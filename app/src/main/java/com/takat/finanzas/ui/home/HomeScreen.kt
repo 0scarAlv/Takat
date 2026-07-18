@@ -23,6 +23,7 @@ import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.AccountBalanceWallet
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
@@ -30,6 +31,7 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
@@ -74,7 +76,8 @@ fun HomeScreen(
     onAddAccount: () -> Unit,
     onAddTransaction: () -> Unit,
     onAddTransfer: () -> Unit,
-    onOpenCategoryExpenses: (categoryId: Long?, from: Long, to: Long) -> Unit
+    onOpenCategoryExpenses: (categoryId: Long?, from: Long, to: Long) -> Unit,
+    onOpenSettings: () -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: HomeViewModel = viewModel(factory = LambdaViewModelFactory { HomeViewModel(repository) })
@@ -103,6 +106,11 @@ fun HomeScreen(
                             }
                         }
                     )
+                },
+                actions = {
+                    IconButton(onClick = onOpenSettings) {
+                        Icon(Icons.Default.Settings, contentDescription = "Ajustes")
+                    }
                 },
                 colors = TopAppBarDefaults.topAppBarColors(
                     containerColor = MaterialTheme.colorScheme.background

@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.takat.finanzas.ui.account.AccountDetailScreen
 import com.takat.finanzas.ui.account.AddEditAccountScreen
 import com.takat.finanzas.ui.home.HomeScreen
+import com.takat.finanzas.ui.settings.SettingsScreen
 import com.takat.finanzas.ui.stats.CategoryExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
 import com.takat.finanzas.ui.transfer.AddTransferScreen
@@ -21,6 +22,7 @@ private object Routes {
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}"
     const val TRANSFER_NEW = "transfer/new"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
+    const val SETTINGS = "settings"
 
     fun accountDetail(id: Long) = "account/$id"
     fun accountEdit(id: Long) = "account/$id/edit"
@@ -41,7 +43,8 @@ fun TakatNavGraph() {
                 onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) },
                 onOpenCategoryExpenses = { categoryId, from, to ->
                     navController.navigate(Routes.categoryExpenses(categoryId, from, to))
-                }
+                },
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) }
             )
         }
 
@@ -117,6 +120,10 @@ fun TakatNavGraph() {
                 toMillis = args?.getLong("to") ?: 0L,
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(Routes.SETTINGS) {
+            SettingsScreen(onBack = { navController.popBackStack() })
         }
     }
 }

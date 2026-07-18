@@ -1,6 +1,8 @@
 package com.takat.finanzas.data.repository
 
 import com.takat.finanzas.data.AppDatabase
+import com.takat.finanzas.data.csv.BackupCsv
+import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.TransactionEntity
@@ -8,10 +10,12 @@ import com.takat.finanzas.data.entity.TransferEntity
 import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.CategoryExpense
+import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
 class FinanceRepository(db: AppDatabase) {
@@ -128,4 +132,86 @@ class FinanceRepository(db: AppDatabase) {
 
     suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer)
     suspend fun deleteTransfer(transfer: TransferEntity) = transferDao.delete(transfer)
+
+    suspend fun exportCsv(): String = BackupCsv.encode(
+        accounts = accountDao.getAll().first(),
+        categories = categoryDao.getAll().first(),
+        transactions = transactionDao.getAll().first(),
+        transfers = transferDao.getAll().first()
+    )
+
+    suspend fun commitImport(parsed: ParsedBackup): ImportResult {
+        val accountIdByName = accountDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
+        val categoryIdByName = categoryDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
+
+        var accountsAdded = 0
+        var categoriesAdded = 0
+        var skipped = 0
+
+        parsed.accounts.forEach { row ->
+            if (!accountIdByName.containsKey(row.name)) {
+                val id = accountDao.insert(
+                    AccountEntity(
+                        name = row.name,
+                        initialBalanceCents = row.initialBalanceCents,
+                        colorArgb = row.colorArgb,
+                        isDebt = row.isDebt,
+                        includeInTotal = row.includeInTotal
+                    )
+                )
+                accountIdByName[row.name] = id
+                accountsAdded++
+            }
+        }
+
+        parsed.categories.forEach { row ->
+            if (!categoryIdByName.containsKey(row.name)) {
+                val id = categoryDao.insert(CategoryEntity(name = row.name, emoji = row.emoji, kind = row.kind))
+                categoryIdByName[row.name] = id
+                categoriesAdded++
+            }
+        }
+
+        var transactionsAdded = 0
+        parsed.transactions.forEach { row ->
+            val accountId = accountIdByName[row.accountName]
+            if (accountId == null) {
+                skipped++
+                return@forEach
+            }
+            transactionDao.insert(
+                TransactionEntity(
+                    accountId = accountId,
+                    categoryId = row.categoryName?.let { categoryIdByName[it] },
+                    amountCents = row.amountCents,
+                    note = row.note,
+                    date = row.date
+                )
+            )
+            transactionsAdded++
+        }
+
+        var transfersAdded = 0
+        parsed.transfers.forEach { row ->
+            val fromId = accountIdByName[row.fromAccountName]
+            val toId = accountIdByName[row.toAccountName]
+            if (fromId == null || toId == null) {
+                skipped++
+                return@forEach
+            }
+            transferDao.insert(
+                TransferEntity(
+                    fromAccountId = fromId,
+                    toAccountId = toId,
+                    categoryId = row.categoryName?.let { categoryIdByName[it] },
+                    amountCents = row.amountCents,
+                    note = row.note,
+                    date = row.date
+                )
+            )
+            transfersAdded++
+        }
+
+        return ImportResult(accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped)
+    }
 }
