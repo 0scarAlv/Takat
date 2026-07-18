@@ -30,13 +30,13 @@ import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.Icon
-import androidx.compose.material3.LargeTopAppBar
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
+import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -56,6 +56,7 @@ import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.key
+import com.takat.finanzas.ui.charts.ChartsScreen
 import com.takat.finanzas.ui.components.MovementDetailDialog
 import com.takat.finanzas.ui.components.MovementRow
 import com.takat.finanzas.ui.stats.StatsScreen
@@ -72,7 +73,8 @@ fun HomeScreen(
     onOpenAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onAddTransaction: () -> Unit,
-    onAddTransfer: () -> Unit
+    onAddTransfer: () -> Unit,
+    onOpenCategoryExpenses: (categoryId: Long?, from: Long, to: Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: HomeViewModel = viewModel(factory = LambdaViewModelFactory { HomeViewModel(repository) })
@@ -81,14 +83,18 @@ fun HomeScreen(
     var selectedMovement by remember { mutableStateOf<Movement?>(null) }
     var titleTapCount by remember { mutableStateOf(0) }
     var showEasterEgg by remember { mutableStateOf(false) }
-    val pagerState = rememberPagerState(pageCount = { 2 })
+    val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
 
     Scaffold(
         topBar = {
-            LargeTopAppBar(
+            TopAppBar(
                 title = {
                     Text(
-                        if (pagerState.currentPage == 0) "Takat" else "Estadísticas",
+                        when (pagerState.currentPage) {
+                            0 -> "Gráficos"
+                            1 -> "Takat"
+                            else -> "Estadísticas"
+                        },
                         modifier = Modifier.clickable {
                             titleTapCount++
                             if (titleTapCount >= 5) {
@@ -128,7 +134,7 @@ fun HomeScreen(
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
             PagerDotsIndicator(
-                pageCount = 2,
+                pageCount = 3,
                 currentPage = pagerState.currentPage,
                 onDotClick = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
                 modifier = Modifier
@@ -136,14 +142,14 @@ fun HomeScreen(
                     .padding(vertical = 8.dp)
             )
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                if (page == 0) {
-                    HomeContent(
+                when (page) {
+                    0 -> ChartsScreen()
+                    1 -> HomeContent(
                         uiState = uiState,
                         onOpenAccount = onOpenAccount,
                         onMovementClick = { selectedMovement = it }
                     )
-                } else {
-                    StatsScreen()
+                    else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses)
                 }
             }
         }

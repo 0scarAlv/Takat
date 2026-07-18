@@ -1,8 +1,7 @@
-package com.takat.finanzas.ui.stats
+package com.takat.finanzas.ui.charts
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.takat.finanzas.data.model.CategoryExpense
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.util.monthLabel
 import com.takat.finanzas.util.monthRange
@@ -16,32 +15,26 @@ import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import java.time.YearMonth
 
-data class StatsUiState(
+data class ChartsUiState(
     val monthLabel: String = monthLabel(YearMonth.now()),
-    val totalExpenseCents: Long = 0,
-    val categoryExpenses: List<CategoryExpense> = emptyList(),
-    val fromMillis: Long = 0,
-    val toMillis: Long = 0
-)
+    val incomeCents: Long = 0,
+    val expenseCents: Long = 0
+) {
+    val balanceCents: Long get() = incomeCents - expenseCents
+}
 
 @OptIn(ExperimentalCoroutinesApi::class)
-class StatsViewModel(repository: FinanceRepository) : ViewModel() {
+class ChartsViewModel(repository: FinanceRepository) : ViewModel() {
     private val selectedMonth = MutableStateFlow(YearMonth.now())
 
-    val uiState: StateFlow<StatsUiState> = selectedMonth
+    val uiState: StateFlow<ChartsUiState> = selectedMonth
         .flatMapLatest { month ->
             val (start, end) = monthRange(month)
-            repository.expensesByCategory(start, end).map { list ->
-                StatsUiState(
-                    monthLabel = monthLabel(month),
-                    totalExpenseCents = list.sumOf { it.totalCents },
-                    categoryExpenses = list,
-                    fromMillis = start,
-                    toMillis = end
-                )
+            repository.incomeExpenseSummary(start, end).map { summary ->
+                ChartsUiState(monthLabel(month), summary.incomeCents, summary.expenseCents)
             }
         }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), StatsUiState())
+        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), ChartsUiState())
 
     fun previousMonth() = selectedMonth.update { it.minusMonths(1) }
     fun nextMonth() = selectedMonth.update { it.plusMonths(1) }

@@ -8,6 +8,7 @@ import com.takat.finanzas.data.entity.TransferEntity
 import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.CategoryExpense
+import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -43,6 +44,25 @@ class FinanceRepository(db: AppDatabase) {
                 .groupBy { it.categoryId }
                 .map { (categoryId, txs) -> CategoryExpense(categoryById[categoryId], txs.sumOf { -it.amountCents }) }
                 .sortedByDescending { it.totalCents }
+        }
+
+    fun expenseTransactionsForCategory(categoryId: Long?, fromInclusive: Long, toExclusive: Long): Flow<List<Movement.TransactionMovement>> =
+        combine(transactionDao.getAll(), categoryDao.getAll(), accountDao.getAll()) { transactions, categories, accounts ->
+            val categoryById = categories.associateBy { it.id }
+            val accountById = accounts.associateBy { it.id }
+            transactions
+                .filter { it.amountCents < 0 && it.date >= fromInclusive && it.date < toExclusive && it.categoryId == categoryId }
+                .sortedByDescending { it.date }
+                .map { Movement.TransactionMovement(it, categoryById[it.categoryId], accountById[it.accountId]) }
+        }
+
+    fun incomeExpenseSummary(fromInclusive: Long, toExclusive: Long): Flow<IncomeExpenseSummary> =
+        transactionDao.getAll().map { transactions ->
+            val inRange = transactions.filter { it.date >= fromInclusive && it.date < toExclusive }
+            IncomeExpenseSummary(
+                incomeCents = inRange.filter { it.amountCents > 0 }.sumOf { it.amountCents },
+                expenseCents = inRange.filter { it.amountCents < 0 }.sumOf { -it.amountCents }
+            )
         }
 
     fun accountWithBalance(accountId: Long): Flow<AccountWithBalance?> =

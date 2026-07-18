@@ -9,6 +9,7 @@ import androidx.navigation.navArgument
 import com.takat.finanzas.ui.account.AccountDetailScreen
 import com.takat.finanzas.ui.account.AddEditAccountScreen
 import com.takat.finanzas.ui.home.HomeScreen
+import com.takat.finanzas.ui.stats.CategoryExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
 import com.takat.finanzas.ui.transfer.AddTransferScreen
 
@@ -19,10 +20,12 @@ private object Routes {
     const val ACCOUNT_EDIT = "account/{accountId}/edit"
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}"
     const val TRANSFER_NEW = "transfer/new"
+    const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
 
     fun accountDetail(id: Long) = "account/$id"
     fun accountEdit(id: Long) = "account/$id/edit"
     fun transactionNew(accountId: Long? = null) = "transaction/new?accountId=${accountId ?: -1L}"
+    fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
 }
 
 @Composable
@@ -35,7 +38,10 @@ fun TakatNavGraph() {
                 onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
                 onAddAccount = { navController.navigate(Routes.ACCOUNT_NEW) },
                 onAddTransaction = { navController.navigate(Routes.transactionNew()) },
-                onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) }
+                onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) },
+                onOpenCategoryExpenses = { categoryId, from, to ->
+                    navController.navigate(Routes.categoryExpenses(categoryId, from, to))
+                }
             )
         }
 
@@ -92,6 +98,24 @@ fun TakatNavGraph() {
             AddTransferScreen(
                 onDone = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() }
+            )
+        }
+
+        composable(
+            Routes.CATEGORY_EXPENSES,
+            arguments = listOf(
+                navArgument("categoryId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("from") { type = NavType.LongType; defaultValue = 0L },
+                navArgument("to") { type = NavType.LongType; defaultValue = 0L }
+            )
+        ) { backStackEntry ->
+            val args = backStackEntry.arguments
+            val rawCategoryId = args?.getLong("categoryId") ?: -1L
+            CategoryExpensesScreen(
+                categoryId = rawCategoryId.takeIf { it >= 0 },
+                fromMillis = args?.getLong("from") ?: 0L,
+                toMillis = args?.getLong("to") ?: 0L,
+                onBack = { navController.popBackStack() }
             )
         }
     }

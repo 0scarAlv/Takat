@@ -14,15 +14,12 @@ private val monthLabelFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", spani
 fun Long.toDisplayDate(): String =
     Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).format(displayFormatter)
 
-/** Epoch millis range [start, end) covering the current calendar month in the device's time zone. */
-fun currentMonthRange(): Pair<Long, Long> {
-    val zone = ZoneId.systemDefault()
-    val month = YearMonth.now(zone)
+/** Epoch millis range [start, end) covering the given calendar month in the device's time zone. */
+fun monthRange(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
     val start = month.atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
     val end = month.plusMonths(1).atDay(1).atStartOfDay(zone).toInstant().toEpochMilli()
     return start to end
 }
 
-fun currentMonthLabel(): String =
-    YearMonth.now(ZoneId.systemDefault()).atDay(1).format(monthLabelFormatter)
-        .replaceFirstChar { it.uppercase() }
+fun monthLabel(month: YearMonth): String =
+    month.atDay(1).format(monthLabelFormatter).replaceFirstChar { it.uppercase() }

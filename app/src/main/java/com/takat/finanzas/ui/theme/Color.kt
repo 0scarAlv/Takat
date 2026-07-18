@@ -28,3 +28,14 @@ val AccountSwatches = listOf(
     0xFF06B6D4.toInt(), // cyan
     0xFF64748B.toInt()  // slate
 )
+
+/** Fixed-order categorical palette (blue, green, magenta, yellow, aqua, orange, violet, red). */
+val CategoricalPaletteLight = listOf(
+    Color(0xFF2A78D6), Color(0xFF008300), Color(0xFFE87BA4), Color(0xFFEDA100),
+    Color(0xFF1BAF7A), Color(0xFFEB6834), Color(0xFF4A3AA7), Color(0xFFE34948)
+)
+val CategoricalPaletteDark = listOf(
+    Color(0xFF3987E5), Color(0xFF008300), Color(0xFFD55181), Color(0xFFC98500),
+    Color(0xFF199E70), Color(0xFFD95926), Color(0xFF9085E9), Color(0xFFE66767)
+)
+val CategoricalOtherGray = Color(0xFF8B8F98)
