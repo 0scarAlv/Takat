@@ -6,6 +6,7 @@ import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.imePadding
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.FilterChip
@@ -19,6 +20,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
+import androidx.compose.ui.window.DialogProperties
 import com.takat.finanzas.data.entity.CategoryEntity
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -56,9 +58,10 @@ fun AddCategoryDialog(
 
     AlertDialog(
         onDismissRequest = onDismiss,
+        properties = DialogProperties(decorFitsSystemWindows = false),
         title = { Text("Nueva categoría") },
         text = {
-            Column {
+            Column(modifier = Modifier.imePadding()) {
                 OutlinedTextField(
                     value = emoji,
                     onValueChange = { if (it.length <= 4) emoji = it },
