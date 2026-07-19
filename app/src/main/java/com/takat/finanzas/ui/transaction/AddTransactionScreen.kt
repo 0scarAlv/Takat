@@ -6,6 +6,8 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.relocation.BringIntoViewRequester
+import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -33,8 +35,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -43,6 +47,7 @@ import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -58,6 +63,8 @@ fun AddTransactionScreen(
     val uiState by viewModel.uiState.collectAsState()
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
+    val noteBringIntoViewRequester = remember { BringIntoViewRequester() }
+    val coroutineScope = rememberCoroutineScope()
 
     LaunchedEffect(uiState.saved) { if (uiState.saved) onDone() }
 
@@ -81,8 +88,8 @@ fun AddTransactionScreen(
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
-                .verticalScroll(rememberScrollState())
                 .imePadding()
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
@@ -153,7 +160,15 @@ fun AddTransactionScreen(
                 value = uiState.note,
                 onValueChange = viewModel::onNoteChange,
                 label = { Text("Nota (opcional)") },
-                modifier = Modifier.fillMaxWidth()
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .bringIntoViewRequester(noteBringIntoViewRequester)
+                    .onFocusEvent {
+                        if (it.isFocused) {
+                            coroutineScope.launch { noteBringIntoViewRequester.bringIntoView() }
+                        }
+                    },
+                singleLine = true
             )
 
             if (uiState.error != null) {

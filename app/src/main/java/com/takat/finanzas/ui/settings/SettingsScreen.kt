@@ -29,6 +29,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.takat.finanzas.BuildConfig
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
@@ -99,6 +100,14 @@ fun SettingsScreen(onBack: () -> Unit) {
                 onClick = { importLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "*/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Importar datos") }
+
+            Spacer(Modifier.height(32.dp))
+            Text("Acerca de", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Versión ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
         }
     }
 
