@@ -33,8 +33,6 @@ import com.takat.finanzas.BuildConfig
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
-import java.io.BufferedReader
-import java.io.InputStreamReader
 import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -46,11 +44,10 @@ fun SettingsScreen(onBack: () -> Unit) {
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
 
-    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("text/csv")) { uri ->
+    val exportLauncher = rememberLauncherForActivityResult(ActivityResultContracts.CreateDocument("application/zip")) { uri ->
         if (uri != null) {
             scope.launch {
-                val csv = viewModel.exportCsv()
-                context.contentResolver.openOutputStream(uri)?.use { it.write(csv.toByteArray()) }
+                context.contentResolver.openOutputStream(uri)?.use { viewModel.exportBackup(it) }
             }
         }
     }
@@ -58,10 +55,8 @@ fun SettingsScreen(onBack: () -> Unit) {
     val importLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
         if (uri != null) {
             scope.launch {
-                val text = context.contentResolver.openInputStream(uri)?.use { input ->
-                    BufferedReader(InputStreamReader(input)).readText()
-                }
-                if (text != null) viewModel.parseForPreview(text)
+                val bytes = context.contentResolver.openInputStream(uri)?.use { it.readBytes() }
+                if (bytes != null) viewModel.parseForPreview(bytes)
             }
         }
     }
@@ -86,18 +81,18 @@ fun SettingsScreen(onBack: () -> Unit) {
         ) {
             Text("Datos", style = MaterialTheme.typography.titleMedium)
             Text(
-                "Exportá tus cuentas y movimientos a un CSV para revisarlos en Excel o para pasarlos a otro teléfono.",
+                "Exportá tus cuentas, movimientos y comprobantes adjuntos en un solo archivo .zip, para revisarlos o pasarlos a otro teléfono.",
                 style = MaterialTheme.typography.bodySmall,
                 color = MaterialTheme.colorScheme.onSurfaceVariant
             )
             Spacer(Modifier.height(16.dp))
             Button(
-                onClick = { exportLauncher.launch("takat_backup_${LocalDate.now()}.csv") },
+                onClick = { exportLauncher.launch("takat_backup_${LocalDate.now()}.zip") },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Exportar datos") }
             Spacer(Modifier.height(12.dp))
             OutlinedButton(
-                onClick = { importLauncher.launch(arrayOf("text/csv", "text/comma-separated-values", "*/*")) },
+                onClick = { importLauncher.launch(arrayOf("application/zip", "text/csv", "text/comma-separated-values", "*/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Importar datos") }
 
@@ -125,9 +120,11 @@ fun SettingsScreen(onBack: () -> Unit) {
             onDismissRequest = viewModel::dismissPreview,
             title = { Text("¿Importar estos datos?") },
             text = {
+                val attachmentCount = parsed.transactions.sumOf { it.attachmentEntries.size }
                 Text(
                     "Se van a agregar ${parsed.accounts.size} cuentas, ${parsed.categories.size} categorías, " +
-                        "${parsed.transactions.size} movimientos y ${parsed.transfers.size} transferencias.\n\n" +
+                        "${parsed.transactions.size} movimientos y ${parsed.transfers.size} transferencias" +
+                        (if (attachmentCount > 0) " (con $attachmentCount comprobantes adjuntos)" else "") + ".\n\n" +
                         "Las cuentas y categorías que ya existan con el mismo nombre se reutilizan, pero los " +
                         "movimientos siempre se agregan como nuevos — si ya importaste este archivo antes, se " +
                         "van a duplicar."
@@ -149,7 +146,8 @@ fun SettingsScreen(onBack: () -> Unit) {
             text = {
                 Text(
                     "Se agregaron ${result.accountsAdded} cuentas, ${result.categoriesAdded} categorías, " +
-                        "${result.transactionsAdded} movimientos y ${result.transfersAdded} transferencias." +
+                        "${result.transactionsAdded} movimientos, ${result.transfersAdded} transferencias y " +
+                        "${result.attachmentsAdded} comprobantes." +
                         if (result.skipped > 0) {
                             "\n\n${result.skipped} filas se saltearon por referenciar una cuenta que no se pudo resolver."
                         } else {

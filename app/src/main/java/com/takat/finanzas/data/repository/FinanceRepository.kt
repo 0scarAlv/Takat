@@ -5,6 +5,7 @@ import android.net.Uri
 import com.takat.finanzas.data.AppDatabase
 import com.takat.finanzas.data.attachment.AttachmentStorage
 import com.takat.finanzas.data.csv.BackupCsv
+import com.takat.finanzas.data.csv.BackupZip
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
@@ -22,6 +23,7 @@ import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
+import java.io.OutputStream
 
 class FinanceRepository(db: AppDatabase, private val attachmentStorage: AttachmentStorage) {
 
@@ -57,13 +59,26 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
         }
 
     fun expenseTransactionsForCategory(categoryId: Long?, fromInclusive: Long, toExclusive: Long): Flow<List<Movement.TransactionMovement>> =
-        combine(transactionDao.getAll(), categoryDao.getAll(), accountDao.getAll()) { transactions, categories, accounts ->
+        combine(
+            transactionDao.getAll(),
+            categoryDao.getAll(),
+            accountDao.getAll(),
+            attachmentDao.getAll()
+        ) { transactions, categories, accounts, attachments ->
             val categoryById = categories.associateBy { it.id }
             val accountById = accounts.associateBy { it.id }
+            val attachmentsByTransaction = attachments.groupBy { it.transactionId }
             transactions
                 .filter { it.amountCents < 0 && it.date >= fromInclusive && it.date < toExclusive && it.categoryId == categoryId }
                 .sortedByDescending { it.date }
-                .map { Movement.TransactionMovement(it, categoryById[it.categoryId], accountById[it.accountId]) }
+                .map {
+                    Movement.TransactionMovement(
+                        it,
+                        categoryById[it.categoryId],
+                        accountById[it.accountId],
+                        attachmentsByTransaction[it.id].orEmpty()
+                    )
+                }
         }
 
     fun incomeExpenseSummary(fromInclusive: Long, toExclusive: Long): Flow<IncomeExpenseSummary> =
@@ -172,14 +187,30 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
     suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer)
     suspend fun deleteTransfer(transfer: TransferEntity) = transferDao.delete(transfer)
 
-    suspend fun exportCsv(): String = BackupCsv.encode(
-        accounts = accountDao.getAll().first(),
-        categories = categoryDao.getAll().first(),
-        transactions = transactionDao.getAll().first(),
-        transfers = transferDao.getAll().first()
-    )
+    /** Writes a single .zip backup: backup.csv plus every transaction's receipts, decrypted, under adjuntos/. */
+    suspend fun exportBackup(output: OutputStream) {
+        val accounts = accountDao.getAll().first()
+        val categories = categoryDao.getAll().first()
+        val transactions = transactionDao.getAll().first()
+        val transfers = transferDao.getAll().first()
+        val attachmentsByTransaction = attachmentDao.getAll().first().groupBy { it.transactionId }
 
-    suspend fun commitImport(parsed: ParsedBackup): ImportResult {
+        val files = mutableMapOf<String, ByteArray>()
+        val entryNamesByTransaction = mutableMapOf<Long, List<String>>()
+        transactions.forEach { tx ->
+            val entries = attachmentsByTransaction[tx.id].orEmpty().mapIndexed { index, attachment ->
+                val entryName = "tx${tx.id}_$index.${extensionFor(attachment.type)}"
+                files[entryName] = attachmentStorage.readDecrypted(attachment)
+                entryName
+            }
+            if (entries.isNotEmpty()) entryNamesByTransaction[tx.id] = entries
+        }
+
+        val csv = BackupCsv.encode(accounts, categories, transactions, transfers, entryNamesByTransaction)
+        BackupZip.write(output, csv, files)
+    }
+
+    suspend fun commitImport(parsed: ParsedBackup, attachmentFiles: Map<String, ByteArray> = emptyMap()): ImportResult {
         val accountIdByName = accountDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
         val categoryIdByName = categoryDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
 
@@ -212,13 +243,14 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
         }
 
         var transactionsAdded = 0
+        var attachmentsAdded = 0
         parsed.transactions.forEach { row ->
             val accountId = accountIdByName[row.accountName]
             if (accountId == null) {
                 skipped++
                 return@forEach
             }
-            transactionDao.insert(
+            val transactionId = transactionDao.insert(
                 TransactionEntity(
                     accountId = accountId,
                     categoryId = row.categoryName?.let { categoryIdByName[it] },
@@ -228,6 +260,17 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
                 )
             )
             transactionsAdded++
+
+            row.attachmentEntries.forEach { entryName ->
+                val bytes = attachmentFiles[entryName] ?: return@forEach
+                val type = typeForEntryName(entryName)
+                if (type == AttachmentType.IMAGE) {
+                    attachmentStorage.saveImage(attachmentDao, transactionId, bytes)
+                } else {
+                    attachmentStorage.saveDocument(attachmentDao, transactionId, type, bytes)
+                }
+                attachmentsAdded++
+            }
         }
 
         var transfersAdded = 0
@@ -251,6 +294,18 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
             transfersAdded++
         }
 
-        return ImportResult(accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped)
+        return ImportResult(accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped, attachmentsAdded)
+    }
+
+    private fun extensionFor(type: AttachmentType): String = when (type) {
+        AttachmentType.IMAGE -> "jpg"
+        AttachmentType.JSON -> "json"
+        AttachmentType.PDF -> "pdf"
+    }
+
+    private fun typeForEntryName(name: String): AttachmentType = when (name.substringAfterLast('.', "").lowercase()) {
+        "json" -> AttachmentType.JSON
+        "pdf" -> AttachmentType.PDF
+        else -> AttachmentType.IMAGE
     }
 }

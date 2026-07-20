@@ -5,5 +5,6 @@ data class ImportResult(
     val categoriesAdded: Int,
     val transactionsAdded: Int,
     val transfersAdded: Int,
-    val skipped: Int
+    val skipped: Int,
+    val attachmentsAdded: Int = 0
 )
