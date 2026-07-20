@@ -1,18 +1,31 @@
 package com.takat.finanzas.ui.components
 
+import android.graphics.BitmapFactory
+import androidx.compose.foundation.Image
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Description
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.remember
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.asImageBitmap
+import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
+import com.takat.finanzas.data.entity.AttachmentEntity
+import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.ui.theme.NegativeRed
 import com.takat.finanzas.ui.theme.PositiveGreen
@@ -47,11 +60,14 @@ fun MovementRow(
                         Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     }
                 }
-                Text(
-                    tx.amountCents.centsToDisplay(showSign = true),
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (isIncome) PositiveGreen else NegativeRed
-                )
+                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                    movement.attachments.firstOrNull()?.let { AttachmentIndicator(it) }
+                    Text(
+                        tx.amountCents.centsToDisplay(showSign = true),
+                        fontWeight = FontWeight.SemiBold,
+                        color = if (isIncome) PositiveGreen else NegativeRed
+                    )
+                }
             }
         }
 
@@ -96,4 +112,24 @@ fun MovementRow(
             }
         }
     }
+}
+
+/** Small preview for a transaction's attachment: the (unencrypted) thumbnail for photos, a document icon otherwise. */
+@Composable
+private fun AttachmentIndicator(attachment: AttachmentEntity) {
+    if (attachment.type == AttachmentType.IMAGE && attachment.thumbnailPath != null) {
+        val bitmap = remember(attachment.thumbnailPath) { BitmapFactory.decodeFile(attachment.thumbnailPath) }
+        if (bitmap != null) {
+            Image(
+                bitmap = bitmap.asImageBitmap(),
+                contentDescription = "Comprobante adjunto",
+                contentScale = ContentScale.Crop,
+                modifier = Modifier
+                    .size(32.dp)
+                    .clip(RoundedCornerShape(6.dp))
+            )
+            return
+        }
+    }
+    Icon(Icons.Filled.Description, contentDescription = "Comprobante adjunto", modifier = Modifier.size(20.dp))
 }
