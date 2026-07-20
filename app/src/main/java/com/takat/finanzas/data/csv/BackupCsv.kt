@@ -22,14 +22,18 @@ fun String.csvColorToInt(): Int {
 object BackupCsv {
     private val HEADER = listOf(
         "type", "name", "emoji", "kind", "initial_balance", "is_debt", "include_in_total",
-        "color", "date", "account", "to_account", "category", "amount", "note"
+        "color", "date", "account", "to_account", "category", "amount", "note", "attachments"
     )
+
+    /** Backups written before receipt attachments existed don't have the trailing column. */
+    private val LEGACY_HEADER = HEADER.dropLast(1)
 
     fun encode(
         accounts: List<AccountEntity>,
         categories: List<CategoryEntity>,
         transactions: List<TransactionEntity>,
-        transfers: List<TransferEntity>
+        transfers: List<TransferEntity>,
+        attachmentEntriesByTransaction: Map<Long, List<String>> = emptyMap()
     ): String {
         val accountById = accounts.associateBy { it.id }
         val categoryById = categories.associateBy { it.id }
@@ -55,7 +59,8 @@ object BackupCsv {
                 account = accountById[t.accountId]?.name.orEmpty(),
                 category = categoryById[t.categoryId]?.name.orEmpty(),
                 amount = t.amountCents.toCsvAmount(),
-                note = t.note.orEmpty()
+                note = t.note.orEmpty(),
+                attachments = attachmentEntriesByTransaction[t.id].orEmpty().joinToString("|")
             )
         }
         transfers.forEach { tr ->
@@ -75,7 +80,12 @@ object BackupCsv {
     fun decode(csv: String): ParsedBackup {
         val lines = csv.lines().filter { it.isNotBlank() }
         require(lines.isNotEmpty()) { "Archivo vacío" }
-        require(parseCsvLine(lines[0]) == HEADER) { "Formato de CSV no reconocido" }
+        val headerFields = parseCsvLine(lines[0])
+        val header = when (headerFields) {
+            HEADER -> HEADER
+            LEGACY_HEADER -> LEGACY_HEADER
+            else -> throw IllegalArgumentException("Formato de respaldo no reconocido")
+        }
 
         val accounts = mutableListOf<AccountRow>()
         val categories = mutableListOf<CategoryRow>()
@@ -84,8 +94,8 @@ object BackupCsv {
 
         for (i in 1 until lines.size) {
             val fields = parseCsvLine(lines[i])
-            if (fields.size < HEADER.size) continue
-            val row = HEADER.zip(fields).toMap()
+            if (fields.size < header.size) continue
+            val row = header.zip(fields).toMap()
 
             when (row["type"]) {
                 "account" -> accounts += AccountRow(
@@ -107,7 +117,8 @@ object BackupCsv {
                     accountName = row["account"].orEmpty(),
                     categoryName = row["category"]?.takeIf { it.isNotBlank() },
                     amountCents = row["amount"].orEmpty().csvAmountToCents() ?: continue,
-                    note = row["note"]?.takeIf { it.isNotBlank() }
+                    note = row["note"]?.takeIf { it.isNotBlank() },
+                    attachmentEntries = row["attachments"].orEmpty().split("|").filter { it.isNotBlank() }
                 )
 
                 "transfer" -> transfers += TransferRow(
@@ -138,9 +149,10 @@ object BackupCsv {
         toAccount: String = "",
         category: String = "",
         amount: String = "",
-        note: String = ""
+        note: String = "",
+        attachments: String = ""
     ): String = listOf(
         type, name, emoji, kind, initialBalance, isDebt, includeInTotal,
-        color, date, account, toAccount, category, amount, note
+        color, date, account, toAccount, category, amount, note, attachments
     ).joinToString(",") { encodeCsvField(it) }
 }

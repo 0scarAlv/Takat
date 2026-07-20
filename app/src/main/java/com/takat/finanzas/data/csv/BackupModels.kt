@@ -21,7 +21,9 @@ data class TransactionRow(
     val accountName: String,
     val categoryName: String?,
     val amountCents: Long,
-    val note: String?
+    val note: String?,
+    /** Filenames (inside the backup zip's adjuntos/ folder) of receipts attached to this transaction. */
+    val attachmentEntries: List<String> = emptyList()
 )
 
 data class TransferRow(
