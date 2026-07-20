@@ -1,9 +1,14 @@
 package com.takat.finanzas.data.repository
 
+import android.content.ContentResolver
+import android.net.Uri
 import com.takat.finanzas.data.AppDatabase
+import com.takat.finanzas.data.attachment.AttachmentStorage
 import com.takat.finanzas.data.csv.BackupCsv
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
+import com.takat.finanzas.data.entity.AttachmentEntity
+import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
@@ -18,12 +23,13 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 
-class FinanceRepository(db: AppDatabase) {
+class FinanceRepository(db: AppDatabase, private val attachmentStorage: AttachmentStorage) {
 
     private val accountDao = db.accountDao()
     private val categoryDao = db.categoryDao()
     private val transactionDao = db.transactionDao()
     private val transferDao = db.transferDao()
+    private val attachmentDao = db.attachmentDao()
 
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
@@ -89,9 +95,10 @@ class FinanceRepository(db: AppDatabase) {
             transactionDao.getForAccount(accountId),
             transferDao.getForAccount(accountId),
             categoryDao.getAll(),
-            accountDao.getAll()
-        ) { transactions, transfers, categories, accounts ->
-            buildMovements(transactions, transfers, categories, accounts)
+            accountDao.getAll(),
+            attachmentDao.getAll()
+        ) { transactions, transfers, categories, accounts, attachments ->
+            buildMovements(transactions, transfers, categories, accounts, attachments)
         }
 
     fun allMovements(): Flow<List<Movement>> =
@@ -99,21 +106,29 @@ class FinanceRepository(db: AppDatabase) {
             transactionDao.getAll(),
             transferDao.getAll(),
             categoryDao.getAll(),
-            accountDao.getAll()
-        ) { transactions, transfers, categories, accounts ->
-            buildMovements(transactions, transfers, categories, accounts)
+            accountDao.getAll(),
+            attachmentDao.getAll()
+        ) { transactions, transfers, categories, accounts, attachments ->
+            buildMovements(transactions, transfers, categories, accounts, attachments)
         }
 
     private fun buildMovements(
         transactions: List<TransactionEntity>,
         transfers: List<TransferEntity>,
         categories: List<CategoryEntity>,
-        accounts: List<AccountEntity>
+        accounts: List<AccountEntity>,
+        attachments: List<AttachmentEntity>
     ): List<Movement> {
         val categoryById = categories.associateBy { it.id }
         val accountById = accounts.associateBy { it.id }
+        val attachmentsByTransaction = attachments.groupBy { it.transactionId }
         val txMovements = transactions.map {
-            Movement.TransactionMovement(it, categoryById[it.categoryId], accountById[it.accountId])
+            Movement.TransactionMovement(
+                it,
+                categoryById[it.categoryId],
+                accountById[it.accountId],
+                attachmentsByTransaction[it.id].orEmpty()
+            )
         }
         val transferMovements = transfers.map {
             Movement.TransferMovement(it, accountById[it.fromAccountId], accountById[it.toAccountId], categoryById[it.categoryId])
@@ -128,7 +143,31 @@ class FinanceRepository(db: AppDatabase) {
     suspend fun addCategory(category: CategoryEntity): Long = categoryDao.insert(category)
 
     suspend fun addTransaction(transaction: TransactionEntity): Long = transactionDao.insert(transaction)
-    suspend fun deleteTransaction(transaction: TransactionEntity) = transactionDao.delete(transaction)
+
+    suspend fun deleteTransaction(transaction: TransactionEntity) {
+        attachmentDao.getForTransactionOnce(transaction.id).forEach { attachmentStorage.deleteFiles(attachmentDao, it) }
+        transactionDao.delete(transaction)
+    }
+
+    fun attachmentsForTransaction(transactionId: Long): Flow<List<AttachmentEntity>> =
+        attachmentDao.getForTransaction(transactionId)
+
+    suspend fun addImageAttachment(transactionId: Long, bytes: ByteArray): AttachmentEntity =
+        attachmentStorage.saveImage(attachmentDao, transactionId, bytes)
+
+    suspend fun addDocumentAttachment(transactionId: Long, type: AttachmentType, bytes: ByteArray): AttachmentEntity =
+        attachmentStorage.saveDocument(attachmentDao, transactionId, type, bytes)
+
+    suspend fun readAttachment(attachment: AttachmentEntity): ByteArray =
+        attachmentStorage.readDecrypted(attachment)
+
+    fun createCaptureFile() = attachmentStorage.createCaptureFile()
+
+    fun writeAttachmentForExternalView(bytes: ByteArray, suffix: String) =
+        attachmentStorage.writeTempForView(bytes, suffix)
+
+    fun readFromUri(resolver: ContentResolver, uri: Uri): ByteArray =
+        attachmentStorage.readFromUri(resolver, uri)
 
     suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer)
     suspend fun deleteTransfer(transfer: TransferEntity) = transferDao.delete(transfer)

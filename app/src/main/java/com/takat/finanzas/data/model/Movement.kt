@@ -1,6 +1,7 @@
 package com.takat.finanzas.data.model
 
 import com.takat.finanzas.data.entity.AccountEntity
+import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
@@ -12,7 +13,8 @@ sealed class Movement {
     data class TransactionMovement(
         val transaction: TransactionEntity,
         val category: CategoryEntity?,
-        val account: AccountEntity?
+        val account: AccountEntity?,
+        val attachments: List<AttachmentEntity> = emptyList()
     ) : Movement() {
         override val date get() = transaction.date
     }

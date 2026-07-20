@@ -3,6 +3,7 @@ package com.takat.finanzas.ui.transaction
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.entity.AccountEntity
+import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.TransactionEntity
@@ -14,6 +15,13 @@ import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
+/** An attachment the user picked/captured that hasn't been persisted yet (no transactionId until save()). */
+data class PendingAttachment(
+    val type: AttachmentType,
+    val bytes: ByteArray,
+    val label: String
+)
+
 data class AddTransactionUiState(
     val accounts: List<AccountEntity> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
@@ -23,6 +31,7 @@ data class AddTransactionUiState(
     val categoryId: Long? = null,
     val note: String = "",
     val dateMillis: Long = System.currentTimeMillis(),
+    val pendingAttachment: PendingAttachment? = null,
     val error: String? = null,
     val saved: Boolean = false
 )
@@ -54,6 +63,8 @@ class AddTransactionViewModel(
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
+    fun onAttachmentPicked(attachment: PendingAttachment) = _uiState.update { it.copy(pendingAttachment = attachment) }
+    fun clearPendingAttachment() = _uiState.update { it.copy(pendingAttachment = null) }
 
     fun addCategory(name: String, emoji: String) {
         viewModelScope.launch {
@@ -76,7 +87,7 @@ class AddTransactionViewModel(
             return
         }
         viewModelScope.launch {
-            repository.addTransaction(
+            val transactionId = repository.addTransaction(
                 TransactionEntity(
                     accountId = accountId,
                     categoryId = state.categoryId,
@@ -85,6 +96,13 @@ class AddTransactionViewModel(
                     date = state.dateMillis
                 )
             )
+            state.pendingAttachment?.let { pending ->
+                if (pending.type == AttachmentType.IMAGE) {
+                    repository.addImageAttachment(transactionId, pending.bytes)
+                } else {
+                    repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
+                }
+            }
             _uiState.update { it.copy(saved = true) }
         }
     }
