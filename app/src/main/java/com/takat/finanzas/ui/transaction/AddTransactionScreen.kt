@@ -6,6 +6,7 @@ import android.content.pm.PackageManager
 import android.net.Uri
 import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
+import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -25,6 +26,7 @@ import androidx.compose.material.icons.filled.AttachFile
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.PhotoCamera
+import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AssistChip
 import androidx.compose.material3.Button
 import androidx.compose.material3.DropdownMenuItem
@@ -114,6 +116,15 @@ fun AddTransactionScreen(
                 val type = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.JSON
                 val name = queryFileName(context, uri) ?: if (type == AttachmentType.PDF) "Comprobante.pdf" else "Comprobante.json"
                 viewModel.onAttachmentPicked(PendingAttachment(type, bytes, name))
+            }
+        }
+    }
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
+        if (uri != null) {
+            coroutineScope.launch {
+                val bytes = repository.readFromUri(context.contentResolver, uri)
+                val name = queryFileName(context, uri) ?: "Imagen.jpg"
+                viewModel.onAttachmentPicked(PendingAttachment(AttachmentType.IMAGE, bytes, name))
             }
         }
     }
@@ -238,14 +249,23 @@ fun AddTransactionScreen(
                 ) {
                     OutlinedButton(onClick = onTakePhotoClick, modifier = Modifier.weight(1f)) {
                         Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Tomar foto")
+                        Text("Foto")
+                    }
+                    OutlinedButton(
+                        onClick = {
+                            galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                        },
+                        modifier = Modifier.weight(1f)
+                    ) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
+                        Text("Galería")
                     }
                     OutlinedButton(
                         onClick = { fileLauncher.launch(arrayOf("application/pdf", "application/json")) },
                         modifier = Modifier.weight(1f)
                     ) {
                         Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Adjuntar archivo")
+                        Text("Archivo")
                     }
                 }
                 uiState.pendingAttachment?.let { attachment ->

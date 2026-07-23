@@ -1,6 +1,11 @@
 package com.takat.finanzas.ui.navigation
 
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
+import androidx.compose.runtime.MutableState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -13,6 +18,7 @@ import com.takat.finanzas.ui.settings.SettingsScreen
 import com.takat.finanzas.ui.stats.CategoryExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
 import com.takat.finanzas.ui.transfer.AddTransferScreen
+import com.takat.finanzas.widget.WidgetActions
 
 private object Routes {
     const val HOME = "home"
@@ -31,8 +37,17 @@ private object Routes {
 }
 
 @Composable
-fun TakatNavGraph() {
+fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) }) {
     val navController = rememberNavController()
+    val widgetAction by pendingWidgetAction
+
+    LaunchedEffect(widgetAction) {
+        when (widgetAction) {
+            WidgetActions.ACTION_NEW_TRANSACTION -> navController.navigate(Routes.transactionNew())
+            WidgetActions.ACTION_NEW_TRANSFER -> navController.navigate(Routes.TRANSFER_NEW)
+        }
+        if (widgetAction != null) pendingWidgetAction.value = null
+    }
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
         composable(Routes.HOME) {

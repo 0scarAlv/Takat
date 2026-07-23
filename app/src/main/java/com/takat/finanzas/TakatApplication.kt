@@ -11,6 +11,6 @@ class TakatApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
-        repository = FinanceRepository(AppDatabase.getInstance(this), AttachmentStorage(this))
+        repository = FinanceRepository(AppDatabase.getInstance(this), AttachmentStorage(this), this)
     }
 }

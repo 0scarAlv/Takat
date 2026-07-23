@@ -183,7 +183,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { showEasterEgg = false },
             title = { Text("¡Encontraste el secreto!") },
-            text = { Text("Sip, esta app la hice yo — OscarAlv. Kotlin, Compose y bastante café.") },
+            text = { Text("Esta app fue hecha en un hiperfoco con mucho café.") },
             confirmButton = {
                 TextButton(onClick = { showEasterEgg = false }) { Text("Cerrar") }
             }
