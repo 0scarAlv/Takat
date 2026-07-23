@@ -1,6 +1,7 @@
 package com.takat.finanzas.data.repository
 
 import android.content.ContentResolver
+import android.content.Context
 import android.net.Uri
 import com.takat.finanzas.data.AppDatabase
 import com.takat.finanzas.data.attachment.AttachmentStorage
@@ -19,13 +20,20 @@ import com.takat.finanzas.data.model.CategoryExpense
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
+import com.takat.finanzas.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.OutputStream
 
-class FinanceRepository(db: AppDatabase, private val attachmentStorage: AttachmentStorage) {
+class FinanceRepository(
+    db: AppDatabase,
+    private val attachmentStorage: AttachmentStorage,
+    private val context: Context
+) {
+
+    private suspend fun refreshWidget() = WidgetUpdater.refresh(context)
 
     private val accountDao = db.accountDao()
     private val categoryDao = db.categoryDao()
@@ -151,17 +159,25 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
         return (txMovements + transferMovements).sortedByDescending { it.date }
     }
 
-    suspend fun addAccount(account: AccountEntity): Long = accountDao.insert(account)
-    suspend fun updateAccount(account: AccountEntity) = accountDao.update(account)
-    suspend fun deleteAccount(account: AccountEntity) = accountDao.delete(account)
+    suspend fun addAccount(account: AccountEntity): Long = accountDao.insert(account).also { refreshWidget() }
+    suspend fun updateAccount(account: AccountEntity) {
+        accountDao.update(account)
+        refreshWidget()
+    }
+    suspend fun deleteAccount(account: AccountEntity) {
+        accountDao.delete(account)
+        refreshWidget()
+    }
 
     suspend fun addCategory(category: CategoryEntity): Long = categoryDao.insert(category)
 
-    suspend fun addTransaction(transaction: TransactionEntity): Long = transactionDao.insert(transaction)
+    suspend fun addTransaction(transaction: TransactionEntity): Long =
+        transactionDao.insert(transaction).also { refreshWidget() }
 
     suspend fun deleteTransaction(transaction: TransactionEntity) {
         attachmentDao.getForTransactionOnce(transaction.id).forEach { attachmentStorage.deleteFiles(attachmentDao, it) }
         transactionDao.delete(transaction)
+        refreshWidget()
     }
 
     fun attachmentsForTransaction(transactionId: Long): Flow<List<AttachmentEntity>> =
@@ -184,8 +200,11 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
     fun readFromUri(resolver: ContentResolver, uri: Uri): ByteArray =
         attachmentStorage.readFromUri(resolver, uri)
 
-    suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer)
-    suspend fun deleteTransfer(transfer: TransferEntity) = transferDao.delete(transfer)
+    suspend fun addTransfer(transfer: TransferEntity): Long = transferDao.insert(transfer).also { refreshWidget() }
+    suspend fun deleteTransfer(transfer: TransferEntity) {
+        transferDao.delete(transfer)
+        refreshWidget()
+    }
 
     /** Writes a single .zip backup: backup.csv plus every transaction's receipts, decrypted, under adjuntos/. */
     suspend fun exportBackup(output: OutputStream) {
@@ -294,6 +313,7 @@ class FinanceRepository(db: AppDatabase, private val attachmentStorage: Attachme
             transfersAdded++
         }
 
+        refreshWidget()
         return ImportResult(accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped, attachmentsAdded)
     }
 
