@@ -94,7 +94,7 @@ fun HomeScreen(
                 title = {
                     Text(
                         when (pagerState.currentPage) {
-                            0 -> "Gráficos"
+                            0 -> "Presupuesto"
                             1 -> "Takat"
                             else -> "Estadísticas"
                         },
@@ -182,8 +182,8 @@ fun HomeScreen(
     if (showEasterEgg) {
         AlertDialog(
             onDismissRequest = { showEasterEgg = false },
-            title = { Text("¡Encontraste el secreto!") },
-            text = { Text("Esta app fue hecha en un hiperfoco con mucho café.") },
+            title = { Text("Esteregg") },
+            text = { Text("Esta app fue hecha en un hiperfoco con mucho café. OscarAlv") },
             confirmButton = {
                 TextButton(onClick = { showEasterEgg = false }) { Text("Cerrar") }
             }
@@ -226,7 +226,7 @@ private fun HomeContent(
 
         item {
             Text(
-                "Movimientos",
+                "Transacciones",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )

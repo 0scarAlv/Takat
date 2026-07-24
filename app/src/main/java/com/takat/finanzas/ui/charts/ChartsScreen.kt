@@ -15,6 +15,7 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.ExperimentalMaterial3Api
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -33,11 +34,14 @@ import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun ChartsScreen(modifier: Modifier = Modifier) {
     val repository = rememberRepository()
     val viewModel: ChartsViewModel = viewModel(factory = LambdaViewModelFactory { ChartsViewModel(repository) })
     val uiState by viewModel.uiState.collectAsState()
+    val budgetViewModel: DailyBudgetViewModel = viewModel(factory = LambdaViewModelFactory { DailyBudgetViewModel(repository) })
+    val budgetState by budgetViewModel.uiState.collectAsState()
 
     LazyColumn(
         modifier = modifier.fillMaxSize(),
@@ -69,6 +73,16 @@ fun ChartsScreen(modifier: Modifier = Modifier) {
                 AmountBar("Ingresos", uiState.incomeCents, maxCents, PositiveGreen)
                 AmountBar("Gastos", uiState.expenseCents, maxCents, NegativeRed)
             }
+        }
+
+        item {
+            DailyBudgetSection(
+                state = budgetState,
+                onEnabledChange = budgetViewModel::onEnabledChange,
+                onPeriodTypeChange = budgetViewModel::onPeriodTypeChange,
+                onDayOfMonthChange = budgetViewModel::onDayOfMonthChange,
+                onBasisChange = budgetViewModel::onBasisChange
+            )
         }
 
         item { Spacer(Modifier.height(24.dp)) }
