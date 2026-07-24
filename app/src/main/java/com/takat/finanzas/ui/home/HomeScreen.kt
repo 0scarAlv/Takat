@@ -182,8 +182,8 @@ fun HomeScreen(
     if (showEasterEgg) {
         AlertDialog(
             onDismissRequest = { showEasterEgg = false },
-            title = { Text("¡Encontraste el secreto!") },
-            text = { Text("Esta app fue hecha en un hiperfoco con mucho café.") },
+            title = { Text("Esteregg") },
+            text = { Text("Esta app fue hecha en un hiperfoco con mucho café. OscarAlv") },
             confirmButton = {
                 TextButton(onClick = { showEasterEgg = false }) { Text("Cerrar") }
             }

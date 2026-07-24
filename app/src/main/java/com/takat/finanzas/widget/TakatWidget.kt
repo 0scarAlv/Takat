@@ -10,6 +10,7 @@ import androidx.glance.GlanceModifier
 import androidx.glance.action.ActionParameters
 import androidx.glance.action.actionParametersOf
 import androidx.glance.action.actionStartActivity
+import androidx.glance.action.clickable
 import androidx.glance.appwidget.GlanceAppWidget
 import androidx.glance.appwidget.components.FilledButton
 import androidx.glance.appwidget.cornerRadius
@@ -55,7 +56,11 @@ class TakatWidget : GlanceAppWidget() {
                     .cornerRadius(16.dp)
                     .padding(12.dp)
             ) {
-                Row(modifier = GlanceModifier.fillMaxWidth()) {
+                Row(
+                    modifier = GlanceModifier
+                        .fillMaxWidth()
+                        .clickable(actionStartActivity<MainActivity>())
+                ) {
                     StatItem("Líquido", totals.availableCents.centsToDisplay(), amountColor(totals.availableCents))
                     StatItem("Deuda", totals.debtCents.centsToDisplay(), amountColor(-totals.debtCents))
                     StatItem("Actual", totals.capitalCents.centsToDisplay(), amountColor(totals.capitalCents))
@@ -87,7 +92,7 @@ class TakatWidget : GlanceAppWidget() {
 private fun RowScope.StatItem(label: String, value: String, valueColor: ColorProvider) {
     Column(modifier = GlanceModifier.defaultWeight()) {
         Text(label, style = TextStyle(fontSize = 11.sp, color = LabelColor))
-        Text(value, style = TextStyle(fontSize = 14.sp, fontWeight = FontWeight.Bold, color = valueColor))
+        Text(value, style = TextStyle(fontSize = 20.sp, fontWeight = FontWeight.Bold, color = valueColor))
     }
 }
 
