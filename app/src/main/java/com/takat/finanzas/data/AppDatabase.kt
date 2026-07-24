@@ -9,11 +9,13 @@ import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.takat.finanzas.data.dao.AccountDao
 import com.takat.finanzas.data.dao.AttachmentDao
+import com.takat.finanzas.data.dao.BudgetSettingsDao
 import com.takat.finanzas.data.dao.CategoryDao
 import com.takat.finanzas.data.dao.TransactionDao
 import com.takat.finanzas.data.dao.TransferDao
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
+import com.takat.finanzas.data.entity.BudgetSettingsEntity
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.TransactionEntity
@@ -28,9 +30,10 @@ import kotlinx.coroutines.launch
         CategoryEntity::class,
         TransactionEntity::class,
         TransferEntity::class,
-        AttachmentEntity::class
+        AttachmentEntity::class,
+        BudgetSettingsEntity::class
     ],
-    version = 3,
+    version = 4,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -40,6 +43,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transactionDao(): TransactionDao
     abstract fun transferDao(): TransferDao
     abstract fun attachmentDao(): AttachmentDao
+    abstract fun budgetSettingsDao(): BudgetSettingsDao
 
     companion object {
         @Volatile
@@ -57,7 +61,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -95,6 +99,22 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_attachments_transactionId` ON `attachments` (`transactionId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_attachments_contentHash` ON `attachments` (`contentHash`)")
+            }
+        }
+
+        private val MIGRATION_3_4 = object : Migration(3, 4) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `budget_settings` (
+                        `id` INTEGER NOT NULL PRIMARY KEY,
+                        `enabled` INTEGER NOT NULL DEFAULT 0,
+                        `periodType` TEXT NOT NULL DEFAULT 'QUINCENA',
+                        `dayOfMonth` INTEGER NOT NULL DEFAULT 1,
+                        `basis` TEXT NOT NULL DEFAULT 'DISPONIBLE'
+                    )
+                    """.trimIndent()
+                )
             }
         }
 

@@ -94,7 +94,7 @@ fun HomeScreen(
                 title = {
                     Text(
                         when (pagerState.currentPage) {
-                            0 -> "Gráficos"
+                            0 -> "Presupuesto"
                             1 -> "Takat"
                             else -> "Estadísticas"
                         },
@@ -226,7 +226,7 @@ private fun HomeContent(
 
         item {
             Text(
-                "Movimientos",
+                "Transacciones",
                 style = MaterialTheme.typography.titleMedium,
                 modifier = Modifier.padding(top = 16.dp)
             )

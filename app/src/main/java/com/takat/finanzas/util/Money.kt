@@ -34,3 +34,6 @@ fun Long.toEditableAmountString(): String {
     val fraction = kotlin.math.abs(this) % 100
     return if (fraction == 0L) whole.toString() else "$whole.${fraction.toString().padStart(2, '0')}"
 }
+
+fun dailyBudgetCents(balanceCents: Long, daysRemaining: Long): Long =
+    balanceCents / daysRemaining.coerceAtLeast(1)
