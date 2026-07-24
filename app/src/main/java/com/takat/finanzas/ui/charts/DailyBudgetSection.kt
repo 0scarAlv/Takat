@@ -50,7 +50,7 @@ fun DailyBudgetSection(
     onDayOfMonthChange: (Int) -> Unit,
     onBasisChange: (BudgetBasis) -> Unit
 ) {
-    var configExpanded by remember { mutableStateOf(true) }
+    var configExpanded by remember { mutableStateOf(false) }
 
     Card(
         modifier = Modifier.fillMaxWidth(),
