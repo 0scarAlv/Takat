@@ -133,23 +133,27 @@ fun AddTransactionScreen(
             cameraLauncher.launch(uri)
         }
     }
-    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocument()) { uri ->
-        if (uri != null) {
+    val fileLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenMultipleDocuments()) { uris ->
+        if (uris.isNotEmpty()) {
             coroutineScope.launch {
-                val bytes = repository.readFromUri(context.contentResolver, uri)
-                val mime = context.contentResolver.getType(uri)
-                val type = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.JSON
-                val name = queryFileName(context, uri) ?: if (type == AttachmentType.PDF) "Comprobante.pdf" else "Comprobante.json"
-                viewModel.onAttachmentPicked(PendingAttachment(type, bytes, name))
+                uris.forEach { uri ->
+                    val bytes = repository.readFromUri(context.contentResolver, uri)
+                    val mime = context.contentResolver.getType(uri)
+                    val type = if (mime == "application/pdf") AttachmentType.PDF else AttachmentType.JSON
+                    val name = queryFileName(context, uri) ?: if (type == AttachmentType.PDF) "Comprobante.pdf" else "Comprobante.json"
+                    viewModel.onAttachmentPicked(PendingAttachment(type, bytes, name))
+                }
             }
         }
     }
-    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickVisualMedia()) { uri ->
-        if (uri != null) {
+    val galleryLauncher = rememberLauncherForActivityResult(ActivityResultContracts.PickMultipleVisualMedia()) { uris ->
+        if (uris.isNotEmpty()) {
             coroutineScope.launch {
-                val bytes = repository.readFromUri(context.contentResolver, uri)
-                val name = queryFileName(context, uri) ?: "Imagen.jpg"
-                viewModel.onAttachmentPicked(PendingAttachment(AttachmentType.IMAGE, bytes, name))
+                uris.forEach { uri ->
+                    val bytes = repository.readFromUri(context.contentResolver, uri)
+                    val name = queryFileName(context, uri) ?: "Imagen.jpg"
+                    viewModel.onAttachmentPicked(PendingAttachment(AttachmentType.IMAGE, bytes, name))
+                }
             }
         }
     }
