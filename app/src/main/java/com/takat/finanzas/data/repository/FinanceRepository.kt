@@ -13,14 +13,19 @@ import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
 import com.takat.finanzas.data.entity.CategoryEntity
+import com.takat.finanzas.data.entity.FixedExpenseEntity
+import com.takat.finanzas.data.entity.FixedExpensePeriodStateEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
 import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.CategoryExpense
+import com.takat.finanzas.data.model.FixedExpensePaymentRecord
+import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
+import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -42,6 +47,8 @@ class FinanceRepository(
     private val transferDao = db.transferDao()
     private val attachmentDao = db.attachmentDao()
     private val budgetSettingsDao = db.budgetSettingsDao()
+    private val fixedExpenseDao = db.fixedExpenseDao()
+    private val fixedExpensePeriodStateDao = db.fixedExpensePeriodStateDao()
 
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
@@ -56,11 +63,81 @@ class FinanceRepository(
         }
 
     fun accountTotals(): Flow<AccountTotals> =
-        accountsWithBalance().map { list ->
+        combine(accountsWithBalance(), pendingFixedExpenses()) { list, pending ->
             val included = list.filter { it.account.includeInTotal }
             val capital = included.filter { !it.account.isDebt }.sumOf { it.balanceCents }
             val debtRaw = included.filter { it.account.isDebt }.sumOf { it.balanceCents }
-            AccountTotals(availableCents = capital + debtRaw, capitalCents = capital, debtCents = -debtRaw)
+            val pendingCents = pending.filter { it.isPending && it.countsTowardTotal }.sumOf { it.fixedExpense.amountCents }
+            AccountTotals(
+                availableCents = capital + debtRaw - pendingCents,
+                capitalCents = capital,
+                debtCents = -debtRaw,
+                pendingFixedExpensesCents = pendingCents
+            )
+        }
+
+    /** Every enabled fixed expense resolved against its current period (stored exception, or the implicit active/unpaid default). */
+    fun pendingFixedExpenses(): Flow<List<PendingFixedExpense>> =
+        combine(fixedExpenseDao.getAll(), fixedExpensePeriodStateDao.getAll(), accountDao.getAll()) { rules, states, accounts ->
+            val accountById = accounts.associateBy { it.id }
+            val stateByKey = states.associateBy { it.fixedExpenseId to it.periodKey }
+            rules.filter { it.enabled }.map { rule ->
+                val periodKey = FixedExpensePeriod.currentPeriodKey(rule.frequency)
+                val state = stateByKey[rule.id to periodKey]
+                PendingFixedExpense(
+                    fixedExpense = rule,
+                    periodKey = periodKey,
+                    active = state?.active ?: true,
+                    paidTransactionId = state?.paidTransactionId,
+                    countsTowardTotal = accountById[rule.accountId]?.includeInTotal ?: false
+                )
+            }
+        }
+
+    fun fixedExpenses(): Flow<List<FixedExpenseEntity>> = fixedExpenseDao.getAll()
+
+    suspend fun addFixedExpense(entity: FixedExpenseEntity): Long = fixedExpenseDao.insert(entity)
+    suspend fun updateFixedExpense(entity: FixedExpenseEntity) = fixedExpenseDao.update(entity)
+    suspend fun deleteFixedExpense(entity: FixedExpenseEntity) = fixedExpenseDao.delete(entity)
+
+    suspend fun setFixedExpensePeriodActive(fixedExpenseId: Long, periodKey: String, active: Boolean) {
+        upsertPeriodState(fixedExpenseId, periodKey) { it.copy(active = active) }
+    }
+
+    suspend fun markFixedExpensePaid(fixedExpenseId: Long, periodKey: String, transactionId: Long) {
+        upsertPeriodState(fixedExpenseId, periodKey) { it.copy(active = true, paidTransactionId = transactionId) }
+        refreshWidget()
+    }
+
+    suspend fun markFixedExpenseNotified(fixedExpenseId: Long, periodKey: String, notifiedAt: Long) {
+        upsertPeriodState(fixedExpenseId, periodKey) { it.copy(notifiedAt = notifiedAt) }
+    }
+
+    suspend fun wasFixedExpenseNotified(fixedExpenseId: Long, periodKey: String): Boolean =
+        fixedExpensePeriodStateDao.find(fixedExpenseId, periodKey)?.notifiedAt != null
+
+    private suspend fun upsertPeriodState(
+        fixedExpenseId: Long,
+        periodKey: String,
+        mutate: (FixedExpensePeriodStateEntity) -> FixedExpensePeriodStateEntity
+    ) {
+        val existing = fixedExpensePeriodStateDao.find(fixedExpenseId, periodKey)
+        val base = existing ?: FixedExpensePeriodStateEntity(fixedExpenseId = fixedExpenseId, periodKey = periodKey)
+        val updated = mutate(base)
+        if (existing == null) fixedExpensePeriodStateDao.insert(updated) else fixedExpensePeriodStateDao.update(updated)
+    }
+
+    /** Paid periods across all fixed expenses, newest first, for the "Historial" report. */
+    fun paidHistory(): Flow<List<FixedExpensePaymentRecord>> =
+        combine(fixedExpensePeriodStateDao.getAll(), fixedExpenseDao.getAll(), transactionDao.getAll()) { states, rules, transactions ->
+            val ruleById = rules.associateBy { it.id }
+            val transactionById = transactions.associateBy { it.id }
+            states.mapNotNull { state ->
+                val paidTransactionId = state.paidTransactionId ?: return@mapNotNull null
+                val rule = ruleById[state.fixedExpenseId] ?: return@mapNotNull null
+                val transaction = transactionById[paidTransactionId] ?: return@mapNotNull null
+                FixedExpensePaymentRecord(rule, state.periodKey, transaction)
+            }.sortedByDescending { it.transaction.date }
         }
 
     fun expensesByCategory(fromInclusive: Long, toExclusive: Long): Flow<List<CategoryExpense>> =

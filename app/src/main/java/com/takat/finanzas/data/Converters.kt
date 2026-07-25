@@ -5,6 +5,7 @@ import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.BudgetBasis
 import com.takat.finanzas.data.entity.BudgetPeriodType
 import com.takat.finanzas.data.entity.CategoryKind
+import com.takat.finanzas.data.entity.FixedExpenseFrequency
 
 class Converters {
     @TypeConverter
@@ -30,4 +31,10 @@ class Converters {
 
     @TypeConverter
     fun toBudgetBasis(value: String): BudgetBasis = BudgetBasis.valueOf(value)
+
+    @TypeConverter
+    fun fromFixedExpenseFrequency(frequency: FixedExpenseFrequency): String = frequency.name
+
+    @TypeConverter
+    fun toFixedExpenseFrequency(value: String): FixedExpenseFrequency = FixedExpenseFrequency.valueOf(value)
 }

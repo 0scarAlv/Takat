@@ -37,7 +37,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit) {
     val repository = rememberRepository()
     val viewModel: SettingsViewModel = viewModel(factory = LambdaViewModelFactory { SettingsViewModel(repository) })
     val uiState by viewModel.uiState.collectAsState()
@@ -79,6 +79,18 @@ fun SettingsScreen(onBack: () -> Unit) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Gestioná tus gastos recurrentes: alquiler, servicios, etc.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = onOpenFixedExpenses, modifier = Modifier.fillMaxWidth()) {
+                Text("Gestionar gastos fijos")
+            }
+
+            Spacer(Modifier.height(32.dp))
             Text("Datos", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Exportá tus cuentas, movimientos y comprobantes adjuntos en un solo archivo .zip, para revisarlos o pasarlos a otro teléfono.",
