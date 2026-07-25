@@ -11,6 +11,8 @@ import com.takat.finanzas.data.dao.AccountDao
 import com.takat.finanzas.data.dao.AttachmentDao
 import com.takat.finanzas.data.dao.BudgetSettingsDao
 import com.takat.finanzas.data.dao.CategoryDao
+import com.takat.finanzas.data.dao.FixedExpenseDao
+import com.takat.finanzas.data.dao.FixedExpensePeriodStateDao
 import com.takat.finanzas.data.dao.TransactionDao
 import com.takat.finanzas.data.dao.TransferDao
 import com.takat.finanzas.data.entity.AccountEntity
@@ -18,6 +20,8 @@ import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
+import com.takat.finanzas.data.entity.FixedExpenseEntity
+import com.takat.finanzas.data.entity.FixedExpensePeriodStateEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
 import kotlinx.coroutines.CoroutineScope
@@ -31,9 +35,11 @@ import kotlinx.coroutines.launch
         TransactionEntity::class,
         TransferEntity::class,
         AttachmentEntity::class,
-        BudgetSettingsEntity::class
+        BudgetSettingsEntity::class,
+        FixedExpenseEntity::class,
+        FixedExpensePeriodStateEntity::class
     ],
-    version = 4,
+    version = 5,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -44,6 +50,8 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun transferDao(): TransferDao
     abstract fun attachmentDao(): AttachmentDao
     abstract fun budgetSettingsDao(): BudgetSettingsDao
+    abstract fun fixedExpenseDao(): FixedExpenseDao
+    abstract fun fixedExpensePeriodStateDao(): FixedExpensePeriodStateDao
 
     companion object {
         @Volatile
@@ -61,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -114,6 +122,52 @@ abstract class AppDatabase : RoomDatabase() {
                         `basis` TEXT NOT NULL DEFAULT 'DISPONIBLE'
                     )
                     """.trimIndent()
+                )
+            }
+        }
+
+        private val MIGRATION_4_5 = object : Migration(4, 5) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `fixed_expenses` (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `name` TEXT NOT NULL,
+                        `amountCents` INTEGER NOT NULL,
+                        `accountId` INTEGER NOT NULL,
+                        `categoryId` INTEGER,
+                        `frequency` TEXT NOT NULL,
+                        `dayOfMonth` INTEGER NOT NULL,
+                        `notifyEnabled` INTEGER NOT NULL DEFAULT 0,
+                        `enabled` INTEGER NOT NULL DEFAULT 1,
+                        `createdAt` INTEGER NOT NULL,
+                        FOREIGN KEY(`accountId`) REFERENCES `accounts`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`categoryId`) REFERENCES `categories`(`id`) ON DELETE SET NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expenses_accountId` ON `fixed_expenses` (`accountId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expenses_categoryId` ON `fixed_expenses` (`categoryId`)")
+
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `fixed_expense_period_state` (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `fixedExpenseId` INTEGER NOT NULL,
+                        `periodKey` TEXT NOT NULL,
+                        `active` INTEGER NOT NULL DEFAULT 1,
+                        `paidTransactionId` INTEGER,
+                        `notifiedAt` INTEGER,
+                        FOREIGN KEY(`fixedExpenseId`) REFERENCES `fixed_expenses`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`paidTransactionId`) REFERENCES `transactions`(`id`) ON DELETE SET NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId` ON `fixed_expense_period_state` (`fixedExpenseId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_paidTransactionId` ON `fixed_expense_period_state` (`paidTransactionId`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId_periodKey` " +
+                        "ON `fixed_expense_period_state` (`fixedExpenseId`, `periodKey`)"
                 )
             }
         }

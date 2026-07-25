@@ -13,6 +13,8 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.takat.finanzas.ui.account.AccountDetailScreen
 import com.takat.finanzas.ui.account.AddEditAccountScreen
+import com.takat.finanzas.ui.fixedexpense.FixedExpenseFormScreen
+import com.takat.finanzas.ui.fixedexpense.FixedExpensesScreen
 import com.takat.finanzas.ui.home.HomeScreen
 import com.takat.finanzas.ui.settings.SettingsScreen
 import com.takat.finanzas.ui.stats.CategoryExpensesScreen
@@ -25,21 +27,29 @@ private object Routes {
     const val ACCOUNT_NEW = "account/new"
     const val ACCOUNT_DETAIL = "account/{accountId}"
     const val ACCOUNT_EDIT = "account/{accountId}/edit"
-    const val TRANSACTION_NEW = "transaction/new?accountId={accountId}"
+    const val TRANSACTION_NEW = "transaction/new?accountId={accountId}&fixedExpenseId={fixedExpenseId}"
     const val TRANSFER_NEW = "transfer/new"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
     const val SETTINGS = "settings"
+    const val FIXED_EXPENSES = "fixed-expenses"
+    const val FIXED_EXPENSE_FORM = "fixed-expenses/form?id={id}"
 
     fun accountDetail(id: Long) = "account/$id"
     fun accountEdit(id: Long) = "account/$id/edit"
-    fun transactionNew(accountId: Long? = null) = "transaction/new?accountId=${accountId ?: -1L}"
+    fun transactionNew(accountId: Long? = null, fixedExpenseId: Long? = null) =
+        "transaction/new?accountId=${accountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
     fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
+    fun fixedExpenseForm(id: Long? = null) = "fixed-expenses/form?id=${id ?: -1L}"
 }
 
 @Composable
-fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) }) {
+fun TakatNavGraph(
+    pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) },
+    pendingFixedExpenseId: MutableState<Long?> = remember { mutableStateOf(null) }
+) {
     val navController = rememberNavController()
     val widgetAction by pendingWidgetAction
+    val fixedExpenseId by pendingFixedExpenseId
 
     LaunchedEffect(widgetAction) {
         when (widgetAction) {
@@ -47,6 +57,13 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
             WidgetActions.ACTION_NEW_TRANSFER -> navController.navigate(Routes.TRANSFER_NEW)
         }
         if (widgetAction != null) pendingWidgetAction.value = null
+    }
+
+    LaunchedEffect(fixedExpenseId) {
+        if (fixedExpenseId != null) {
+            navController.navigate(Routes.transactionNew(fixedExpenseId = fixedExpenseId))
+            pendingFixedExpenseId.value = null
+        }
     }
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
@@ -59,7 +76,9 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
                 onOpenCategoryExpenses = { categoryId, from, to ->
                     navController.navigate(Routes.categoryExpenses(categoryId, from, to))
                 },
-                onOpenSettings = { navController.navigate(Routes.SETTINGS) }
+                onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
+                onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) }
             )
         }
 
@@ -102,11 +121,16 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
 
         composable(
             Routes.TRANSACTION_NEW,
-            arguments = listOf(navArgument("accountId") { type = NavType.LongType; defaultValue = -1L })
+            arguments = listOf(
+                navArgument("accountId") { type = NavType.LongType; defaultValue = -1L },
+                navArgument("fixedExpenseId") { type = NavType.LongType; defaultValue = -1L }
+            )
         ) { backStackEntry ->
             val rawId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+            val rawFixedExpenseId = backStackEntry.arguments?.getLong("fixedExpenseId") ?: -1L
             AddTransactionScreen(
                 preselectedAccountId = rawId.takeIf { it >= 0 },
+                preselectedFixedExpenseId = rawFixedExpenseId.takeIf { it >= 0 },
                 onDone = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() }
             )
@@ -138,7 +162,30 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
         }
 
         composable(Routes.SETTINGS) {
-            SettingsScreen(onBack = { navController.popBackStack() })
+            SettingsScreen(
+                onBack = { navController.popBackStack() },
+                onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) }
+            )
+        }
+
+        composable(Routes.FIXED_EXPENSES) {
+            FixedExpensesScreen(
+                onBack = { navController.popBackStack() },
+                onAddNew = { navController.navigate(Routes.fixedExpenseForm()) },
+                onEdit = { id -> navController.navigate(Routes.fixedExpenseForm(id)) }
+            )
+        }
+
+        composable(
+            Routes.FIXED_EXPENSE_FORM,
+            arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L })
+        ) { backStackEntry ->
+            val rawId = backStackEntry.arguments?.getLong("id") ?: -1L
+            FixedExpenseFormScreen(
+                fixedExpenseId = rawId.takeIf { it >= 0 },
+                onDone = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() }
+            )
         }
     }
 }

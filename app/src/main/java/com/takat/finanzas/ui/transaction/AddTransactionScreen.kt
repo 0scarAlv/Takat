@@ -64,6 +64,7 @@ import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
+import com.takat.finanzas.ui.components.FixedExpensePicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
@@ -73,12 +74,13 @@ import java.io.File
 @Composable
 fun AddTransactionScreen(
     preselectedAccountId: Long?,
+    preselectedFixedExpenseId: Long? = null,
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: AddTransactionViewModel = viewModel(
-        factory = LambdaViewModelFactory { AddTransactionViewModel(repository, preselectedAccountId) }
+        factory = LambdaViewModelFactory { AddTransactionViewModel(repository, preselectedAccountId, preselectedFixedExpenseId) }
     )
     val uiState by viewModel.uiState.collectAsState()
     var accountMenuExpanded by remember { mutableStateOf(false) }
@@ -174,6 +176,18 @@ fun AddTransactionScreen(
                     onClick = { viewModel.onTypeChange(false) },
                     shape = SegmentedButtonDefaults.itemShape(1, 2)
                 ) { Text("Ingreso") }
+            }
+
+            if (uiState.pendingFixedExpenses.isNotEmpty()) {
+                Column {
+                    Text("¿Es un gasto fijo?", style = MaterialTheme.typography.labelLarge)
+                    FixedExpensePicker(
+                        pending = uiState.pendingFixedExpenses,
+                        selectedId = uiState.selectedFixedExpenseId,
+                        onToggle = viewModel::onFixedExpenseToggle,
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
 
             ExposedDropdownMenuBox(

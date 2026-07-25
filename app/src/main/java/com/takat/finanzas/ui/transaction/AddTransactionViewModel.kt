@@ -7,8 +7,10 @@ import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.TransactionEntity
+import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.util.parseAmountToCents
+import com.takat.finanzas.util.toEditableAmountString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -32,13 +34,16 @@ data class AddTransactionUiState(
     val note: String = "",
     val dateMillis: Long = System.currentTimeMillis(),
     val pendingAttachment: PendingAttachment? = null,
+    val pendingFixedExpenses: List<PendingFixedExpense> = emptyList(),
+    val selectedFixedExpenseId: Long? = null,
     val error: String? = null,
     val saved: Boolean = false
 )
 
 class AddTransactionViewModel(
     private val repository: FinanceRepository,
-    preselectedAccountId: Long?
+    preselectedAccountId: Long?,
+    private val preselectedFixedExpenseId: Long? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransactionUiState(accountId = preselectedAccountId))
@@ -56,6 +61,15 @@ class AddTransactionViewModel(
         viewModelScope.launch {
             repository.categories.collect { cats -> _uiState.update { it.copy(categories = cats) } }
         }
+        viewModelScope.launch {
+            repository.pendingFixedExpenses().collect { pending ->
+                val stillSelectable = pending.filter { it.isPending }
+                _uiState.update { it.copy(pendingFixedExpenses = stillSelectable) }
+                if (preselectedFixedExpenseId != null && _uiState.value.selectedFixedExpenseId == null) {
+                    stillSelectable.find { it.fixedExpense.id == preselectedFixedExpenseId }?.let { onFixedExpenseSelect(it) }
+                }
+            }
+        }
     }
 
     fun onAccountChange(id: Long) = _uiState.update { it.copy(accountId = id) }
@@ -65,6 +79,27 @@ class AddTransactionViewModel(
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
     fun onAttachmentPicked(attachment: PendingAttachment) = _uiState.update { it.copy(pendingAttachment = attachment) }
     fun clearPendingAttachment() = _uiState.update { it.copy(pendingAttachment = null) }
+
+    fun onFixedExpenseToggle(fixedExpenseId: Long) {
+        if (_uiState.value.selectedFixedExpenseId == fixedExpenseId) {
+            _uiState.update { it.copy(selectedFixedExpenseId = null) }
+        } else {
+            _uiState.value.pendingFixedExpenses.find { it.fixedExpense.id == fixedExpenseId }?.let { onFixedExpenseSelect(it) }
+        }
+    }
+
+    private fun onFixedExpenseSelect(pending: PendingFixedExpense) {
+        _uiState.update {
+            it.copy(
+                selectedFixedExpenseId = pending.fixedExpense.id,
+                accountId = pending.fixedExpense.accountId,
+                categoryId = pending.fixedExpense.categoryId,
+                isExpense = true,
+                amountText = pending.fixedExpense.amountCents.toEditableAmountString(),
+                note = "Pago de ${pending.fixedExpense.name}"
+            )
+        }
+    }
 
     fun addCategory(name: String, emoji: String) {
         viewModelScope.launch {
@@ -101,6 +136,13 @@ class AddTransactionViewModel(
                     repository.addImageAttachment(transactionId, pending.bytes)
                 } else {
                     repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
+                }
+            }
+            state.selectedFixedExpenseId?.let { fixedExpenseId ->
+                val pendingItem = state.pendingFixedExpenses.find { it.fixedExpense.id == fixedExpenseId }
+                // A partial payment (less than the full amount) shouldn't clear it from pending — it's not paid off yet.
+                if (pendingItem != null && cents >= pendingItem.fixedExpense.amountCents) {
+                    repository.markFixedExpensePaid(fixedExpenseId, pendingItem.periodKey, transactionId)
                 }
             }
             _uiState.update { it.copy(saved = true) }

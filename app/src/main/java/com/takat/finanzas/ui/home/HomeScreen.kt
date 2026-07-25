@@ -62,6 +62,7 @@ import com.takat.finanzas.ui.charts.ChartsScreen
 import com.takat.finanzas.ui.components.MovementDetailDialog
 import com.takat.finanzas.ui.components.MovementRow
 import com.takat.finanzas.ui.stats.StatsScreen
+import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.theme.NegativeRed
 import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
@@ -77,7 +78,9 @@ fun HomeScreen(
     onAddTransaction: () -> Unit,
     onAddTransfer: () -> Unit,
     onOpenCategoryExpenses: (categoryId: Long?, from: Long, to: Long) -> Unit,
-    onOpenSettings: () -> Unit
+    onOpenSettings: () -> Unit,
+    onOpenFixedExpenses: () -> Unit,
+    onPayFixedExpense: (fixedExpenseId: Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: HomeViewModel = viewModel(factory = LambdaViewModelFactory { HomeViewModel(repository) })
@@ -155,7 +158,9 @@ fun HomeScreen(
                     1 -> HomeContent(
                         uiState = uiState,
                         onOpenAccount = onOpenAccount,
-                        onMovementClick = { selectedMovement = it }
+                        onMovementClick = { selectedMovement = it },
+                        onOpenFixedExpenses = onOpenFixedExpenses,
+                        onPayFixedExpense = onPayFixedExpense
                     )
                     else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses)
                 }
@@ -195,7 +200,9 @@ fun HomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
-    onMovementClick: (Movement) -> Unit
+    onMovementClick: (Movement) -> Unit,
+    onOpenFixedExpenses: () -> Unit,
+    onPayFixedExpense: (fixedExpenseId: Long) -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -203,6 +210,13 @@ private fun HomeContent(
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
         item { TotalsCard(uiState.totals) }
+
+        item {
+            FixedExpensesSection(
+                onManageClick = onOpenFixedExpenses,
+                onPayClick = onPayFixedExpense
+            )
+        }
 
         if (uiState.accounts.isNotEmpty()) {
             item {
@@ -304,6 +318,17 @@ private fun TotalsCard(totals: AccountTotals, modifier: Modifier = Modifier) {
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
+                }
+                if (totals.pendingFixedExpensesCents > 0) {
+                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
+                        Text("Gasto fijo", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            totals.pendingFixedExpensesCents.centsToDisplay(),
+                            style = MaterialTheme.typography.titleMedium,
+                            fontWeight = FontWeight.SemiBold,
+                            color = AmberAccent
+                        )
+                    }
                 }
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Deuda total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
