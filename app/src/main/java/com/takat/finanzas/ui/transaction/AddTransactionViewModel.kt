@@ -31,7 +31,7 @@ data class AddTransactionUiState(
     val categoryId: Long? = null,
     val note: String = "",
     val dateMillis: Long = System.currentTimeMillis(),
-    val pendingAttachment: PendingAttachment? = null,
+    val pendingAttachments: List<PendingAttachment> = emptyList(),
     val error: String? = null,
     val saved: Boolean = false
 )
@@ -63,8 +63,11 @@ class AddTransactionViewModel(
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
-    fun onAttachmentPicked(attachment: PendingAttachment) = _uiState.update { it.copy(pendingAttachment = attachment) }
-    fun clearPendingAttachment() = _uiState.update { it.copy(pendingAttachment = null) }
+    fun onAttachmentPicked(attachment: PendingAttachment) =
+        _uiState.update { it.copy(pendingAttachments = it.pendingAttachments + attachment) }
+
+    fun removeAttachment(attachment: PendingAttachment) =
+        _uiState.update { it.copy(pendingAttachments = it.pendingAttachments - attachment) }
 
     fun addCategory(name: String, emoji: String) {
         viewModelScope.launch {
@@ -96,7 +99,7 @@ class AddTransactionViewModel(
                     date = state.dateMillis
                 )
             )
-            state.pendingAttachment?.let { pending ->
+            state.pendingAttachments.forEach { pending ->
                 if (pending.type == AttachmentType.IMAGE) {
                     repository.addImageAttachment(transactionId, pending.bytes)
                 } else {

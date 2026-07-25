@@ -1,11 +1,13 @@
 package com.takat.finanzas.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -37,9 +39,17 @@ private object Routes {
 }
 
 @Composable
-fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) }) {
+fun TakatNavGraph(
+    pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) },
+    pendingShareUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
+) {
     val navController = rememberNavController()
     val widgetAction by pendingWidgetAction
+    val shareUris by pendingShareUris
+    // Snapshot of the share URIs consumed by the currently-open "new transaction" screen.
+    // Kept separate from pendingShareUris so navigating there again later (e.g. via the FAB)
+    // doesn't re-attach stale files from a previous share.
+    var consumedShareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
     LaunchedEffect(widgetAction) {
         when (widgetAction) {
@@ -47,6 +57,14 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
             WidgetActions.ACTION_NEW_TRANSFER -> navController.navigate(Routes.TRANSFER_NEW)
         }
         if (widgetAction != null) pendingWidgetAction.value = null
+    }
+
+    LaunchedEffect(shareUris) {
+        if (shareUris.isNotEmpty()) {
+            consumedShareUris = shareUris
+            pendingShareUris.value = emptyList()
+            navController.navigate(Routes.transactionNew())
+        }
     }
 
     NavHost(navController = navController, startDestination = Routes.HOME) {
@@ -107,6 +125,8 @@ fun TakatNavGraph(pendingWidgetAction: MutableState<String?> = remember { mutabl
             val rawId = backStackEntry.arguments?.getLong("accountId") ?: -1L
             AddTransactionScreen(
                 preselectedAccountId = rawId.takeIf { it >= 0 },
+                initialShareUris = consumedShareUris,
+                onShareUrisConsumed = { consumedShareUris = emptyList() },
                 onDone = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() }
             )

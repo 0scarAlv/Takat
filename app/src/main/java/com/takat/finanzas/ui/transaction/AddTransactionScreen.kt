@@ -10,6 +10,8 @@ import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.ExperimentalLayoutApi
+import androidx.compose.foundation.layout.FlowRow
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -69,10 +71,12 @@ import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
 import java.io.File
 
-@OptIn(ExperimentalMaterial3Api::class)
+@OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
 fun AddTransactionScreen(
     preselectedAccountId: Long?,
+    initialShareUris: List<Uri> = emptyList(),
+    onShareUrisConsumed: () -> Unit = {},
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
@@ -88,6 +92,27 @@ fun AddTransactionScreen(
     val context = LocalContext.current
 
     LaunchedEffect(uiState.saved) { if (uiState.saved) onDone() }
+
+    LaunchedEffect(initialShareUris) {
+        if (initialShareUris.isNotEmpty()) {
+            initialShareUris.forEach { uri ->
+                val bytes = repository.readFromUri(context.contentResolver, uri)
+                val mime = context.contentResolver.getType(uri)
+                val type = when {
+                    mime?.startsWith("image/") == true -> AttachmentType.IMAGE
+                    mime == "application/pdf" -> AttachmentType.PDF
+                    else -> AttachmentType.JSON
+                }
+                val name = queryFileName(context, uri) ?: when (type) {
+                    AttachmentType.IMAGE -> "Imagen.jpg"
+                    AttachmentType.PDF -> "Comprobante.pdf"
+                    AttachmentType.JSON -> "Comprobante.json"
+                }
+                viewModel.onAttachmentPicked(PendingAttachment(type, bytes, name))
+            }
+            onShareUrisConsumed()
+        }
+    }
 
     var pendingCaptureFile by remember { mutableStateOf<File?>(null) }
     val cameraLauncher = rememberLauncherForActivityResult(ActivityResultContracts.TakePicture()) { success ->
@@ -268,23 +293,30 @@ fun AddTransactionScreen(
                         Text("Archivo")
                     }
                 }
-                uiState.pendingAttachment?.let { attachment ->
-                    AssistChip(
-                        onClick = {},
+                if (uiState.pendingAttachments.isNotEmpty()) {
+                    FlowRow(
                         modifier = Modifier.padding(top = 8.dp),
-                        leadingIcon = {
-                            Icon(
-                                if (attachment.type == AttachmentType.IMAGE) Icons.Filled.PhotoCamera else Icons.Filled.Description,
-                                contentDescription = null
+                        horizontalArrangement = Arrangement.spacedBy(8.dp),
+                        verticalArrangement = Arrangement.spacedBy(8.dp)
+                    ) {
+                        uiState.pendingAttachments.forEach { attachment ->
+                            AssistChip(
+                                onClick = {},
+                                leadingIcon = {
+                                    Icon(
+                                        if (attachment.type == AttachmentType.IMAGE) Icons.Filled.PhotoCamera else Icons.Filled.Description,
+                                        contentDescription = null
+                                    )
+                                },
+                                label = { Text(attachment.label) },
+                                trailingIcon = {
+                                    IconButton(onClick = { viewModel.removeAttachment(attachment) }) {
+                                        Icon(Icons.Filled.Close, contentDescription = "Quitar adjunto")
+                                    }
+                                }
                             )
-                        },
-                        label = { Text(attachment.label) },
-                        trailingIcon = {
-                            IconButton(onClick = viewModel::clearPendingAttachment) {
-                                Icon(Icons.Filled.Close, contentDescription = "Quitar adjunto")
-                            }
                         }
-                    )
+                    }
                 }
             }
 
