@@ -27,6 +27,7 @@ data class FixedExpenseFormUiState(
     val categoryId: Long? = null,
     val frequency: FixedExpenseFrequency = FixedExpenseFrequency.MENSUAL,
     val dayOfMonth: Int = 1,
+    val quincenaOnly: Boolean = true,
     val notifyEnabled: Boolean = false,
     val enabled: Boolean = true,
     val error: String? = null,
@@ -64,6 +65,7 @@ class FixedExpenseFormViewModel(
                         categoryId = existing.categoryId,
                         frequency = existing.frequency,
                         dayOfMonth = existing.dayOfMonth,
+                        quincenaOnly = existing.quincenaOnly,
                         notifyEnabled = existing.notifyEnabled,
                         enabled = existing.enabled
                     )
@@ -78,6 +80,7 @@ class FixedExpenseFormViewModel(
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
     fun onFrequencyChange(frequency: FixedExpenseFrequency) = _uiState.update { it.copy(frequency = frequency) }
     fun onDayOfMonthChange(day: Int) = _uiState.update { it.copy(dayOfMonth = day) }
+    fun onQuincenaOnlyChange(value: Boolean) = _uiState.update { it.copy(quincenaOnly = value) }
     fun onNotifyEnabledChange(value: Boolean) = _uiState.update { it.copy(notifyEnabled = value) }
     fun onEnabledChange(value: Boolean) = _uiState.update { it.copy(enabled = value) }
 
@@ -113,6 +116,7 @@ class FixedExpenseFormViewModel(
                 categoryId = state.categoryId,
                 frequency = state.frequency,
                 dayOfMonth = state.dayOfMonth,
+                quincenaOnly = state.quincenaOnly,
                 notifyEnabled = state.notifyEnabled,
                 enabled = state.enabled
             )

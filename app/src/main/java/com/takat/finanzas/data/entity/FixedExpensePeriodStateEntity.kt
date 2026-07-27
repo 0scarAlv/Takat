@@ -10,6 +10,10 @@ import androidx.room.PrimaryKey
  * implicitly active and unpaid — rows only exist once the user deviates from that default
  * (deactivates the period, or gets notified about it). How much has been paid is derived from
  * [TransactionEntity] rows tagged with this period, not stored here.
+ *
+ * The three `*NotifiedAt` columns track independently whether each MENSUAL reminder stage (day
+ * before, due day, 2-days-after follow-up) has already fired for this period; QUINCENAL only ever
+ * uses [dueNotifiedAt].
  */
 @Entity(
     tableName = "fixed_expense_period_state",
@@ -31,5 +35,7 @@ data class FixedExpensePeriodStateEntity(
     val fixedExpenseId: Long,
     val periodKey: String,
     val active: Boolean = true,
-    val notifiedAt: Long? = null
+    val preNotifiedAt: Long? = null,
+    val dueNotifiedAt: Long? = null,
+    val followUpNotifiedAt: Long? = null
 )
