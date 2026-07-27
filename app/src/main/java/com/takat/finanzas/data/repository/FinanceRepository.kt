@@ -67,7 +67,7 @@ class FinanceRepository(
             val included = list.filter { it.account.includeInTotal }
             val capital = included.filter { !it.account.isDebt }.sumOf { it.balanceCents }
             val debtRaw = included.filter { it.account.isDebt }.sumOf { it.balanceCents }
-            val pendingCents = pending.filter { it.isPending && it.countsTowardTotal }.sumOf { it.fixedExpense.amountCents }
+            val pendingCents = pending.filter { it.isPending && it.countsTowardTotal }.sumOf { it.remainingCents }
             AccountTotals(
                 availableCents = capital + debtRaw - pendingCents,
                 capitalCents = capital,
@@ -78,17 +78,27 @@ class FinanceRepository(
 
     /** Every enabled fixed expense resolved against its current period (stored exception, or the implicit active/unpaid default). */
     fun pendingFixedExpenses(): Flow<List<PendingFixedExpense>> =
-        combine(fixedExpenseDao.getAll(), fixedExpensePeriodStateDao.getAll(), accountDao.getAll()) { rules, states, accounts ->
+        combine(
+            fixedExpenseDao.getAll(),
+            fixedExpensePeriodStateDao.getAll(),
+            accountDao.getAll(),
+            transactionDao.getAll()
+        ) { rules, states, accounts, transactions ->
             val accountById = accounts.associateBy { it.id }
             val stateByKey = states.associateBy { it.fixedExpenseId to it.periodKey }
+            val paymentsByKey = transactions
+                .filter { it.fixedExpenseId != null && it.fixedExpensePeriodKey != null }
+                .groupBy { it.fixedExpenseId!! to it.fixedExpensePeriodKey!! }
             rules.filter { it.enabled }.map { rule ->
                 val periodKey = FixedExpensePeriod.currentPeriodKey(rule.frequency)
                 val state = stateByKey[rule.id to periodKey]
+                val payments = paymentsByKey[rule.id to periodKey].orEmpty()
                 PendingFixedExpense(
                     fixedExpense = rule,
                     periodKey = periodKey,
                     active = state?.active ?: true,
-                    paidTransactionId = state?.paidTransactionId,
+                    paidCents = payments.sumOf { -it.amountCents },
+                    lastPaymentTransactionId = payments.maxByOrNull { it.date }?.id,
                     countsTowardTotal = accountById[rule.accountId]?.includeInTotal ?: false
                 )
             }
@@ -102,11 +112,6 @@ class FinanceRepository(
 
     suspend fun setFixedExpensePeriodActive(fixedExpenseId: Long, periodKey: String, active: Boolean) {
         upsertPeriodState(fixedExpenseId, periodKey) { it.copy(active = active) }
-    }
-
-    suspend fun markFixedExpensePaid(fixedExpenseId: Long, periodKey: String, transactionId: Long) {
-        upsertPeriodState(fixedExpenseId, periodKey) { it.copy(active = true, paidTransactionId = transactionId) }
-        refreshWidget()
     }
 
     suspend fun markFixedExpenseNotified(fixedExpenseId: Long, periodKey: String, notifiedAt: Long) {
@@ -127,17 +132,19 @@ class FinanceRepository(
         if (existing == null) fixedExpensePeriodStateDao.insert(updated) else fixedExpensePeriodStateDao.update(updated)
     }
 
-    /** Paid periods across all fixed expenses, newest first, for the "Historial" report. */
+    /** Periods with at least one payment toward them, across all fixed expenses, newest first, for the "Historial" report. */
     fun paidHistory(): Flow<List<FixedExpensePaymentRecord>> =
-        combine(fixedExpensePeriodStateDao.getAll(), fixedExpenseDao.getAll(), transactionDao.getAll()) { states, rules, transactions ->
+        combine(transactionDao.getAll(), fixedExpenseDao.getAll()) { transactions, rules ->
             val ruleById = rules.associateBy { it.id }
-            val transactionById = transactions.associateBy { it.id }
-            states.mapNotNull { state ->
-                val paidTransactionId = state.paidTransactionId ?: return@mapNotNull null
-                val rule = ruleById[state.fixedExpenseId] ?: return@mapNotNull null
-                val transaction = transactionById[paidTransactionId] ?: return@mapNotNull null
-                FixedExpensePaymentRecord(rule, state.periodKey, transaction)
-            }.sortedByDescending { it.transaction.date }
+            transactions
+                .filter { it.fixedExpenseId != null && it.fixedExpensePeriodKey != null }
+                .groupBy { it.fixedExpenseId!! to it.fixedExpensePeriodKey!! }
+                .mapNotNull { (key, payments) ->
+                    val rule = ruleById[key.first] ?: return@mapNotNull null
+                    val lastPayment = payments.maxByOrNull { it.date } ?: return@mapNotNull null
+                    FixedExpensePaymentRecord(rule, key.second, payments.sumOf { -it.amountCents }, lastPayment)
+                }
+                .sortedByDescending { it.lastPayment.date }
         }
 
     fun expensesByCategory(fromInclusive: Long, toExclusive: Long): Flow<List<CategoryExpense>> =

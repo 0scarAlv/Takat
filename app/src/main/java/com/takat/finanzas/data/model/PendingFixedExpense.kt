@@ -7,8 +7,10 @@ data class PendingFixedExpense(
     val fixedExpense: FixedExpenseEntity,
     val periodKey: String,
     val active: Boolean,
-    val paidTransactionId: Long?,
+    val paidCents: Long,
+    val lastPaymentTransactionId: Long?,
     val countsTowardTotal: Boolean
 ) {
-    val isPending: Boolean get() = active && paidTransactionId == null
+    val remainingCents: Long get() = (fixedExpense.amountCents - paidCents).coerceAtLeast(0)
+    val isPending: Boolean get() = active && remainingCents > 0
 }

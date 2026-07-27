@@ -15,9 +15,13 @@ data class FixedExpenseRowUiState(
     val periodKey: String,
     val name: String,
     val amountCents: Long,
+    val paidCents: Long,
+    val remainingCents: Long,
     val active: Boolean,
-    val paidMovement: Movement.TransactionMovement?
-)
+    val lastPayment: Movement.TransactionMovement?
+) {
+    val isFullyPaid: Boolean get() = remainingCents <= 0
+}
 
 data class FixedExpensesSectionUiState(
     val rows: List<FixedExpenseRowUiState> = emptyList(),
@@ -36,13 +40,15 @@ class FixedExpensesSectionViewModel(private val repository: FinanceRepository) :
                     periodKey = it.periodKey,
                     name = it.fixedExpense.name,
                     amountCents = it.fixedExpense.amountCents,
+                    paidCents = it.paidCents,
+                    remainingCents = it.remainingCents,
                     active = it.active,
-                    paidMovement = it.paidTransactionId?.let { txId -> movementByTransactionId[txId] }
+                    lastPayment = it.lastPaymentTransactionId?.let { txId -> movementByTransactionId[txId] }
                 )
             }
             FixedExpensesSectionUiState(
                 rows = rows,
-                pendingTotalCents = rows.filter { it.active && it.paidMovement == null }.sumOf { it.amountCents }
+                pendingTotalCents = rows.filter { it.active && !it.isFullyPaid }.sumOf { it.remainingCents }
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FixedExpensesSectionUiState())
 

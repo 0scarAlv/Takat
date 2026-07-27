@@ -95,7 +95,7 @@ class AddTransactionViewModel(
                 accountId = pending.fixedExpense.accountId,
                 categoryId = pending.fixedExpense.categoryId,
                 isExpense = true,
-                amountText = pending.fixedExpense.amountCents.toEditableAmountString(),
+                amountText = pending.remainingCents.toEditableAmountString(),
                 note = "Pago de ${pending.fixedExpense.name}"
             )
         }
@@ -121,6 +121,9 @@ class AddTransactionViewModel(
             _uiState.update { it.copy(error = "Ingresá un monto válido") }
             return
         }
+        val selectedFixedExpensePeriodKey = state.selectedFixedExpenseId?.let { id ->
+            state.pendingFixedExpenses.find { it.fixedExpense.id == id }?.periodKey
+        }
         viewModelScope.launch {
             val transactionId = repository.addTransaction(
                 TransactionEntity(
@@ -128,7 +131,11 @@ class AddTransactionViewModel(
                     categoryId = state.categoryId,
                     amountCents = if (state.isExpense) -cents else cents,
                     note = state.note.trim().ifBlank { null },
-                    date = state.dateMillis
+                    date = state.dateMillis,
+                    // Tagging the transaction itself (rather than a separately tracked "paid" flag) means
+                    // deleting it later automatically un-counts it — two partial payments (20 + 30) still add up.
+                    fixedExpenseId = state.selectedFixedExpenseId,
+                    fixedExpensePeriodKey = selectedFixedExpensePeriodKey
                 )
             )
             state.pendingAttachment?.let { pending ->
@@ -136,13 +143,6 @@ class AddTransactionViewModel(
                     repository.addImageAttachment(transactionId, pending.bytes)
                 } else {
                     repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
-                }
-            }
-            state.selectedFixedExpenseId?.let { fixedExpenseId ->
-                val pendingItem = state.pendingFixedExpenses.find { it.fixedExpense.id == fixedExpenseId }
-                // A partial payment (less than the full amount) shouldn't clear it from pending — it's not paid off yet.
-                if (pendingItem != null && cents >= pendingItem.fixedExpense.amountCents) {
-                    repository.markFixedExpensePaid(fixedExpenseId, pendingItem.periodKey, transactionId)
                 }
             }
             _uiState.update { it.copy(saved = true) }
