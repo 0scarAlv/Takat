@@ -14,6 +14,8 @@ import com.takat.finanzas.MainActivity
 import com.takat.finanzas.R
 import com.takat.finanzas.util.centsToDisplay
 
+enum class FixedExpenseNotificationKind { UPCOMING, DUE, OVERDUE }
+
 object NotificationHelper {
     const val CHANNEL_ID = "fixed_expenses"
     const val EXTRA_FIXED_EXPENSE_ID = "fixed_expense_id"
@@ -27,7 +29,7 @@ object NotificationHelper {
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
     }
 
-    fun notifyDue(context: Context, fixedExpenseId: Long, name: String, amountCents: Long) {
+    fun notify(context: Context, kind: FixedExpenseNotificationKind, fixedExpenseId: Long, name: String, amountCents: Long) {
         val hasPermission = Build.VERSION.SDK_INT < Build.VERSION_CODES.TIRAMISU ||
             ActivityCompat.checkSelfPermission(context, Manifest.permission.POST_NOTIFICATIONS) == PackageManager.PERMISSION_GRANTED
         if (!hasPermission) return
@@ -42,10 +44,16 @@ object NotificationHelper {
             intent,
             android.app.PendingIntent.FLAG_UPDATE_CURRENT or android.app.PendingIntent.FLAG_IMMUTABLE
         )
+        val amount = amountCents.centsToDisplay()
+        val (title, text) = when (kind) {
+            FixedExpenseNotificationKind.UPCOMING -> "Gasto fijo mañana" to "$name se cobra mañana · $amount"
+            FixedExpenseNotificationKind.DUE -> "Gasto fijo pendiente" to "$name · $amount"
+            FixedExpenseNotificationKind.OVERDUE -> "Gasto fijo sin pagar" to "$name sigue sin pagarse · $amount"
+        }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
             .setSmallIcon(R.drawable.ic_widget_transaction)
-            .setContentTitle("Gasto fijo pendiente")
-            .setContentText("$name · ${amountCents.centsToDisplay()}")
+            .setContentTitle(title)
+            .setContentText(text)
             .setContentIntent(pendingIntent)
             .setAutoCancel(true)
             .build()

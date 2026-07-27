@@ -1,7 +1,10 @@
 package com.takat.finanzas.ui.settings
 
+import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
@@ -24,12 +27,19 @@ import androidx.compose.material3.TopAppBar
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableIntStateOf
+import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
+import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.work.OneTimeWorkRequestBuilder
+import androidx.work.WorkManager
 import com.takat.finanzas.BuildConfig
+import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
@@ -110,10 +120,25 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit) {
 
             Spacer(Modifier.height(32.dp))
             Text("Acerca de", style = MaterialTheme.typography.titleMedium)
+            var secretTapCount by remember { mutableIntStateOf(0) }
+            var lastTapAt by remember { mutableLongStateOf(0L) }
             Text(
                 "Versión ${BuildConfig.VERSION_NAME} (build ${BuildConfig.VERSION_CODE})",
                 style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
+                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                modifier = Modifier.clickable(
+                    indication = null,
+                    interactionSource = remember { MutableInteractionSource() }
+                ) {
+                    val now = System.currentTimeMillis()
+                    secretTapCount = if (now - lastTapAt > 1500) 1 else secretTapCount + 1
+                    lastTapAt = now
+                    if (secretTapCount >= 7) {
+                        secretTapCount = 0
+                        WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<FixedExpenseReminderWorker>().build())
+                        Toast.makeText(context, "Revisando gastos fijos pendientes de avisar…", Toast.LENGTH_SHORT).show()
+                    }
+                }
             )
             Text(
                 "Derechos reservados Oscar Alvarado 2026",

@@ -7,10 +7,12 @@ data class PendingFixedExpense(
     val fixedExpense: FixedExpenseEntity,
     val periodKey: String,
     val active: Boolean,
+    /** Whether this period has begun mattering yet — see [FixedExpensePeriod.hasPeriodStarted]. */
+    val started: Boolean,
     val paidCents: Long,
     val lastPaymentTransactionId: Long?,
     val countsTowardTotal: Boolean
 ) {
     val remainingCents: Long get() = (fixedExpense.amountCents - paidCents).coerceAtLeast(0)
-    val isPending: Boolean get() = active && remainingCents > 0
+    val isPending: Boolean get() = active && started && remainingCents > 0
 }

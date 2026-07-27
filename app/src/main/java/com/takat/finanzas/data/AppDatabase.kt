@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
         FixedExpenseEntity::class,
         FixedExpensePeriodStateEntity::class
     ],
-    version = 7,
+    version = 9,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -69,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -228,6 +228,26 @@ abstract class AppDatabase : RoomDatabase() {
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId_periodKey` " +
                         "ON `fixed_expense_period_state` (`fixedExpenseId`, `periodKey`)"
                 )
+            }
+        }
+
+        private val MIGRATION_7_8 = object : Migration(7, 8) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Split the single "was notified" flag into three independent stages (pre-due, due,
+                // follow-up) now that MENSUAL expenses get a day-before heads-up and a
+                // day-after-due follow-up in addition to the existing due-day notification.
+                db.execSQL("ALTER TABLE `fixed_expense_period_state` RENAME COLUMN `notifiedAt` TO `dueNotifiedAt`")
+                db.execSQL("ALTER TABLE `fixed_expense_period_state` ADD COLUMN `preNotifiedAt` INTEGER")
+                db.execSQL("ALTER TABLE `fixed_expense_period_state` ADD COLUMN `followUpNotifiedAt` INTEGER")
+            }
+        }
+
+        private val MIGRATION_8_9 = object : Migration(8, 9) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Quincena-gating for MENSUAL expenses is now opt-in per expense instead of
+                // always-on: someone paid monthly may want a second-half bill visible for the
+                // whole month. Default true preserves the always-on behavior existing rows already had.
+                db.execSQL("ALTER TABLE `fixed_expenses` ADD COLUMN `quincenaOnly` INTEGER NOT NULL DEFAULT 1")
             }
         }
 

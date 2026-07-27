@@ -26,6 +26,7 @@ import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.PendingFixedExpense
+import com.takat.finanzas.data.model.ReminderStage
 import com.takat.finanzas.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -97,12 +98,23 @@ class FinanceRepository(
                     fixedExpense = rule,
                     periodKey = periodKey,
                     active = state?.active ?: true,
+                    started = FixedExpensePeriod.hasPeriodStarted(rule.frequency, rule.dayOfMonth, rule.quincenaOnly),
                     paidCents = payments.sumOf { -it.amountCents },
                     lastPaymentTransactionId = payments.maxByOrNull { it.date }?.id,
                     countsTowardTotal = accountById[rule.accountId]?.includeInTotal ?: false
                 )
             }
         }
+
+    /** Remaining unpaid amount for an arbitrary (possibly past) period, e.g. for a follow-up reminder. */
+    suspend fun remainingCentsForPeriod(rule: FixedExpenseEntity, periodKey: String): Long {
+        val active = fixedExpensePeriodStateDao.find(rule.id, periodKey)?.active ?: true
+        if (!active) return 0
+        val paidCents = transactionDao.getAll().first()
+            .filter { it.fixedExpenseId == rule.id && it.fixedExpensePeriodKey == periodKey }
+            .sumOf { -it.amountCents }
+        return (rule.amountCents - paidCents).coerceAtLeast(0)
+    }
 
     fun fixedExpenses(): Flow<List<FixedExpenseEntity>> = fixedExpenseDao.getAll()
 
@@ -114,12 +126,24 @@ class FinanceRepository(
         upsertPeriodState(fixedExpenseId, periodKey) { it.copy(active = active) }
     }
 
-    suspend fun markFixedExpenseNotified(fixedExpenseId: Long, periodKey: String, notifiedAt: Long) {
-        upsertPeriodState(fixedExpenseId, periodKey) { it.copy(notifiedAt = notifiedAt) }
+    suspend fun markFixedExpenseNotified(fixedExpenseId: Long, periodKey: String, stage: ReminderStage, notifiedAt: Long) {
+        upsertPeriodState(fixedExpenseId, periodKey) {
+            when (stage) {
+                ReminderStage.PRE_DUE -> it.copy(preNotifiedAt = notifiedAt)
+                ReminderStage.DUE -> it.copy(dueNotifiedAt = notifiedAt)
+                ReminderStage.FOLLOW_UP -> it.copy(followUpNotifiedAt = notifiedAt)
+            }
+        }
     }
 
-    suspend fun wasFixedExpenseNotified(fixedExpenseId: Long, periodKey: String): Boolean =
-        fixedExpensePeriodStateDao.find(fixedExpenseId, periodKey)?.notifiedAt != null
+    suspend fun wasFixedExpenseNotified(fixedExpenseId: Long, periodKey: String, stage: ReminderStage): Boolean {
+        val state = fixedExpensePeriodStateDao.find(fixedExpenseId, periodKey) ?: return false
+        return when (stage) {
+            ReminderStage.PRE_DUE -> state.preNotifiedAt != null
+            ReminderStage.DUE -> state.dueNotifiedAt != null
+            ReminderStage.FOLLOW_UP -> state.followUpNotifiedAt != null
+        }
+    }
 
     private suspend fun upsertPeriodState(
         fixedExpenseId: Long,

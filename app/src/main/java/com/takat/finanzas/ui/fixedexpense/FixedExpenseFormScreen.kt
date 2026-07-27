@@ -185,6 +185,20 @@ fun FixedExpenseFormScreen(
                     modifier = Modifier.fillMaxWidth(),
                     singleLine = true
                 )
+
+                Column {
+                    Row(modifier = Modifier.fillMaxWidth()) {
+                        Text("Mostrar únicamente en la quincena correspondiente", modifier = Modifier.weight(1f))
+                        Switch(checked = uiState.quincenaOnly, onCheckedChange = viewModel::onQuincenaOnlyChange)
+                    }
+                    Text(
+                        "Si te pagan quincenal, activalo para que no aparezca como pendiente antes de la quincena " +
+                            "en que se cobra (día 1 si el día de pago es 1-15, día 16 si es 16-31). Si te pagan " +
+                            "mensual, desactivalo para verlo reflejado desde el día 1 del mes.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             } else {
                 Text(
                     "Se avisa el día 1 (primera quincena) y el día 16 (segunda quincena).",
