@@ -30,5 +30,12 @@ data class TransactionEntity(
     /** Signed amount in cents: positive for income, negative for expense. */
     val amountCents: Long,
     val note: String?,
-    val date: Long
+    val date: Long,
+    /**
+     * Set when this transaction is a payment toward a fixed expense's period. Deliberately not a
+     * DB foreign key: "paid so far" for a period is derived by summing matching transactions, so
+     * deleting one here automatically un-counts it — no separate "paid" flag to fall out of sync.
+     */
+    val fixedExpenseId: Long? = null,
+    val fixedExpensePeriodKey: String? = null
 )

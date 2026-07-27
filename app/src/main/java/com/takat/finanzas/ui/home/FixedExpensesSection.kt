@@ -89,19 +89,23 @@ fun FixedExpensesSection(
                         modifier = Modifier
                             .fillMaxWidth()
                             .padding(vertical = 6.dp)
-                            .let { base -> if (row.paidMovement == null) base.clickable { onPayClick(row.fixedExpenseId) } else base },
+                            .let { base -> if (!row.isFullyPaid) base.clickable { onPayClick(row.fixedExpenseId) } else base },
                         horizontalArrangement = Arrangement.SpaceBetween,
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
                             Text(row.name, style = MaterialTheme.typography.bodyLarge)
                             Text(
-                                row.amountCents.centsToDisplay(),
+                                if (row.paidCents > 0 && !row.isFullyPaid) {
+                                    "${row.paidCents.centsToDisplay()} de ${row.amountCents.centsToDisplay()} · faltan ${row.remainingCents.centsToDisplay()}"
+                                } else {
+                                    row.amountCents.centsToDisplay()
+                                },
                                 style = MaterialTheme.typography.bodySmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant
                             )
                         }
-                        if (row.paidMovement != null) {
+                        if (row.isFullyPaid) {
                             Text("Pagado ✓", color = PositiveGreen, fontWeight = FontWeight.SemiBold)
                         } else {
                             Switch(

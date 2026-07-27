@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
         FixedExpenseEntity::class,
         FixedExpensePeriodStateEntity::class
     ],
-    version = 5,
+    version = 7,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -69,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -165,6 +165,65 @@ abstract class AppDatabase : RoomDatabase() {
                 )
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId` ON `fixed_expense_period_state` (`fixedExpenseId`)")
                 db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_paidTransactionId` ON `fixed_expense_period_state` (`paidTransactionId`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId_periodKey` " +
+                        "ON `fixed_expense_period_state` (`fixedExpenseId`, `periodKey`)"
+                )
+            }
+        }
+
+        private val MIGRATION_5_6 = object : Migration(5, 6) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Replaces the single paidTransactionId flag with an accumulating paidCents counter
+                // so partial payments toward the same period add up instead of each being compared
+                // to the full amount in isolation. No real transaction data lives in this table.
+                db.execSQL("DROP TABLE IF EXISTS `fixed_expense_period_state`")
+                db.execSQL(
+                    """
+                    CREATE TABLE `fixed_expense_period_state` (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `fixedExpenseId` INTEGER NOT NULL,
+                        `periodKey` TEXT NOT NULL,
+                        `active` INTEGER NOT NULL DEFAULT 1,
+                        `paidCents` INTEGER NOT NULL DEFAULT 0,
+                        `lastPaidTransactionId` INTEGER,
+                        `notifiedAt` INTEGER,
+                        FOREIGN KEY(`fixedExpenseId`) REFERENCES `fixed_expenses`(`id`) ON DELETE CASCADE,
+                        FOREIGN KEY(`lastPaidTransactionId`) REFERENCES `transactions`(`id`) ON DELETE SET NULL
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId` ON `fixed_expense_period_state` (`fixedExpenseId`)")
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_lastPaidTransactionId` ON `fixed_expense_period_state` (`lastPaidTransactionId`)")
+                db.execSQL(
+                    "CREATE UNIQUE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId_periodKey` " +
+                        "ON `fixed_expense_period_state` (`fixedExpenseId`, `periodKey`)"
+                )
+            }
+        }
+
+        private val MIGRATION_6_7 = object : Migration(6, 7) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // How much of a fixed expense's period is paid is now derived by summing the
+                // transactions tagged with it (deleting one automatically un-counts it) instead of
+                // a separately maintained counter that could drift out of sync.
+                db.execSQL("ALTER TABLE `transactions` ADD COLUMN `fixedExpenseId` INTEGER")
+                db.execSQL("ALTER TABLE `transactions` ADD COLUMN `fixedExpensePeriodKey` TEXT")
+
+                db.execSQL("DROP TABLE IF EXISTS `fixed_expense_period_state`")
+                db.execSQL(
+                    """
+                    CREATE TABLE `fixed_expense_period_state` (
+                        `id` INTEGER NOT NULL PRIMARY KEY AUTOINCREMENT,
+                        `fixedExpenseId` INTEGER NOT NULL,
+                        `periodKey` TEXT NOT NULL,
+                        `active` INTEGER NOT NULL DEFAULT 1,
+                        `notifiedAt` INTEGER,
+                        FOREIGN KEY(`fixedExpenseId`) REFERENCES `fixed_expenses`(`id`) ON DELETE CASCADE
+                    )
+                    """.trimIndent()
+                )
+                db.execSQL("CREATE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId` ON `fixed_expense_period_state` (`fixedExpenseId`)")
                 db.execSQL(
                     "CREATE UNIQUE INDEX IF NOT EXISTS `index_fixed_expense_period_state_fixedExpenseId_periodKey` " +
                         "ON `fixed_expense_period_state` (`fixedExpenseId`, `periodKey`)"
