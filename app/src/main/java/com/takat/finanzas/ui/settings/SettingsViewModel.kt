@@ -5,11 +5,14 @@ import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.csv.BackupCsv
 import com.takat.finanzas.data.csv.BackupZip
 import com.takat.finanzas.data.csv.ParsedBackup
+import com.takat.finanzas.data.entity.AppSettingsEntity
+import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.repository.FinanceRepository
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import java.io.OutputStream
@@ -18,12 +21,28 @@ data class SettingsUiState(
     val pendingImport: ParsedBackup? = null,
     val pendingAttachmentFiles: Map<String, ByteArray> = emptyMap(),
     val importError: String? = null,
-    val importResult: ImportResult? = null
+    val importResult: ImportResult? = null,
+    val themeMode: ThemeMode = ThemeMode.SYSTEM
 )
 
 class SettingsViewModel(private val repository: FinanceRepository) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
+
+    init {
+        viewModelScope.launch {
+            repository.appSettings().collect { settings ->
+                _uiState.update { it.copy(themeMode = settings?.themeMode ?: ThemeMode.SYSTEM) }
+            }
+        }
+    }
+
+    fun onThemeModeChange(mode: ThemeMode) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(themeMode = mode))
+        }
+    }
 
     suspend fun exportBackup(output: OutputStream) = repository.exportBackup(output)
 

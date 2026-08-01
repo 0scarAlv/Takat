@@ -21,6 +21,9 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -39,6 +42,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.takat.finanzas.BuildConfig
+import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
@@ -89,6 +93,32 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit) {
                 .padding(padding)
                 .padding(16.dp)
         ) {
+            Text("Apariencia", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Elegí el tema de la app.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = uiState.themeMode == ThemeMode.LIGHT,
+                    onClick = { viewModel.onThemeModeChange(ThemeMode.LIGHT) },
+                    shape = SegmentedButtonDefaults.itemShape(0, 3)
+                ) { Text("Claro") }
+                SegmentedButton(
+                    selected = uiState.themeMode == ThemeMode.DARK,
+                    onClick = { viewModel.onThemeModeChange(ThemeMode.DARK) },
+                    shape = SegmentedButtonDefaults.itemShape(1, 3)
+                ) { Text("Oscuro") }
+                SegmentedButton(
+                    selected = uiState.themeMode == ThemeMode.SYSTEM,
+                    onClick = { viewModel.onThemeModeChange(ThemeMode.SYSTEM) },
+                    shape = SegmentedButtonDefaults.itemShape(2, 3)
+                ) { Text("Sistema") }
+            }
+
+            Spacer(Modifier.height(32.dp))
             Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
             Text(
                 "Gestioná tus gastos recurrentes: alquiler, servicios, etc.",

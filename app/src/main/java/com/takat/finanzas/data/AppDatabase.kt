@@ -8,6 +8,7 @@ import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
 import com.takat.finanzas.data.dao.AccountDao
+import com.takat.finanzas.data.dao.AppSettingsDao
 import com.takat.finanzas.data.dao.AttachmentDao
 import com.takat.finanzas.data.dao.BudgetSettingsDao
 import com.takat.finanzas.data.dao.CategoryDao
@@ -16,6 +17,7 @@ import com.takat.finanzas.data.dao.FixedExpensePeriodStateDao
 import com.takat.finanzas.data.dao.TransactionDao
 import com.takat.finanzas.data.dao.TransferDao
 import com.takat.finanzas.data.entity.AccountEntity
+import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
 import com.takat.finanzas.data.entity.CategoryEntity
@@ -37,9 +39,10 @@ import kotlinx.coroutines.launch
         AttachmentEntity::class,
         BudgetSettingsEntity::class,
         FixedExpenseEntity::class,
-        FixedExpensePeriodStateEntity::class
+        FixedExpensePeriodStateEntity::class,
+        AppSettingsEntity::class
     ],
-    version = 10,
+    version = 11,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -52,6 +55,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun budgetSettingsDao(): BudgetSettingsDao
     abstract fun fixedExpenseDao(): FixedExpenseDao
     abstract fun fixedExpensePeriodStateDao(): FixedExpensePeriodStateDao
+    abstract fun appSettingsDao(): AppSettingsDao
 
     companion object {
         @Volatile
@@ -69,7 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -260,6 +264,21 @@ abstract class AppDatabase : RoomDatabase() {
                 db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `lastLiveValueEpochDay` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `frozenBudgetCents` INTEGER NOT NULL DEFAULT 0")
                 db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `frozenBudgetEpochDay` INTEGER NOT NULL DEFAULT 0")
+            }
+        }
+
+        private val MIGRATION_10_11 = object : Migration(10, 11) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // App-wide preferences (currently just light/dark/system theme), separate from
+                // budget_settings which is specific to the daily-budget feature.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `app_settings` (
+                        `id` INTEGER NOT NULL PRIMARY KEY,
+                        `themeMode` TEXT NOT NULL DEFAULT 'SYSTEM'
+                    )
+                    """.trimIndent()
+                )
             }
         }
 

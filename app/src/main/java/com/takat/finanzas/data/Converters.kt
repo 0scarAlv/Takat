@@ -6,6 +6,7 @@ import com.takat.finanzas.data.entity.BudgetBasis
 import com.takat.finanzas.data.entity.BudgetPeriodType
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.FixedExpenseFrequency
+import com.takat.finanzas.data.entity.ThemeMode
 
 class Converters {
     @TypeConverter
@@ -37,4 +38,10 @@ class Converters {
 
     @TypeConverter
     fun toFixedExpenseFrequency(value: String): FixedExpenseFrequency = FixedExpenseFrequency.valueOf(value)
+
+    @TypeConverter
+    fun fromThemeMode(mode: ThemeMode): String = mode.name
+
+    @TypeConverter
+    fun toThemeMode(value: String): ThemeMode = ThemeMode.valueOf(value)
 }

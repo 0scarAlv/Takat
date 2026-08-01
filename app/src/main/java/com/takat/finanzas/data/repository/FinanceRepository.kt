@@ -9,6 +9,7 @@ import com.takat.finanzas.data.csv.BackupCsv
 import com.takat.finanzas.data.csv.BackupZip
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
+import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
@@ -55,6 +56,7 @@ class FinanceRepository(
     private val budgetSettingsDao = db.budgetSettingsDao()
     private val fixedExpenseDao = db.fixedExpenseDao()
     private val fixedExpensePeriodStateDao = db.fixedExpensePeriodStateDao()
+    private val appSettingsDao = db.appSettingsDao()
 
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
@@ -62,6 +64,11 @@ class FinanceRepository(
 
     suspend fun updateBudgetSettings(settings: BudgetSettingsEntity) =
         budgetSettingsDao.upsert(settings.copy(id = 0))
+
+    fun appSettings(): Flow<AppSettingsEntity?> = appSettingsDao.get()
+
+    suspend fun updateAppSettings(settings: AppSettingsEntity) =
+        appSettingsDao.upsert(settings.copy(id = 0))
 
     fun accountsWithBalance(): Flow<List<AccountWithBalance>> =
         combine(accountDao.getAll(), transactionDao.getAll(), transferDao.getAll()) { accounts, transactions, transfers ->
