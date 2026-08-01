@@ -23,6 +23,7 @@ import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.AttachmentType
@@ -51,13 +52,27 @@ fun MovementRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text(movement.category?.emoji ?: "❔", style = MaterialTheme.typography.titleLarge)
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text(movement.category?.name ?: "Sin categoría", style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            movement.category?.name ?: "Sin categoría",
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         val subtitle = listOfNotNull(tx.note?.takeIf { it.isNotBlank() }, tx.date.toDisplayDate())
                             .joinToString(" · ")
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
                 Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
@@ -87,16 +102,30 @@ fun MovementRow(
                 horizontalArrangement = Arrangement.SpaceBetween,
                 verticalAlignment = Alignment.CenterVertically
             ) {
-                Row(verticalAlignment = Alignment.CenterVertically) {
+                Row(
+                    modifier = Modifier.weight(1f, fill = false),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
                     Text("⇄", style = MaterialTheme.typography.titleLarge)
                     Column(modifier = Modifier.padding(start = 12.dp)) {
-                        Text(title, style = MaterialTheme.typography.bodyLarge)
+                        Text(
+                            title,
+                            style = MaterialTheme.typography.bodyLarge,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                         val subtitle = listOfNotNull(
                             movement.category?.let { "${it.emoji} ${it.name}" },
                             transfer.note?.takeIf { it.isNotBlank() },
                             transfer.date.toDisplayDate()
                         ).joinToString(" · ")
-                        Text(subtitle, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text(
+                            subtitle,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            maxLines = 1,
+                            overflow = TextOverflow.Ellipsis
+                        )
                     }
                 }
                 if (currentAccountId != null) {
