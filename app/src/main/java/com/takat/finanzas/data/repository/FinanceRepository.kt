@@ -27,12 +27,17 @@ import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.model.ReminderStage
+import com.takat.finanzas.util.computeBudgetFreeze
+import com.takat.finanzas.util.computeLiveBudget
+import com.takat.finanzas.util.dayRange
 import com.takat.finanzas.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.OutputStream
+import java.time.LocalDate
+import java.time.ZoneId
 
 class FinanceRepository(
     db: AppDatabase,
@@ -76,6 +81,48 @@ class FinanceRepository(
                 pendingFixedExpensesCents = pendingCents
             )
         }
+
+    /**
+     * Excludes fixed-expense payments (transactions tagged with [TransactionEntity.fixedExpenseId]):
+     * that money was already reserved out of the daily-budget balance while the expense was pending
+     * ([accountTotals]'s [AccountTotals.pendingFixedExpensesCents]), so paying it shouldn't also count
+     * against today's discretionary spending.
+     */
+    fun spentTodayCents(zone: ZoneId = ZoneId.systemDefault()): Flow<Long> =
+        combine(transactionDao.getAll(), accountDao.getAll()) { transactions, accounts ->
+            val (start, end) = dayRange(LocalDate.now(zone), zone)
+            val includedAccountIds = accounts.filter { it.includeInTotal }.map { it.id }.toSet()
+            transactions
+                .filter {
+                    it.accountId in includedAccountIds && it.amountCents < 0 &&
+                        it.fixedExpenseId == null && it.date >= start && it.date < end
+                }
+                .sumOf { -it.amountCents }
+        }
+
+    /**
+     * Lazily rolls the static "presupuesto diario" over to [today] if it's stale, freezing whatever live
+     * value was last observed on a prior day. No-op when the daily budget feature is disabled or has never
+     * been configured. Called both at app startup and reactively from [DailyBudgetViewModel] so the freeze
+     * applies as soon as possible without needing an exact-midnight background job.
+     */
+    suspend fun ensureDailyBudgetFrozen(today: LocalDate = LocalDate.now(ZoneId.systemDefault())) {
+        val settings = budgetSettingsDao.get().first() ?: return
+        if (!settings.enabled) return
+        val totals = accountTotals().first()
+        val live = computeLiveBudget(settings, totals, today)
+        val freeze = computeBudgetFreeze(settings, live.liveValueCents, today)
+        if (freeze.changed) {
+            updateBudgetSettings(
+                settings.copy(
+                    lastLiveValueCents = freeze.lastLiveValueCents,
+                    lastLiveValueEpochDay = freeze.lastLiveValueEpochDay,
+                    frozenBudgetCents = freeze.frozenBudgetCents,
+                    frozenBudgetEpochDay = freeze.frozenBudgetEpochDay
+                )
+            )
+        }
+    }
 
     /** Every enabled fixed expense resolved against its current period (stored exception, or the implicit active/unpaid default). */
     fun pendingFixedExpenses(): Flow<List<PendingFixedExpense>> =

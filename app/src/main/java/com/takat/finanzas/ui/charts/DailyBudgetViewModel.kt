@@ -6,9 +6,7 @@ import com.takat.finanzas.data.entity.BudgetBasis
 import com.takat.finanzas.data.entity.BudgetPeriodType
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
 import com.takat.finanzas.data.repository.FinanceRepository
-import com.takat.finanzas.util.daysRemaining
-import com.takat.finanzas.util.dailyBudgetCents
-import com.takat.finanzas.util.nextPaymentDate
+import com.takat.finanzas.util.computeLiveBudget
 import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.combine
@@ -25,28 +23,42 @@ data class DailyBudgetUiState(
     val basis: BudgetBasis = BudgetBasis.DISPONIBLE,
     val nextPaymentDate: LocalDate? = null,
     val daysRemaining: Long = 0,
-    val dailyBudgetCents: Long = 0
+    /** "Valor diario": live value, recalculated with every movement. */
+    val dailyBudgetCents: Long = 0,
+    /** "Presupuesto diario": static value frozen at the last day rollover. */
+    val frozenBudgetCents: Long = 0,
+    /** "Gastado hoy": sum of today's expenses. */
+    val spentTodayCents: Long = 0,
+    /** frozenBudgetCents - spentTodayCents. Negative means overspent for the day. */
+    val remainingTodayCents: Long = 0
 )
 
 class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewModel() {
     val uiState: StateFlow<DailyBudgetUiState> =
-        combine(repository.budgetSettings(), repository.accountTotals()) { settings, totals ->
+        combine(
+            repository.budgetSettings(),
+            repository.accountTotals(),
+            repository.spentTodayCents()
+        ) { settings, totals, spentTodayCents ->
             val today = LocalDate.now(ZoneId.systemDefault())
             val enabled = settings?.enabled ?: false
-            val periodType = settings?.periodType ?: BudgetPeriodType.QUINCENA
-            val dayOfMonth = settings?.dayOfMonth ?: 1
-            val basis = settings?.basis ?: BudgetBasis.DISPONIBLE
-            val nextDate = if (enabled) nextPaymentDate(today, periodType, dayOfMonth) else null
-            val remaining = nextDate?.let { daysRemaining(today, it) } ?: 0
-            val balance = if (basis == BudgetBasis.DISPONIBLE) totals.availableCents else totals.capitalCents
+            val live = computeLiveBudget(settings, totals, today)
+
+            if (enabled) {
+                viewModelScope.launch { repository.ensureDailyBudgetFrozen(today) }
+            }
+
             DailyBudgetUiState(
                 enabled = enabled,
-                periodType = periodType,
-                dayOfMonth = dayOfMonth,
-                basis = basis,
-                nextPaymentDate = nextDate,
-                daysRemaining = remaining,
-                dailyBudgetCents = if (enabled) dailyBudgetCents(balance, remaining) else 0
+                periodType = settings?.periodType ?: BudgetPeriodType.QUINCENA,
+                dayOfMonth = settings?.dayOfMonth ?: 1,
+                basis = settings?.basis ?: BudgetBasis.DISPONIBLE,
+                nextPaymentDate = live.nextPaymentDate,
+                daysRemaining = live.daysRemaining,
+                dailyBudgetCents = live.liveValueCents,
+                frozenBudgetCents = if (enabled) settings?.frozenBudgetCents ?: 0 else 0,
+                spentTodayCents = spentTodayCents,
+                remainingTodayCents = if (enabled) (settings?.frozenBudgetCents ?: 0) - spentTodayCents else 0
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DailyBudgetUiState())
 

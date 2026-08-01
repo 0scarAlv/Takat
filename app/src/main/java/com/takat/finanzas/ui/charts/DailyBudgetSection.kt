@@ -79,22 +79,68 @@ fun DailyBudgetSection(
                 ) {
                     Column {
                         Text(
-                            "Disponible por día",
+                            "Valor diario",
                             style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
                             state.dailyBudgetCents.centsToDisplay(showSign = true),
-                            style = MaterialTheme.typography.headlineMedium,
+                            style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
                             color = if (state.dailyBudgetCents < 0) NegativeRed else PositiveGreen
+                        )
+                    }
+                    Column {
+                        Text(
+                            "Presupuesto diario",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            state.frozenBudgetCents.centsToDisplay(showSign = true),
+                            style = MaterialTheme.typography.titleLarge,
+                            fontWeight = FontWeight.Bold,
+                            color = if (state.frozenBudgetCents < 0) NegativeRed else PositiveGreen
                         )
                     }
                     state.nextPaymentDate?.let { date ->
                         Text(
                             "Faltan ${state.daysRemaining} días\npara el ${date.toDisplayDate()}",
-                            style = MaterialTheme.typography.bodyLarge,
+                            style = MaterialTheme.typography.bodySmall,
                             color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                    }
+                }
+
+                Spacer(Modifier.height(10.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Column {
+                        Text(
+                            "Gastado hoy",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            state.spentTodayCents.centsToDisplay(),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold
+                        )
+                    }
+                    Column(horizontalAlignment = Alignment.End) {
+                        Text(
+                            "Disponible hoy",
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant
+                        )
+                        Text(
+                            state.remainingTodayCents.centsToDisplay(showSign = true),
+                            style = MaterialTheme.typography.bodyLarge,
+                            fontWeight = FontWeight.SemiBold,
+                            color = if (state.remainingTodayCents < 0) NegativeRed else PositiveGreen
                         )
                     }
                 }

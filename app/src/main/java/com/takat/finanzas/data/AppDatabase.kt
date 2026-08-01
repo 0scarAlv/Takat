@@ -39,7 +39,7 @@ import kotlinx.coroutines.launch
         FixedExpenseEntity::class,
         FixedExpensePeriodStateEntity::class
     ],
-    version = 9,
+    version = 10,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -69,7 +69,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -248,6 +248,18 @@ abstract class AppDatabase : RoomDatabase() {
                 // always-on: someone paid monthly may want a second-half bill visible for the
                 // whole month. Default true preserves the always-on behavior existing rows already had.
                 db.execSQL("ALTER TABLE `fixed_expenses` ADD COLUMN `quincenaOnly` INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        private val MIGRATION_9_10 = object : Migration(9, 10) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Daily-budget freeze: track the last-observed live value (+ the day it was observed on) so it
+                // can be copied into a static "presupuesto diario" lazily, the next time the app is used after
+                // midnight, without needing a background job.
+                db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `lastLiveValueCents` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `lastLiveValueEpochDay` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `frozenBudgetCents` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("ALTER TABLE `budget_settings` ADD COLUMN `frozenBudgetEpochDay` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

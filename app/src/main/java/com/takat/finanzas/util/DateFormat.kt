@@ -38,6 +38,13 @@ fun monthRange(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Pair<Lo
     return start to end
 }
 
+/** Epoch millis range [start, end) covering the given calendar day in the device's time zone. */
+fun dayRange(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Pair<Long, Long> {
+    val start = date.atStartOfDay(zone).toInstant().toEpochMilli()
+    val end = date.plusDays(1).atStartOfDay(zone).toInstant().toEpochMilli()
+    return start to end
+}
+
 fun monthLabel(month: YearMonth): String =
     month.atDay(1).format(monthLabelFormatter).replaceFirstChar { it.uppercase() }
 
