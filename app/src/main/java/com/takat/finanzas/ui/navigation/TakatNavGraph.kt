@@ -1,11 +1,13 @@
 package com.takat.finanzas.ui.navigation
 
+import android.net.Uri
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import androidx.navigation.NavType
 import androidx.navigation.compose.NavHost
 import androidx.navigation.compose.composable
@@ -45,11 +47,17 @@ private object Routes {
 @Composable
 fun TakatNavGraph(
     pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) },
-    pendingFixedExpenseId: MutableState<Long?> = remember { mutableStateOf(null) }
+    pendingFixedExpenseId: MutableState<Long?> = remember { mutableStateOf(null) },
+    pendingShareUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
 ) {
     val navController = rememberNavController()
     val widgetAction by pendingWidgetAction
     val fixedExpenseId by pendingFixedExpenseId
+    val shareUris by pendingShareUris
+    // Snapshot of the share URIs consumed by the currently-open "new transaction" screen.
+    // Kept separate from pendingShareUris so navigating there again later (e.g. via the FAB)
+    // doesn't re-attach stale files from a previous share.
+    var consumedShareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
     LaunchedEffect(widgetAction) {
         when (widgetAction) {
@@ -63,6 +71,14 @@ fun TakatNavGraph(
         if (fixedExpenseId != null) {
             navController.navigate(Routes.transactionNew(fixedExpenseId = fixedExpenseId))
             pendingFixedExpenseId.value = null
+        }
+    }
+
+    LaunchedEffect(shareUris) {
+        if (shareUris.isNotEmpty()) {
+            consumedShareUris = shareUris
+            pendingShareUris.value = emptyList()
+            navController.navigate(Routes.transactionNew())
         }
     }
 
@@ -131,6 +147,8 @@ fun TakatNavGraph(
             AddTransactionScreen(
                 preselectedAccountId = rawId.takeIf { it >= 0 },
                 preselectedFixedExpenseId = rawFixedExpenseId.takeIf { it >= 0 },
+                initialShareUris = consumedShareUris,
+                onShareUrisConsumed = { consumedShareUris = emptyList() },
                 onDone = { navController.popBackStack() },
                 onCancel = { navController.popBackStack() }
             )
