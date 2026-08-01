@@ -35,6 +35,7 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.takat.finanzas.MainActivity
@@ -48,7 +49,7 @@ import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.flow.first
 
 private val DailyBudgetActionKey = ActionParameters.Key<String>(WidgetActions.ACTION_KEY)
-private val DailyBudgetBackground = ColorProvider(day = Color(0xFFF8FAFC), night = Color(0xFF1E293B))
+private val DailyBudgetBackground = ColorProvider(day = Color(0xFFCBD5E1), night = Color(0xFF1E293B))
 private val DailyBudgetLabelColor = ColorProvider(day = Color(0xFF64748B), night = Color(0xFF94A3B8))
 private val DailyBudgetDivider = ColorProvider(day = Color(0x1A0F172A), night = Color(0x1AF8FAFC))
 private val DailyBudgetIconColor = ColorProvider(day = Color(0xFF334155), night = Color(0xFFCBD5E1))
@@ -153,9 +154,12 @@ private fun RowScope.ActionIcon(iconRes: Int, contentDescription: String, onClic
 
 @Composable
 private fun RowScope.StatItem(label: String, value: String, valueColor: ColorProvider) {
-    Column(modifier = GlanceModifier.defaultWeight()) {
-        Text(label, style = TextStyle(fontSize = 11.sp, color = DailyBudgetLabelColor))
-        Text(value, style = TextStyle(fontSize = 16.sp, fontWeight = FontWeight.Bold, color = valueColor))
+    Column(
+        modifier = GlanceModifier.defaultWeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, style = TextStyle(fontSize = 13.sp, color = DailyBudgetLabelColor, textAlign = TextAlign.Center))
+        Text(value, style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Bold, color = valueColor, textAlign = TextAlign.Center))
     }
 }
 

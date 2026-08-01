@@ -31,7 +31,7 @@ import com.takat.finanzas.MainActivity
 import com.takat.finanzas.R
 
 private val QuickActionsActionKey = ActionParameters.Key<String>(WidgetActions.ACTION_KEY)
-private val QuickActionsBackground = ColorProvider(day = Color(0xFFF8FAFC), night = Color(0xFF1E293B))
+private val QuickActionsBackground = ColorProvider(day = Color(0xFFCBD5E1), night = Color(0xFF1E293B))
 private val QuickActionsDivider = ColorProvider(day = Color(0x1A0F172A), night = Color(0x1AF8FAFC))
 private val QuickActionsIconColor = ColorProvider(day = Color(0xFF334155), night = Color(0xFFCBD5E1))
 

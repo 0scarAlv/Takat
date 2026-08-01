@@ -1,0 +1,47 @@
+<?xml version="1.0" encoding="utf-8"?>
+<LinearLayout xmlns:android="http://schemas.android.com/apk/res/android"
+    android:layout_width="match_parent"
+    android:layout_height="match_parent"
+    android:orientation="horizontal"
+    android:background="@drawable/widget_preview_background">
+
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:src="@drawable/ic_widget_transaction"
+        android:scaleType="centerInside"
+        android:padding="14dp"
+        android:tint="#334155"
+        android:contentDescription="Nuevo movimiento" />
+
+    <ImageView
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#1A0F172A" />
+
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:src="@drawable/ic_widget_open"
+        android:scaleType="centerInside"
+        android:padding="14dp"
+        android:tint="#334155"
+        android:contentDescription="Abrir Takat" />
+
+    <ImageView
+        android:layout_width="1dp"
+        android:layout_height="match_parent"
+        android:background="#1A0F172A" />
+
+    <ImageView
+        android:layout_width="0dp"
+        android:layout_height="match_parent"
+        android:layout_weight="1"
+        android:src="@drawable/ic_widget_transfer"
+        android:scaleType="centerInside"
+        android:padding="14dp"
+        android:tint="#334155"
+        android:contentDescription="Nueva transferencia" />
+</LinearLayout>

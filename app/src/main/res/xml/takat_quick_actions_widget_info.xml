@@ -5,6 +5,7 @@
     android:targetCellWidth="3"
     android:targetCellHeight="1"
     android:previewImage="@mipmap/ic_launcher"
+    android:previewLayout="@layout/widget_preview_quick_actions"
     android:initialLayout="@layout/glance_default_loading_layout"
     android:resizeMode="horizontal|vertical"
     android:widgetCategory="home_screen" />

@@ -35,6 +35,7 @@ import androidx.glance.layout.size
 import androidx.glance.layout.width
 import androidx.glance.text.FontWeight
 import androidx.glance.text.Text
+import androidx.glance.text.TextAlign
 import androidx.glance.text.TextStyle
 import androidx.glance.unit.ColorProvider
 import com.takat.finanzas.MainActivity
@@ -48,7 +49,7 @@ import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.flow.first
 
 private val ActionKey = ActionParameters.Key<String>(WidgetActions.ACTION_KEY)
-private val WidgetBackground = ColorProvider(day = Color(0xFFF8FAFC), night = Color(0xFF1E293B))
+private val WidgetBackground = ColorProvider(day = Color(0xFFCBD5E1), night = Color(0xFF1E293B))
 private val LabelColor = ColorProvider(day = Color(0xFF64748B), night = Color(0xFF94A3B8))
 private val DividerColor = ColorProvider(day = Color(0x1A0F172A), night = Color(0x1AF8FAFC))
 private val ActionIconColor = ColorProvider(day = Color(0xFF334155), night = Color(0xFFCBD5E1))
@@ -133,9 +134,12 @@ private fun RowScope.ActionIcon(iconRes: Int, contentDescription: String, onClic
 
 @Composable
 private fun RowScope.StatItem(label: String, value: String, valueColor: ColorProvider) {
-    Column(modifier = GlanceModifier.defaultWeight()) {
-        Text(label, style = TextStyle(fontSize = 13.sp, color = LabelColor))
-        Text(value, style = TextStyle(fontSize = 22.sp, fontWeight = FontWeight.Bold, color = valueColor))
+    Column(
+        modifier = GlanceModifier.defaultWeight(),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(label, style = TextStyle(fontSize = 13.sp, color = LabelColor, textAlign = TextAlign.Center))
+        Text(value, style = TextStyle(fontSize = 26.sp, fontWeight = FontWeight.Bold, color = valueColor, textAlign = TextAlign.Center))
     }
 }
 
