@@ -144,13 +144,12 @@ fun HomeScreen(
         }
     ) { innerPadding ->
         Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            PagerDotsIndicator(
-                pageCount = 3,
+            SectionSelector(
                 currentPage = pagerState.currentPage,
-                onDotClick = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
+                onSectionClick = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
                 modifier = Modifier
                     .fillMaxWidth()
-                    .padding(vertical = 8.dp)
+                    .padding(horizontal = 16.dp, vertical = 8.dp)
             )
             HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
                 when (page) {
@@ -267,27 +266,40 @@ private fun HomeContent(
     }
 }
 
+private val SectionLabels = listOf("Presupuesto", "Inicio", "Estadísticas")
+
 @Composable
-private fun PagerDotsIndicator(
-    pageCount: Int,
+private fun SectionSelector(
     currentPage: Int,
-    onDotClick: (Int) -> Unit,
+    onSectionClick: (Int) -> Unit,
     modifier: Modifier = Modifier
 ) {
     Row(
         modifier = modifier,
-        horizontalArrangement = Arrangement.Center
+        horizontalArrangement = Arrangement.spacedBy(8.dp)
     ) {
-        repeat(pageCount) { page ->
-            val active = page == currentPage
+        SectionLabels.forEachIndexed { page, label ->
+            val selected = page == currentPage
             Box(
                 modifier = Modifier
-                    .padding(horizontal = 4.dp)
-                    .size(if (active) 8.dp else 6.dp)
-                    .clip(CircleShape)
-                    .background(if (active) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.surfaceVariant)
-                    .clickable { onDotClick(page) }
-            )
+                    .weight(1f)
+                    .clip(RoundedCornerShape(14.dp))
+                    .background(
+                        if (selected) MaterialTheme.colorScheme.primary
+                        else MaterialTheme.colorScheme.surfaceVariant
+                    )
+                    .clickable { onSectionClick(page) }
+                    .padding(vertical = 14.dp),
+                contentAlignment = Alignment.Center
+            ) {
+                Text(
+                    label,
+                    style = MaterialTheme.typography.labelLarge,
+                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
+                    color = if (selected) MaterialTheme.colorScheme.onPrimary
+                    else MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
         }
     }
 }
