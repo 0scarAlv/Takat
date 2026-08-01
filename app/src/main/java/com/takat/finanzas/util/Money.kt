@@ -7,14 +7,14 @@ fun Long.centsToDisplay(showSign: Boolean = false): String {
     val fraction = absCents % 100
     val wholeGrouped = groupThousands(whole)
     val sign = if (negative) "-" else if (showSign) "+" else ""
-    return "$sign$ $wholeGrouped,${fraction.toString().padStart(2, '0')}"
+    return "$sign$ $wholeGrouped.${fraction.toString().padStart(2, '0')}"
 }
 
 private fun groupThousands(value: Long): String {
     val raw = value.toString()
     val builder = StringBuilder()
     for ((index, char) in raw.reversed().withIndex()) {
-        if (index != 0 && index % 3 == 0) builder.append('.')
+        if (index != 0 && index % 3 == 0) builder.append(',')
         builder.append(char)
     }
     return builder.reverse().toString()
