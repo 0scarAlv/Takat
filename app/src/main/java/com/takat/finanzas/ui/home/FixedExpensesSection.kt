@@ -65,7 +65,7 @@ fun FixedExpensesSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
+                    Text("Gastos fijos (gastos mensuales)", style = MaterialTheme.typography.titleMedium)
                     Text(
                         if (uiState.pendingTotalCents > 0) "${uiState.pendingTotalCents.centsToDisplay()} pendiente este período" else "Todo pagado este período",
                         style = MaterialTheme.typography.bodySmall,

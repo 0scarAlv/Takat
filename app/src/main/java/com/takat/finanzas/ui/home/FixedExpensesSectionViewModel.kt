@@ -2,6 +2,7 @@ package com.takat.finanzas.ui.home
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
+import com.takat.finanzas.data.entity.FixedExpenseFrequency
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.repository.FinanceRepository
 import kotlinx.coroutines.flow.SharingStarted
@@ -35,13 +36,16 @@ class FixedExpensesSectionViewModel(private val repository: FinanceRepository) :
                 .filterIsInstance<Movement.TransactionMovement>()
                 .associateBy { it.transaction.id }
             val rows = pending.map {
+                // Shown as a monthly-equivalent figure (see "Gastos fijos (gastos mensuales)" legend):
+                // a QUINCENAL rule only bills its amount once per half-month, so its monthly figure is x2.
+                val monthlyMultiplier = if (it.fixedExpense.frequency == FixedExpenseFrequency.QUINCENAL) 2 else 1
                 FixedExpenseRowUiState(
                     fixedExpenseId = it.fixedExpense.id,
                     periodKey = it.periodKey,
                     name = it.fixedExpense.name,
-                    amountCents = it.fixedExpense.amountCents,
-                    paidCents = it.paidCents,
-                    remainingCents = it.remainingCents,
+                    amountCents = it.fixedExpense.amountCents * monthlyMultiplier,
+                    paidCents = it.paidCents * monthlyMultiplier,
+                    remainingCents = it.remainingCents * monthlyMultiplier,
                     active = it.active,
                     lastPayment = it.lastPaymentTransactionId?.let { txId -> movementByTransactionId[txId] }
                 )
