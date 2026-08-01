@@ -70,6 +70,18 @@
                 android:resource="@xml/takat_quick_actions_widget_info" />
         </receiver>
 
+        <receiver
+            android:name=".widget.TakatDailyBudgetWidgetReceiver"
+            android:exported="false"
+            android:label="Takat: presupuesto diario">
+            <intent-filter>
+                <action android:name="android.appwidget.action.APPWIDGET_UPDATE" />
+            </intent-filter>
+            <meta-data
+                android:name="android.appwidget.provider"
+                android:resource="@xml/takat_daily_budget_widget_info" />
+        </receiver>
+
         <provider
             android:name="androidx.core.content.FileProvider"
             android:authorities="${applicationId}.fileprovider"

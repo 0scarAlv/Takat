@@ -7,5 +7,6 @@ import androidx.glance.appwidget.updateAll
 object WidgetUpdater {
     suspend fun refresh(context: Context) {
         TakatWidget().updateAll(context)
+        TakatDailyBudgetWidget().updateAll(context)
     }
 }
