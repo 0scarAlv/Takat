@@ -15,6 +15,7 @@ data class FixedExpenseRowUiState(
     val fixedExpenseId: Long,
     val periodKey: String,
     val name: String,
+    val frequency: FixedExpenseFrequency,
     val amountCents: Long,
     val paidCents: Long,
     val remainingCents: Long,
@@ -25,8 +26,7 @@ data class FixedExpenseRowUiState(
 }
 
 data class FixedExpensesSectionUiState(
-    val rows: List<FixedExpenseRowUiState> = emptyList(),
-    val pendingTotalCents: Long = 0
+    val rows: List<FixedExpenseRowUiState> = emptyList()
 )
 
 class FixedExpensesSectionViewModel(private val repository: FinanceRepository) : ViewModel() {
@@ -36,24 +36,19 @@ class FixedExpensesSectionViewModel(private val repository: FinanceRepository) :
                 .filterIsInstance<Movement.TransactionMovement>()
                 .associateBy { it.transaction.id }
             val rows = pending.map {
-                // Shown as a monthly-equivalent figure (see "Gastos fijos (gastos mensuales)" legend):
-                // a QUINCENAL rule only bills its amount once per half-month, so its monthly figure is x2.
-                val monthlyMultiplier = if (it.fixedExpense.frequency == FixedExpenseFrequency.QUINCENAL) 2 else 1
                 FixedExpenseRowUiState(
                     fixedExpenseId = it.fixedExpense.id,
                     periodKey = it.periodKey,
                     name = it.fixedExpense.name,
-                    amountCents = it.fixedExpense.amountCents * monthlyMultiplier,
-                    paidCents = it.paidCents * monthlyMultiplier,
-                    remainingCents = it.remainingCents * monthlyMultiplier,
+                    frequency = it.fixedExpense.frequency,
+                    amountCents = it.fixedExpense.amountCents,
+                    paidCents = it.paidCents,
+                    remainingCents = it.remainingCents,
                     active = it.active,
                     lastPayment = it.lastPaymentTransactionId?.let { txId -> movementByTransactionId[txId] }
                 )
             }
-            FixedExpensesSectionUiState(
-                rows = rows,
-                pendingTotalCents = rows.filter { it.active && !it.isFullyPaid }.sumOf { it.remainingCents }
-            )
+            FixedExpensesSectionUiState(rows = rows)
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FixedExpensesSectionUiState())
 
     fun onActiveChange(fixedExpenseId: Long, periodKey: String, active: Boolean) {

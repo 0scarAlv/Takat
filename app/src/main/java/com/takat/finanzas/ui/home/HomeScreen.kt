@@ -333,7 +333,7 @@ private fun TotalsCard(totals: AccountTotals, modifier: Modifier = Modifier) {
                 }
                 if (totals.pendingFixedExpensesCents > 0) {
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Gasto fijo (quincena)", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                        Text("Gasto fijo este período", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
                             totals.pendingFixedExpensesCents.centsToDisplay(),
                             style = MaterialTheme.typography.titleMedium,

@@ -31,7 +31,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
-import com.takat.finanzas.ui.theme.AmberAccent
+import com.takat.finanzas.data.entity.FixedExpenseFrequency
 import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
@@ -65,12 +65,7 @@ fun FixedExpensesSection(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
-                    Text("Gastos fijos (gastos mensuales)", style = MaterialTheme.typography.titleMedium)
-                    Text(
-                        if (uiState.pendingTotalCents > 0) "${uiState.pendingTotalCents.centsToDisplay()} pendiente este período" else "Todo pagado este período",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = if (uiState.pendingTotalCents > 0) AmberAccent else PositiveGreen
-                    )
+                    Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
                 }
                 IconButton(onClick = onManageClick) {
                     Icon(Icons.Default.Settings, contentDescription = "Gestionar gastos fijos")
@@ -94,7 +89,15 @@ fun FixedExpensesSection(
                         verticalAlignment = Alignment.CenterVertically
                     ) {
                         Column {
-                            Text(row.name, style = MaterialTheme.typography.bodyLarge)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(row.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    if (row.frequency == FixedExpenseFrequency.QUINCENAL) "Quincenal" else "Mensual",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 6.dp)
+                                )
+                            }
                             Text(
                                 if (row.paidCents > 0 && !row.isFullyPaid) {
                                     "${row.paidCents.centsToDisplay()} de ${row.amountCents.centsToDisplay()} · faltan ${row.remainingCents.centsToDisplay()}"
