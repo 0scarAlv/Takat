@@ -14,7 +14,7 @@ data class CategoryExpensesUiState(
     val totalCents: Long = 0
 ) {
     val categoryLabel: String
-        get() = movements.firstOrNull()?.category?.let { "${it.emoji} ${it.name}" } ?: "Sin categoría"
+        get() = movements.firstOrNull()?.category?.name ?: "Sin categoría"
 }
 
 class CategoryExpensesViewModel(

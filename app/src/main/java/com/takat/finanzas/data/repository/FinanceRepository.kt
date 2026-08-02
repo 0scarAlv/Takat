@@ -60,6 +60,8 @@ class FinanceRepository(
 
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
+    suspend fun updateCategory(category: CategoryEntity) = categoryDao.update(category)
+
     fun budgetSettings(): Flow<BudgetSettingsEntity?> = budgetSettingsDao.get()
 
     suspend fun updateBudgetSettings(settings: BudgetSettingsEntity) =

@@ -4,6 +4,7 @@ import androidx.room.Dao
 import androidx.room.Delete
 import androidx.room.Insert
 import androidx.room.Query
+import androidx.room.Update
 import com.takat.finanzas.data.entity.CategoryEntity
 import kotlinx.coroutines.flow.Flow
 
@@ -17,6 +18,9 @@ interface CategoryDao {
 
     @Insert
     suspend fun insertAll(categories: List<CategoryEntity>)
+
+    @Update
+    suspend fun update(category: CategoryEntity)
 
     @Delete
     suspend fun delete(category: CategoryEntity)

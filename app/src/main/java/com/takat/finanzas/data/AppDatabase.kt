@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
         FixedExpensePeriodStateEntity::class,
         AppSettingsEntity::class
     ],
-    version = 11,
+    version = 12,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -73,7 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -282,15 +282,41 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_11_12 = object : Migration(11, 12) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Categories are moving from emoji to Material icons (see util/CategoryIcons.kt): the
+                // `emoji` column itself is unchanged (still a free-form String, still the CSV backup
+                // column name) so old backups keep restoring fine — it just now also accepts an icon
+                // name as a value. This backfills the 8 seeded default categories only; custom
+                // categories keep their emoji until edited from the new "Gestionar categorías" screen.
+                val iconByDefaultName = mapOf(
+                    "Sueldo" to "Payments",
+                    "Otros ingresos" to "TrendingUp",
+                    "Comida" to "Restaurant",
+                    "Transporte" to "DirectionsBus",
+                    "Pago de deuda" to "CreditCard",
+                    "Servicios" to "Bolt",
+                    "Entretenimiento" to "SportsEsports",
+                    "Otros gastos" to "Category"
+                )
+                iconByDefaultName.forEach { (name, icon) ->
+                    db.execSQL(
+                        "UPDATE `categories` SET `emoji` = ? WHERE `isDefault` = 1 AND `name` = ?",
+                        arrayOf(icon, name)
+                    )
+                }
+            }
+        }
+
         private fun defaultCategories() = listOf(
-            CategoryEntity(name = "Sueldo", emoji = "💰", kind = CategoryKind.INCOME, isDefault = true),
-            CategoryEntity(name = "Otros ingresos", emoji = "➕", kind = CategoryKind.INCOME, isDefault = true),
-            CategoryEntity(name = "Comida", emoji = "🍔", kind = CategoryKind.EXPENSE, isDefault = true),
-            CategoryEntity(name = "Transporte", emoji = "🚌", kind = CategoryKind.EXPENSE, isDefault = true),
-            CategoryEntity(name = "Pago de deuda", emoji = "💳", kind = CategoryKind.EXPENSE, isDefault = true),
-            CategoryEntity(name = "Servicios", emoji = "💡", kind = CategoryKind.EXPENSE, isDefault = true),
-            CategoryEntity(name = "Entretenimiento", emoji = "🎮", kind = CategoryKind.EXPENSE, isDefault = true),
-            CategoryEntity(name = "Otros gastos", emoji = "📦", kind = CategoryKind.BOTH, isDefault = true)
+            CategoryEntity(name = "Sueldo", emoji = "Payments", kind = CategoryKind.INCOME, isDefault = true),
+            CategoryEntity(name = "Otros ingresos", emoji = "TrendingUp", kind = CategoryKind.INCOME, isDefault = true),
+            CategoryEntity(name = "Comida", emoji = "Restaurant", kind = CategoryKind.EXPENSE, isDefault = true),
+            CategoryEntity(name = "Transporte", emoji = "DirectionsBus", kind = CategoryKind.EXPENSE, isDefault = true),
+            CategoryEntity(name = "Pago de deuda", emoji = "CreditCard", kind = CategoryKind.EXPENSE, isDefault = true),
+            CategoryEntity(name = "Servicios", emoji = "Bolt", kind = CategoryKind.EXPENSE, isDefault = true),
+            CategoryEntity(name = "Entretenimiento", emoji = "SportsEsports", kind = CategoryKind.EXPENSE, isDefault = true),
+            CategoryEntity(name = "Otros gastos", emoji = "Category", kind = CategoryKind.BOTH, isDefault = true)
         )
     }
 }

@@ -56,7 +56,11 @@ fun MovementRow(
                     modifier = Modifier.weight(1f, fill = false),
                     verticalAlignment = Alignment.CenterVertically
                 ) {
-                    Text(movement.category?.emoji ?: "❔", style = MaterialTheme.typography.titleLarge)
+                    CategoryGlyph(
+                        movement.category?.emoji,
+                        iconSize = 28.dp,
+                        fallbackTextStyle = MaterialTheme.typography.titleLarge
+                    )
                     Column(modifier = Modifier.padding(start = 12.dp)) {
                         Text(
                             movement.category?.name ?: "Sin categoría",
@@ -115,7 +119,7 @@ fun MovementRow(
                             overflow = TextOverflow.Ellipsis
                         )
                         val subtitle = listOfNotNull(
-                            movement.category?.let { "${it.emoji} ${it.name}" },
+                            movement.category?.name,
                             transfer.note?.takeIf { it.isNotBlank() },
                             transfer.date.toDisplayDate()
                         ).joinToString(" · ")

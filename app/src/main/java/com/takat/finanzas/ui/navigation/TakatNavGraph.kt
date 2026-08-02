@@ -15,6 +15,7 @@ import androidx.navigation.compose.rememberNavController
 import androidx.navigation.navArgument
 import com.takat.finanzas.ui.account.AccountDetailScreen
 import com.takat.finanzas.ui.account.AddEditAccountScreen
+import com.takat.finanzas.ui.category.CategoriesScreen
 import com.takat.finanzas.ui.fixedexpense.FixedExpenseFormScreen
 import com.takat.finanzas.ui.fixedexpense.FixedExpensesScreen
 import com.takat.finanzas.ui.home.HomeScreen
@@ -33,6 +34,7 @@ private object Routes {
     const val TRANSFER_NEW = "transfer/new"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
     const val SETTINGS = "settings"
+    const val CATEGORIES = "categories"
     const val FIXED_EXPENSES = "fixed-expenses"
     const val FIXED_EXPENSE_FORM = "fixed-expenses/form?id={id}"
 
@@ -182,8 +184,13 @@ fun TakatNavGraph(
         composable(Routes.SETTINGS) {
             SettingsScreen(
                 onBack = { navController.popBackStack() },
-                onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) }
+                onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
+                onOpenCategories = { navController.navigate(Routes.CATEGORIES) }
             )
+        }
+
+        composable(Routes.CATEGORIES) {
+            CategoriesScreen(onBack = { navController.popBackStack() })
         }
 
         composable(Routes.FIXED_EXPENSES) {

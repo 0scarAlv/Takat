@@ -51,7 +51,7 @@ import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit) {
+fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCategories: () -> Unit) {
     val repository = rememberRepository()
     val viewModel: SettingsViewModel = viewModel(factory = LambdaViewModelFactory { SettingsViewModel(repository) })
     val uiState by viewModel.uiState.collectAsState()
@@ -128,6 +128,18 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit) {
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onOpenFixedExpenses, modifier = Modifier.fillMaxWidth()) {
                 Text("Gestionar gastos fijos")
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Text("Categorías", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Editá el nombre y el ícono de tus categorías.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            OutlinedButton(onClick = onOpenCategories, modifier = Modifier.fillMaxWidth()) {
+                Text("Gestionar categorías")
             }
 
             Spacer(Modifier.height(32.dp))

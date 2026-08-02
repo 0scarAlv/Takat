@@ -157,7 +157,7 @@ fun MovementDetailDialog(
                         DetailRow("Tipo", if (tx.amountCents >= 0) "Ingreso" else "Gasto")
                         DetailRow("Monto", tx.amountCents.centsToDisplay(showSign = true))
                         DetailRow("Cuenta", movement.account?.name ?: "Cuenta eliminada")
-                        DetailRow("Categoría", movement.category?.let { "${it.emoji} ${it.name}" } ?: "Sin categoría")
+                        DetailRow("Categoría", movement.category?.name ?: "Sin categoría")
                         DetailRow("Fecha", tx.date.toDisplayDate())
                         DetailRow("Nota", tx.note?.takeIf { it.isNotBlank() } ?: "—")
                         if (movement.attachments.isNotEmpty()) {
@@ -179,7 +179,7 @@ fun MovementDetailDialog(
                         DetailRow("Monto", transfer.amountCents.centsToDisplay())
                         DetailRow("Desde", movement.fromAccount?.name ?: "Cuenta eliminada")
                         DetailRow("Hacia", movement.toAccount?.name ?: "Cuenta eliminada")
-                        DetailRow("Motivo", movement.category?.let { "${it.emoji} ${it.name}" } ?: "Sin motivo")
+                        DetailRow("Motivo", movement.category?.name ?: "Sin motivo")
                         DetailRow("Fecha", transfer.date.toDisplayDate())
                         DetailRow("Nota", transfer.note?.takeIf { it.isNotBlank() } ?: "—")
                     }
