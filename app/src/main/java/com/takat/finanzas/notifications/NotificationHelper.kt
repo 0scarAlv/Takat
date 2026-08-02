@@ -51,7 +51,7 @@ object NotificationHelper {
             FixedExpenseNotificationKind.OVERDUE -> "Gasto fijo sin pagar" to "$name sigue sin pagarse · $amount"
         }
         val notification = NotificationCompat.Builder(context, CHANNEL_ID)
-            .setSmallIcon(R.drawable.ic_widget_transaction)
+            .setSmallIcon(R.drawable.ic_launcher_foreground)
             .setContentTitle(title)
             .setContentText(text)
             .setContentIntent(pendingIntent)
