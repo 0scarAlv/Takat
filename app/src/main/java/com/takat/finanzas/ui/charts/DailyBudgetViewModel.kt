@@ -70,10 +70,16 @@ class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewMode
     fun onBasisChange(basis: BudgetBasis) = persist { it.copy(basis = basis) }
     fun onDayOfMonthChange(day: Int) = persist { it.copy(dayOfMonth = day) }
 
+    /**
+     * Resets [BudgetSettingsEntity.frozenBudgetEpochDay] to the sentinel so the change takes effect on
+     * "Presupuesto diario" right away instead of waiting for the next day rollover — otherwise switching
+     * basis/período/día after it already froze once today leaves the old frozen value on screen even
+     * though "Valor diario" (computed live) already reflects the new settings. See [computeBudgetFreeze].
+     */
     private fun persist(mutate: (BudgetSettingsEntity) -> BudgetSettingsEntity) {
         viewModelScope.launch {
             val current = repository.budgetSettings().first() ?: BudgetSettingsEntity()
-            repository.updateBudgetSettings(mutate(current))
+            repository.updateBudgetSettings(mutate(current).copy(frozenBudgetEpochDay = 0))
         }
     }
 }
