@@ -187,7 +187,7 @@ fun HomeScreen(
         AlertDialog(
             onDismissRequest = { showEasterEgg = false },
             title = { Text("Esteregg") },
-            text = { Text("Esta app fue hecha en un hiperfoco con mucho café. OscarAlv") },
+            text = { Text("Esta app fue hecha en un hiperfoco con mucho café y aburrimiento.") },
             confirmButton = {
                 TextButton(onClick = { showEasterEgg = false }) { Text("Cerrar") }
             }
@@ -208,7 +208,7 @@ private fun HomeContent(
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { TotalsCard(uiState.totals) }
+        item { TotalsCard(uiState.totals, uiState.sarcasticMessagesEnabled) }
 
         item {
             FixedExpensesSection(
@@ -305,7 +305,7 @@ private fun SectionSelector(
 }
 
 @Composable
-private fun TotalsCard(totals: AccountTotals, modifier: Modifier = Modifier) {
+private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean, modifier: Modifier = Modifier) {
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -316,7 +316,11 @@ private fun TotalsCard(totals: AccountTotals, modifier: Modifier = Modifier) {
             Text("Disponible", color = MaterialTheme.colorScheme.onSurfaceVariant)
             Spacer(Modifier.height(8.dp))
             Text(
-                totals.availableCents.centsToDisplay(),
+                if (totals.availableCents < 0 && sarcasticMessagesEnabled) {
+                    "${totals.availableCents.centsToDisplay()} (Eres irresponsable financieramente)"
+                } else {
+                    totals.availableCents.centsToDisplay()
+                },
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
                 color = if (totals.availableCents < 0) NegativeRed else PositiveGreen

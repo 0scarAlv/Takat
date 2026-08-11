@@ -22,7 +22,11 @@ data class SettingsUiState(
     val pendingAttachmentFiles: Map<String, ByteArray> = emptyMap(),
     val importError: String? = null,
     val importResult: ImportResult? = null,
-    val themeMode: ThemeMode = ThemeMode.SYSTEM
+    val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val backupFolderUri: String? = null,
+    val lastBackupEpochMillis: Long? = null,
+    val lastBackupError: String? = null,
+    val sarcasticMessagesEnabled: Boolean = true
 )
 
 class SettingsViewModel(private val repository: FinanceRepository) : ViewModel() {
@@ -32,7 +36,15 @@ class SettingsViewModel(private val repository: FinanceRepository) : ViewModel()
     init {
         viewModelScope.launch {
             repository.appSettings().collect { settings ->
-                _uiState.update { it.copy(themeMode = settings?.themeMode ?: ThemeMode.SYSTEM) }
+                _uiState.update {
+                    it.copy(
+                        themeMode = settings?.themeMode ?: ThemeMode.SYSTEM,
+                        backupFolderUri = settings?.backupFolderUri,
+                        lastBackupEpochMillis = settings?.lastBackupEpochMillis,
+                        lastBackupError = settings?.lastBackupError,
+                        sarcasticMessagesEnabled = settings?.sarcasticMessagesEnabled ?: true
+                    )
+                }
             }
         }
     }
@@ -41,6 +53,27 @@ class SettingsViewModel(private val repository: FinanceRepository) : ViewModel()
         viewModelScope.launch {
             val current = repository.appSettings().first() ?: AppSettingsEntity()
             repository.updateAppSettings(current.copy(themeMode = mode))
+        }
+    }
+
+    fun onBackupFolderPicked(uri: String) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(backupFolderUri = uri, lastBackupError = null))
+        }
+    }
+
+    fun clearBackupFolder() {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(backupFolderUri = null, lastBackupError = null))
+        }
+    }
+
+    fun onSarcasticMessagesChange(enabled: Boolean) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(sarcasticMessagesEnabled = enabled))
         }
     }
 

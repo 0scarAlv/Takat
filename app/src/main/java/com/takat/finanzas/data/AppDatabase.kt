@@ -42,7 +42,7 @@ import kotlinx.coroutines.launch
         FixedExpensePeriodStateEntity::class,
         AppSettingsEntity::class
     ],
-    version = 12,
+    version = 14,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -73,7 +73,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -305,6 +305,25 @@ abstract class AppDatabase : RoomDatabase() {
                         arrayOf(icon, name)
                     )
                 }
+            }
+        }
+
+        private val MIGRATION_12_13 = object : Migration(12, 13) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Daily automatic backup: a user-picked SAF tree folder to write a rolling backup.zip
+                // into every 24h (see DailyBackupWorker), plus bookkeeping so Settings can show when
+                // the last one ran and surface failures (e.g. the folder became inaccessible).
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `backupFolderUri` TEXT")
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `lastBackupEpochMillis` INTEGER")
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `lastBackupError` TEXT")
+            }
+        }
+
+        private val MIGRATION_13_14 = object : Migration(13, 14) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Lets the sarcastic asides on "Disponible" / "Disponible hoy" be turned off from
+                // Settings. Defaults to on since they already shipped enabled with no toggle.
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `sarcasticMessagesEnabled` INTEGER NOT NULL DEFAULT 1")
             }
         }
 

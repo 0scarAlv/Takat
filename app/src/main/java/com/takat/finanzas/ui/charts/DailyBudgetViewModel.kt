@@ -30,7 +30,8 @@ data class DailyBudgetUiState(
     /** "Gastado hoy": sum of today's expenses. */
     val spentTodayCents: Long = 0,
     /** frozenBudgetCents - spentTodayCents. Negative means overspent for the day. */
-    val remainingTodayCents: Long = 0
+    val remainingTodayCents: Long = 0,
+    val sarcasticMessagesEnabled: Boolean = true
 )
 
 class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewModel() {
@@ -38,8 +39,9 @@ class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewMode
         combine(
             repository.budgetSettings(),
             repository.accountTotals(),
-            repository.spentTodayCents()
-        ) { settings, totals, spentTodayCents ->
+            repository.spentTodayCents(),
+            repository.appSettings()
+        ) { settings, totals, spentTodayCents, appSettings ->
             val today = LocalDate.now(ZoneId.systemDefault())
             val enabled = settings?.enabled ?: false
             val live = computeLiveBudget(settings, totals, today)
@@ -58,7 +60,8 @@ class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewMode
                 dailyBudgetCents = live.liveValueCents,
                 frozenBudgetCents = if (enabled) settings?.frozenBudgetCents ?: 0 else 0,
                 spentTodayCents = spentTodayCents,
-                remainingTodayCents = if (enabled) (settings?.frozenBudgetCents ?: 0) - spentTodayCents else 0
+                remainingTodayCents = if (enabled) (settings?.frozenBudgetCents ?: 0) - spentTodayCents else 0,
+                sarcasticMessagesEnabled = appSettings?.sarcasticMessagesEnabled ?: true
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), DailyBudgetUiState())
 

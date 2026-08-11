@@ -14,14 +14,17 @@ import kotlinx.coroutines.flow.stateIn
 data class HomeUiState(
     val accounts: List<AccountWithBalance> = emptyList(),
     val totals: AccountTotals = AccountTotals(0, 0, 0),
-    val movements: List<Movement> = emptyList()
+    val movements: List<Movement> = emptyList(),
+    val sarcasticMessagesEnabled: Boolean = true
 )
 
 class HomeViewModel(repository: FinanceRepository) : ViewModel() {
     val uiState: StateFlow<HomeUiState> = combine(
         repository.accountsWithBalance(),
         repository.accountTotals(),
-        repository.allMovements()
-    ) { accounts, totals, movements -> HomeUiState(accounts, totals, movements) }
-        .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
+        repository.allMovements(),
+        repository.appSettings()
+    ) { accounts, totals, movements, settings ->
+        HomeUiState(accounts, totals, movements, settings?.sarcasticMessagesEnabled ?: true)
+    }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), HomeUiState())
 }

@@ -1,16 +1,23 @@
 package com.takat.finanzas.ui.settings
 
+import android.content.Intent
+import android.net.Uri
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.interaction.MutableInteractionSource
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.AlertDialog
@@ -24,6 +31,7 @@ import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
 import androidx.compose.material3.SingleChoiceSegmentedButtonRow
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -42,12 +50,15 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.OneTimeWorkRequestBuilder
 import androidx.work.WorkManager
 import com.takat.finanzas.BuildConfig
+import com.takat.finanzas.backup.DailyBackupWorker
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import kotlinx.coroutines.launch
+import java.text.DateFormat
 import java.time.LocalDate
+import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -75,6 +86,16 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
         }
     }
 
+    val backupFolderLauncher = rememberLauncherForActivityResult(ActivityResultContracts.OpenDocumentTree()) { uri ->
+        if (uri != null) {
+            context.contentResolver.takePersistableUriPermission(
+                uri,
+                Intent.FLAG_GRANT_READ_URI_PERMISSION or Intent.FLAG_GRANT_WRITE_URI_PERMISSION
+            )
+            viewModel.onBackupFolderPicked(uri.toString())
+        }
+    }
+
     Scaffold(
         topBar = {
             TopAppBar(
@@ -91,6 +112,7 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
             modifier = Modifier
                 .fillMaxSize()
                 .padding(padding)
+                .verticalScroll(rememberScrollState())
                 .padding(16.dp)
         ) {
             Text("Apariencia", style = MaterialTheme.typography.titleMedium)
@@ -116,6 +138,25 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
                     onClick = { viewModel.onThemeModeChange(ThemeMode.SYSTEM) },
                     shape = SegmentedButtonDefaults.itemShape(2, 3)
                 ) { Text("Sistema") }
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Mensajes sarcásticos", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Los avisos como \"Eres irresponsable financieramente\" o \"te deseo suerte\" cuando andás corto de plata.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.sarcasticMessagesEnabled,
+                    onCheckedChange = viewModel::onSarcasticMessagesChange
+                )
             }
 
             Spacer(Modifier.height(32.dp))
@@ -159,6 +200,51 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
                 onClick = { importLauncher.launch(arrayOf("application/zip", "text/csv", "text/comma-separated-values", "*/*")) },
                 modifier = Modifier.fillMaxWidth()
             ) { Text("Importar datos") }
+
+            Spacer(Modifier.height(32.dp))
+            Text("Respaldo automático", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Elegí una carpeta y Takat va a guardar ahí un respaldo diario en segundo plano, sin que tengas que acordarte de exportar a mano.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            val backupFolderUri = uiState.backupFolderUri
+            if (backupFolderUri != null) {
+                val folderName = remember(backupFolderUri) {
+                    DocumentFile.fromTreeUri(context, Uri.parse(backupFolderUri))?.name
+                }
+                Text("Carpeta: ${folderName ?: "elegida"}", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(4.dp))
+                val lastBackupText = uiState.lastBackupEpochMillis?.let {
+                    "Último respaldo: ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(it))}"
+                } ?: "Todavía no se hizo ningún respaldo automático."
+                Text(lastBackupText, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                uiState.lastBackupError?.let { error ->
+                    Spacer(Modifier.height(4.dp))
+                    Text("El último intento falló: $error", style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.error)
+                }
+                Spacer(Modifier.height(16.dp))
+                Button(
+                    onClick = {
+                        WorkManager.getInstance(context).enqueue(OneTimeWorkRequestBuilder<DailyBackupWorker>().build())
+                        Toast.makeText(context, "Generando respaldo…", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.fillMaxWidth()
+                ) { Text("Respaldar ahora") }
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = { backupFolderLauncher.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Cambiar carpeta")
+                }
+                Spacer(Modifier.height(4.dp))
+                TextButton(onClick = { viewModel.clearBackupFolder() }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Desactivar respaldo automático")
+                }
+            } else {
+                Button(onClick = { backupFolderLauncher.launch(null) }, modifier = Modifier.fillMaxWidth()) {
+                    Text("Elegir carpeta de respaldo")
+                }
+            }
 
             Spacer(Modifier.height(32.dp))
             Text("Acerca de", style = MaterialTheme.typography.titleMedium)

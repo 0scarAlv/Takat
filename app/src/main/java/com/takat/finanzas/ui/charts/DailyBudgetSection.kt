@@ -137,7 +137,11 @@ fun DailyBudgetSection(
                             color = MaterialTheme.colorScheme.onSurfaceVariant
                         )
                         Text(
-                            state.remainingTodayCents.centsToDisplay(showSign = true),
+                            if (state.remainingTodayCents < 100 && state.sarcasticMessagesEnabled) {
+                                "${state.remainingTodayCents.centsToDisplay(showSign = true)} (te deseo suerte)"
+                            } else {
+                                state.remainingTodayCents.centsToDisplay(showSign = true)
+                            },
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
                             color = if (state.remainingTodayCents < 0) NegativeRed else PositiveGreen
