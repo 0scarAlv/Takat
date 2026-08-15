@@ -13,6 +13,7 @@ import androidx.compose.runtime.mutableStateOf
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.NotificationHelper
 import com.takat.finanzas.share.ShareIntentUtil
+import com.takat.finanzas.ui.components.WhatsNewGate
 import com.takat.finanzas.ui.navigation.TakatNavGraph
 import com.takat.finanzas.ui.theme.TakatTheme
 import com.takat.finanzas.ui.util.rememberRepository
@@ -43,6 +44,7 @@ class MainActivity : ComponentActivity() {
                     pendingFixedExpenseId = pendingFixedExpenseId,
                     pendingShareUris = pendingShareUris
                 )
+                WhatsNewGate(repository)
             }
         }
     }

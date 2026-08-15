@@ -17,5 +17,8 @@ fun computeLiveBudget(settings: BudgetSettingsEntity?, totals: AccountTotals, to
     val nextDate = nextPaymentDate(today, settings.periodType, settings.dayOfMonth)
     val remaining = daysRemaining(today, nextDate)
     val balance = if (settings.basis == BudgetBasis.DISPONIBLE) totals.availableCents else totals.capitalCents
-    return LiveBudget(nextDate, remaining, dailyBudgetCents(balance, remaining))
+    // +1: spread the balance over today through the payment day inclusive. The payment may not land until
+    // later that day (or on the last day of the month), so today still needs its own slice — otherwise the
+    // day before payment silently eats the whole remaining balance and payment day itself gets nothing.
+    return LiveBudget(nextDate, remaining, dailyBudgetCents(balance, remaining + 1))
 }

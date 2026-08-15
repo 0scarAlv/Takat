@@ -1,0 +1,76 @@
+package com.takat.finanzas.util
+
+data class ChangelogEntry(
+    val versionCode: Int,
+    val versionName: String,
+    val changes: List<String>
+)
+
+/**
+ * Full release history, keyed by [ChangelogEntry.versionCode] (matches `versionCode` in build.gradle.kts).
+ * Shown to the user as a "qué hay de nuevo" dialog after an update — see WhatsNewDialog.kt. Reconstructed
+ * from git history when the feature was added, so early low-value entries are terse on purpose.
+ */
+object Changelog {
+    val entries: List<ChangelogEntry> = listOf(
+        ChangelogEntry(1, "0.1", listOf(
+            "Arranca el proyecto Takat."
+        )),
+        ChangelogEntry(2, "0.2", listOf(
+            "Primera versión funcional: cuentas, movimientos, transferencias y categorías.",
+            "Inicio con header compacto, navegación por mes, detalle por categoría y gráficos de ingresos/gastos y torta.",
+            "Exportar e importar movimientos en CSV para respaldo o migrar de dispositivo.",
+            "Arreglos de teclado tapando los campos al crear movimientos o categorías."
+        )),
+        ChangelogEntry(3, "0.3.5", listOf(
+            "Adjuntar foto, PDF o JSON como comprobante de un movimiento.",
+            "El respaldo ahora exporta todo (incluidos los comprobantes) en un solo zip.",
+            "Arreglo: comprobantes que no aparecían en el detalle por categoría."
+        )),
+        ChangelogEntry(4, "1.1.5", listOf(
+            "Widget de accesos rápidos para la pantalla de inicio.",
+            "Adjuntar varias imágenes de la galería a la vez.",
+            "APK firmado con clave de release en vez de la clave de debug."
+        )),
+        ChangelogEntry(5, "1.2.0", listOf(
+            "Nuevo: Presupuesto diario, que reparte el saldo disponible entre los días que faltan para el próximo pago.",
+            "Widget más grande y legible, y abre Inicio al tocarlo.",
+            "Easter egg y créditos en Ajustes."
+        )),
+        ChangelogEntry(6, "1.5.0", listOf(
+            "Nuevo módulo de Gastos fijos: registrá pagos recurrentes (quincenales o mensuales), con pagos parciales y recordatorios.",
+            "Compartir una imagen, PDF o JSON desde otra app directo a Takat para crear un movimiento.",
+            "Seleccionar varios archivos o imágenes a la vez al adjuntar."
+        )),
+        ChangelogEntry(7, "1.6.5", listOf(
+            "Compartir para crear movimiento ahora soporta elegir varios archivos a la vez.",
+            "Presupuesto diario con 3 valores: el valor diario (se recalcula con cada movimiento), un presupuesto diario fijo (se congela solo al pasar la medianoche) y gastado hoy / disponible hoy.",
+            "Nuevo widget de presupuesto diario (gastado, presupuesto y disponible de hoy).",
+            "Nuevo widget compacto de accesos rápidos.",
+            "Tema claro / oscuro / sistema, elegible desde Ajustes.",
+            "Home: pestañas con nombre (Presupuesto / Inicio / Estadísticas) en vez de puntos.",
+            "Gastos fijos: cada pendiente indica si es Quincenal o Mensual en vez de un total mezclado.",
+            "Widgets: números centrados y más grandes, y fondo más oscuro en modo claro para pantallas OLED.",
+            "Arreglo: el monto de un movimiento ya no se deforma cuando la nota es muy larga.",
+            "Arreglo: \"Gastado hoy\" ya no contaba dos veces los pagos de gastos fijos."
+        )),
+        ChangelogEntry(8, "1.7.0", listOf(
+            "El gráfico de gastos ahora es una dona, y las categorías usan íconos en vez de emoji.",
+            "El ícono de la notificación ahora usa el logo de Takat.",
+            "Respaldo automático diario a una carpeta elegida por vos.",
+            "Nuevo interruptor en Ajustes para apagar los mensajes sarcásticos."
+        )),
+        ChangelogEntry(9, "1.7.1", listOf(
+            "Arreglo: Presupuesto diario no se actualizaba el mismo día al cambiar la base, el período o el día de pago."
+        )),
+        ChangelogEntry(10, "1.7.2", listOf(
+            "Arreglo: Valor diario ya no le daba todo el saldo al día anterior al pago dejando el día 15 (o el último día del mes) sin nada — ahora cada día, incluido el de pago, tiene su propio colchón por si el pago llega tarde.",
+            "Nuevo ícono de categoría: Plaga.",
+            "Nuevo: esta pantalla de novedades, que muestra los cambios de cada actualización."
+        ))
+    )
+
+    /** Entries strictly newer than [lastSeenVersionCode], oldest first. */
+    fun entriesAfter(lastSeenVersionCode: Int): List<ChangelogEntry> =
+        entries.filter { it.versionCode > lastSeenVersionCode }.sortedBy { it.versionCode }
+}

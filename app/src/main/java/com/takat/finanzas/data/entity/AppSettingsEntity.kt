@@ -14,5 +14,7 @@ data class AppSettingsEntity(
     val lastBackupEpochMillis: Long? = null,
     val lastBackupError: String? = null,
     /** Toggles the joke asides like "(Eres irresponsable financieramente)" and "(te deseo suerte)". */
-    val sarcasticMessagesEnabled: Boolean = true
+    val sarcasticMessagesEnabled: Boolean = true,
+    /** Highest [com.takat.finanzas.util.ChangelogEntry.versionCode] already shown in the "qué hay de nuevo" dialog. */
+    val lastSeenVersionCode: Int = 0
 )

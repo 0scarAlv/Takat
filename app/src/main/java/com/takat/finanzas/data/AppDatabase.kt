@@ -7,6 +7,7 @@ import androidx.room.RoomDatabase
 import androidx.room.TypeConverters
 import androidx.room.migration.Migration
 import androidx.sqlite.db.SupportSQLiteDatabase
+import com.takat.finanzas.BuildConfig
 import com.takat.finanzas.data.dao.AccountDao
 import com.takat.finanzas.data.dao.AppSettingsDao
 import com.takat.finanzas.data.dao.AttachmentDao
@@ -42,7 +43,7 @@ import kotlinx.coroutines.launch
         FixedExpensePeriodStateEntity::class,
         AppSettingsEntity::class
     ],
-    version = 14,
+    version = 15,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -73,12 +74,15 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
                         CoroutineScope(Dispatchers.IO).launch {
                             database.categoryDao().insertAll(defaultCategories())
+                            // Fresh install: start "caught up" on the changelog so the "qué hay de nuevo"
+                            // dialog only ever appears after a real update, never on first launch.
+                            database.appSettingsDao().upsert(AppSettingsEntity(lastSeenVersionCode = BuildConfig.VERSION_CODE))
                         }
                     }
                 }).build()
@@ -324,6 +328,16 @@ abstract class AppDatabase : RoomDatabase() {
                 // Lets the sarcastic asides on "Disponible" / "Disponible hoy" be turned off from
                 // Settings. Defaults to on since they already shipped enabled with no toggle.
                 db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `sarcasticMessagesEnabled` INTEGER NOT NULL DEFAULT 1")
+            }
+        }
+
+        private val MIGRATION_14_15 = object : Migration(14, 15) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Tracks the highest changelog version already shown to the user (see util/Changelog.kt),
+                // so the "qué hay de nuevo" dialog can appear once after each update. Existing installs
+                // default to 0 ("never seen anything") so they get the full reconstructed history the
+                // first time they land on this version.
+                db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `lastSeenVersionCode` INTEGER NOT NULL DEFAULT 0")
             }
         }
 

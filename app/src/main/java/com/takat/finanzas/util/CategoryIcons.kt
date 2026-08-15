@@ -25,6 +25,7 @@ import androidx.compose.material.icons.filled.LocalHospital
 import androidx.compose.material.icons.filled.Luggage
 import androidx.compose.material.icons.filled.MusicNote
 import androidx.compose.material.icons.filled.Payments
+import androidx.compose.material.icons.filled.PestControl
 import androidx.compose.material.icons.filled.Pets
 import androidx.compose.material.icons.filled.Redeem
 import androidx.compose.material.icons.filled.Restaurant
@@ -68,6 +69,7 @@ val CategoryIcons: Map<String, ImageVector> = mapOf(
     "School" to Icons.Filled.School,
     "Checkroom" to Icons.Filled.Checkroom,
     "Pets" to Icons.Filled.Pets,
+    "PestControl" to Icons.Filled.PestControl,
     "CardGiftcard" to Icons.Filled.CardGiftcard,
     "Redeem" to Icons.Filled.Redeem,
     "Flight" to Icons.Filled.Flight,
