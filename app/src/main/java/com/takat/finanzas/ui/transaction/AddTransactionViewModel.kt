@@ -104,10 +104,10 @@ class AddTransactionViewModel(
         }
     }
 
-    fun addCategory(name: String, emoji: String) {
+    fun addCategory(name: String, emoji: String, isSalary: Boolean) {
         viewModelScope.launch {
             val kind = if (_uiState.value.isExpense) CategoryKind.EXPENSE else CategoryKind.INCOME
-            val id = repository.addCategory(CategoryEntity(name = name, emoji = emoji, kind = kind))
+            val id = repository.addCategory(CategoryEntity(name = name, emoji = emoji, kind = kind, isSalary = isSalary))
             _uiState.update { it.copy(categoryId = id) }
         }
     }

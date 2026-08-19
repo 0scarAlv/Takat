@@ -40,11 +40,12 @@ class DailyBudgetViewModel(private val repository: FinanceRepository) : ViewMode
             repository.budgetSettings(),
             repository.accountTotals(),
             repository.spentTodayCents(),
-            repository.appSettings()
-        ) { settings, totals, spentTodayCents, appSettings ->
+            repository.appSettings(),
+            repository.lastSalaryDate()
+        ) { settings, totals, spentTodayCents, appSettings, lastSalaryDate ->
             val today = LocalDate.now(ZoneId.systemDefault())
             val enabled = settings?.enabled ?: false
-            val live = computeLiveBudget(settings, totals, today)
+            val live = computeLiveBudget(settings, totals, today, lastSalaryDate)
 
             if (enabled) {
                 viewModelScope.launch { repository.ensureDailyBudgetFrozen(today) }

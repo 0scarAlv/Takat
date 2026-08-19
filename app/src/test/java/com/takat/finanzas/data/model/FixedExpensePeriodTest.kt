@@ -61,4 +61,65 @@ class FixedExpensePeriodTest {
         assertEquals(true, FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.QUINCENAL, 20, quincenaOnly = true, LocalDate.of(2026, 7, 2)))
         assertEquals(true, FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.QUINCENAL, 20, quincenaOnly = false, LocalDate.of(2026, 7, 2)))
     }
+
+    @Test
+    fun `a salary logged before day 15 jumps the quincenal period key to the second half immediately`() {
+        val today = LocalDate.of(2026, 8, 14)
+        assertEquals("2026-08-Q1", FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.QUINCENAL, today))
+        assertEquals(
+            "2026-08-Q2",
+            FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.QUINCENAL, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `a salary logged after day 15 jumps the quincenal period key to next month's first half`() {
+        val today = LocalDate.of(2026, 8, 29)
+        assertEquals("2026-08-Q2", FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.QUINCENAL, today))
+        assertEquals(
+            "2026-09-Q1",
+            FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.QUINCENAL, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `a stale salary anchor from an already-passed quincena is ignored`() {
+        val staleSalary = LocalDate.of(2026, 7, 14)
+        val today = LocalDate.of(2026, 8, 20)
+        assertEquals(
+            "2026-08-Q2",
+            FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.QUINCENAL, today, lastSalaryDate = staleSalary)
+        )
+    }
+
+    @Test
+    fun `a same-day salary starts a second-half MENSUAL bill before day 16`() {
+        val today = LocalDate.of(2026, 8, 14)
+        assertEquals(
+            false,
+            FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.MENSUAL, 20, quincenaOnly = true, today)
+        )
+        assertEquals(
+            true,
+            FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.MENSUAL, 20, quincenaOnly = true, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `a salary funding the first half does not start a second-half MENSUAL bill early`() {
+        // Salary logged Jul 31 targets Aug-Q1 (day > 15 funds next month's first half); a second-half
+        // bill needs Aug-Q2, a later half than that, so it still waits for day 16.
+        val today = LocalDate.of(2026, 8, 3)
+        val salaryJul31 = LocalDate.of(2026, 7, 31)
+        assertEquals(
+            false,
+            FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.MENSUAL, 20, quincenaOnly = true, today, lastSalaryDate = salaryJul31)
+        )
+    }
+
+    @Test
+    fun `salary anchor boundary is end of month for a pre-15 salary and day 15 of next month otherwise`() {
+        assertEquals(LocalDate.of(2026, 8, 31), FixedExpensePeriod.salaryAnchorBoundary(LocalDate.of(2026, 8, 14)))
+        assertEquals(LocalDate.of(2026, 9, 15), FixedExpensePeriod.salaryAnchorBoundary(LocalDate.of(2026, 8, 29)))
+    }
 }

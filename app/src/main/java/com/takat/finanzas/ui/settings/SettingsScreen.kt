@@ -40,6 +40,7 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableLongStateOf
+import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
@@ -55,6 +56,7 @@ import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.time.LocalDate
@@ -244,6 +246,60 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
                 Button(onClick = { backupFolderLauncher.launch(null) }, modifier = Modifier.fillMaxWidth()) {
                     Text("Elegir carpeta de respaldo")
                 }
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Text("Depuración", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Si te pasa algo raro (por ejemplo, el widget que no se actualiza), activá el registro, " +
+                    "esperá a que vuelva a pasar y después compartilo para que lo pueda revisar. Se guarda " +
+                    "solo en este teléfono hasta que lo compartís.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            var debugLoggingEnabled by remember { mutableStateOf(DebugLog.isEnabled) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Grabar registro de depuración", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = debugLoggingEnabled,
+                    onCheckedChange = {
+                        debugLoggingEnabled = it
+                        DebugLog.setEnabled(it)
+                    }
+                )
+            }
+            Spacer(Modifier.height(12.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(12.dp)
+            ) {
+                OutlinedButton(
+                    onClick = {
+                        val uri = DebugLog.prepareShareFile(context)
+                        if (uri != null) {
+                            val sendIntent = Intent(Intent.ACTION_SEND).apply {
+                                type = "text/plain"
+                                putExtra(Intent.EXTRA_STREAM, uri)
+                                addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
+                            }
+                            context.startActivity(Intent.createChooser(sendIntent, "Compartir registro"))
+                        } else {
+                            Toast.makeText(context, "Todavía no hay nada registrado", Toast.LENGTH_SHORT).show()
+                        }
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Compartir registro") }
+                OutlinedButton(
+                    onClick = {
+                        DebugLog.clear()
+                        Toast.makeText(context, "Registro borrado", Toast.LENGTH_SHORT).show()
+                    },
+                    modifier = Modifier.weight(1f)
+                ) { Text("Borrar registro") }
             }
 
             Spacer(Modifier.height(32.dp))

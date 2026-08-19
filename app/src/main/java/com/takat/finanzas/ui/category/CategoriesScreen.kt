@@ -93,9 +93,10 @@ fun CategoriesScreen(onBack: () -> Unit) {
     editing?.let { category ->
         AddCategoryDialog(
             existing = category,
+            showSalaryOption = category.kind != CategoryKind.EXPENSE,
             onDismiss = { editing = null },
-            onConfirm = { name, icon ->
-                viewModel.updateCategory(category, name, icon)
+            onConfirm = { name, icon, isSalary ->
+                viewModel.updateCategory(category, name, icon, isSalary)
                 editing = null
             }
         )

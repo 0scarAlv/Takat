@@ -10,9 +10,14 @@ import com.takat.finanzas.data.attachment.AttachmentStorage
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.notifications.NotificationHelper
+import com.takat.finanzas.util.DebugLog
+import com.takat.finanzas.widget.WidgetMidnightRefreshWorker
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
+import java.time.Duration
+import java.time.LocalDate
+import java.time.LocalDateTime
 import java.util.concurrent.TimeUnit
 
 class TakatApplication : Application() {
@@ -21,6 +26,8 @@ class TakatApplication : Application() {
 
     override fun onCreate() {
         super.onCreate()
+        DebugLog.init(this)
+        DebugLog.log("TakatApplication.onCreate")
         repository = FinanceRepository(AppDatabase.getInstance(this), AttachmentStorage(this), this)
         CoroutineScope(Dispatchers.IO).launch { repository.ensureDailyBudgetFrozen() }
         NotificationHelper.createChannel(this)
@@ -35,6 +42,19 @@ class TakatApplication : Application() {
             "daily_backup",
             ExistingPeriodicWorkPolicy.KEEP,
             backupRequest
+        )
+
+        // Aligns the periodic run to just after local midnight instead of "24h after whenever the
+        // app first launched" — see WidgetMidnightRefreshWorker for why this exists.
+        val initialDelay = Duration.between(LocalDateTime.now(), LocalDate.now().plusDays(1).atStartOfDay())
+        DebugLog.log("TakatApplication: scheduling widget midnight refresh, initialDelay=${initialDelay.toMinutes()}min")
+        val widgetRefreshRequest = PeriodicWorkRequestBuilder<WidgetMidnightRefreshWorker>(24, TimeUnit.HOURS)
+            .setInitialDelay(initialDelay.toMillis(), TimeUnit.MILLISECONDS)
+            .build()
+        WorkManager.getInstance(this).enqueueUniquePeriodicWork(
+            "widget_midnight_refresh",
+            ExistingPeriodicWorkPolicy.KEEP,
+            widgetRefreshRequest
         )
     }
 }

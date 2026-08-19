@@ -11,5 +11,7 @@ data class CategoryEntity(
     val name: String,
     val emoji: String,
     val kind: CategoryKind,
-    val isDefault: Boolean = false
+    val isDefault: Boolean = false,
+    /** Income tagged with this category marks the start of a new quincena as soon as it's logged (see FixedExpensePeriod). */
+    val isSalary: Boolean = false
 )

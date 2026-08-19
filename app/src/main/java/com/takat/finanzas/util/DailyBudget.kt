@@ -12,9 +12,9 @@ data class LiveBudget(
 )
 
 /** The live "valor diario", recalculated from current settings/totals. Mirrors [dailyBudgetCents]'s formula. */
-fun computeLiveBudget(settings: BudgetSettingsEntity?, totals: AccountTotals, today: LocalDate): LiveBudget {
+fun computeLiveBudget(settings: BudgetSettingsEntity?, totals: AccountTotals, today: LocalDate, lastSalaryDate: LocalDate? = null): LiveBudget {
     if (settings == null || !settings.enabled) return LiveBudget(null, 0, 0)
-    val nextDate = nextPaymentDate(today, settings.periodType, settings.dayOfMonth)
+    val nextDate = nextPaymentDate(today, settings.periodType, settings.dayOfMonth, lastSalaryDate)
     val remaining = daysRemaining(today, nextDate)
     val balance = if (settings.basis == BudgetBasis.DISPONIBLE) totals.availableCents else totals.capitalCents
     // +1: spread the balance over today through the payment day inclusive. The payment may not land until

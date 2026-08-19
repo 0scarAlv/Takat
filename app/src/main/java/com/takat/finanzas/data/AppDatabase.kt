@@ -43,7 +43,7 @@ import kotlinx.coroutines.launch
         FixedExpensePeriodStateEntity::class,
         AppSettingsEntity::class
     ],
-    version = 15,
+    version = 16,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -74,7 +74,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -341,8 +341,18 @@ abstract class AppDatabase : RoomDatabase() {
             }
         }
 
+        private val MIGRATION_15_16 = object : Migration(15, 16) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Income tagged as salary marks the start of a new quincena the moment it's logged,
+                // instead of waiting for the calendar to reach day 16/1 (see FixedExpensePeriod).
+                // The default "Sueldo" category is backfilled since it already means salary for everyone.
+                db.execSQL("ALTER TABLE `categories` ADD COLUMN `isSalary` INTEGER NOT NULL DEFAULT 0")
+                db.execSQL("UPDATE `categories` SET `isSalary` = 1 WHERE `isDefault` = 1 AND `name` = 'Sueldo'")
+            }
+        }
+
         private fun defaultCategories() = listOf(
-            CategoryEntity(name = "Sueldo", emoji = "Payments", kind = CategoryKind.INCOME, isDefault = true),
+            CategoryEntity(name = "Sueldo", emoji = "Payments", kind = CategoryKind.INCOME, isDefault = true, isSalary = true),
             CategoryEntity(name = "Otros ingresos", emoji = "TrendingUp", kind = CategoryKind.INCOME, isDefault = true),
             CategoryEntity(name = "Comida", emoji = "Restaurant", kind = CategoryKind.EXPENSE, isDefault = true),
             CategoryEntity(name = "Transporte", emoji = "DirectionsBus", kind = CategoryKind.EXPENSE, isDefault = true),

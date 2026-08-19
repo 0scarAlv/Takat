@@ -13,9 +13,9 @@ class CategoriesViewModel(private val repository: FinanceRepository) : ViewModel
     val categories: StateFlow<List<CategoryEntity>> =
         repository.categories.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), emptyList())
 
-    fun updateCategory(category: CategoryEntity, name: String, icon: String) {
+    fun updateCategory(category: CategoryEntity, name: String, icon: String, isSalary: Boolean) {
         viewModelScope.launch {
-            repository.updateCategory(category.copy(name = name, emoji = icon))
+            repository.updateCategory(category.copy(name = name, emoji = icon, isSalary = isSalary))
         }
     }
 }

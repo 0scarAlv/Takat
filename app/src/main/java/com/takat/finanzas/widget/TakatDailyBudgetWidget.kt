@@ -45,6 +45,7 @@ import com.takat.finanzas.ui.theme.NegativeRed
 import com.takat.finanzas.ui.theme.NegativeRedDark
 import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.theme.PositiveGreenDark
+import com.takat.finanzas.util.DebugLog
 import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.flow.first
 
@@ -58,6 +59,7 @@ private val DailyBudgetNeutralValue = ColorProvider(day = Color(0xFF0F172A), nig
 /** Shows "Gastado hoy / Presupuesto diario / Disponible hoy", plus the same movimiento/transferencia shortcuts as [TakatWidget]. */
 class TakatDailyBudgetWidget : GlanceAppWidget() {
     override suspend fun provideGlance(context: Context, id: GlanceId) {
+        DebugLog.log("TakatDailyBudgetWidget.provideGlance")
         val repository = (context.applicationContext as TakatApplication).repository
         repository.ensureDailyBudgetFrozen()
         val settings = repository.budgetSettings().first()

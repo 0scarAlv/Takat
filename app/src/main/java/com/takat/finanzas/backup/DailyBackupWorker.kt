@@ -6,6 +6,7 @@ import androidx.documentfile.provider.DocumentFile
 import androidx.work.CoroutineWorker
 import androidx.work.WorkerParameters
 import com.takat.finanzas.TakatApplication
+import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 import java.time.format.DateTimeFormatter
@@ -22,6 +23,7 @@ private const val RETENTION_COUNT = 30
  */
 class DailyBackupWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        DebugLog.log("DailyBackupWorker: doWork start")
         val repository = (applicationContext as TakatApplication).repository
         val settings = repository.appSettings().first() ?: return Result.success()
         val folderUriString = settings.backupFolderUri ?: return Result.success()
@@ -48,9 +50,11 @@ class DailyBackupWorker(context: Context, params: WorkerParameters) : CoroutineW
             repository.updateAppSettings(
                 settings.copy(lastBackupEpochMillis = System.currentTimeMillis(), lastBackupError = null)
             )
+            DebugLog.log("DailyBackupWorker: doWork success")
             Result.success()
         } catch (e: Exception) {
             repository.updateAppSettings(settings.copy(lastBackupError = e.message ?: "Error desconocido"))
+            DebugLog.log("DailyBackupWorker: doWork failed: ${e.message}")
             Result.retry()
         }
     }

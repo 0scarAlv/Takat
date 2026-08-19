@@ -7,6 +7,7 @@ import com.takat.finanzas.TakatApplication
 import com.takat.finanzas.data.entity.FixedExpenseFrequency
 import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ReminderStage
+import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.flow.first
 import java.time.LocalDate
 
@@ -17,6 +18,7 @@ import java.time.LocalDate
  */
 class FixedExpenseReminderWorker(context: Context, params: WorkerParameters) : CoroutineWorker(context, params) {
     override suspend fun doWork(): Result {
+        DebugLog.log("FixedExpenseReminderWorker: doWork start")
         val repository = (applicationContext as TakatApplication).repository
         val today = LocalDate.now()
 
@@ -60,6 +62,7 @@ class FixedExpenseReminderWorker(context: Context, params: WorkerParameters) : C
             }
         }
 
+        DebugLog.log("FixedExpenseReminderWorker: doWork success")
         return Result.success()
     }
 }

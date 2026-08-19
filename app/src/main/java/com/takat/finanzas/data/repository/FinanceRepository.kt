@@ -28,6 +28,7 @@ import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.model.ReminderStage
+import com.takat.finanzas.util.DebugLog
 import com.takat.finanzas.util.computeBudgetFreeze
 import com.takat.finanzas.util.computeLiveBudget
 import com.takat.finanzas.util.dayRange
@@ -37,6 +38,7 @@ import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import java.io.OutputStream
+import java.time.Instant
 import java.time.LocalDate
 import java.time.ZoneId
 
@@ -61,6 +63,22 @@ class FinanceRepository(
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
     suspend fun updateCategory(category: CategoryEntity) = categoryDao.update(category)
+
+    /**
+     * Calendar date of the most recent income tagged with a "salary" category — the anchor that lets a
+     * salary income jump the current quincena forward as soon as it's logged, instead of waiting for
+     * the calendar to reach day 16/1. See [FixedExpensePeriod.currentPeriodKey]/[FixedExpensePeriod.hasPeriodStarted].
+     * Derived from the transactions table itself (not separately stored), so editing or deleting the
+     * salary transaction automatically updates or removes the anchor.
+     */
+    fun lastSalaryDate(zone: ZoneId = ZoneId.systemDefault()): Flow<LocalDate?> =
+        combine(categoryDao.getAll(), transactionDao.getAll()) { categories, transactions ->
+            val salaryCategoryIds = categories.filter { it.isSalary }.map { it.id }.toSet()
+            transactions
+                .filter { it.amountCents > 0 && it.categoryId in salaryCategoryIds }
+                .maxByOrNull { it.date }
+                ?.let { Instant.ofEpochMilli(it.date).atZone(zone).toLocalDate() }
+        }
 
     fun budgetSettings(): Flow<BudgetSettingsEntity?> = budgetSettingsDao.get()
 
@@ -119,8 +137,12 @@ class FinanceRepository(
         val settings = budgetSettingsDao.get().first() ?: return
         if (!settings.enabled) return
         val totals = accountTotals().first()
-        val live = computeLiveBudget(settings, totals, today)
+        val live = computeLiveBudget(settings, totals, today, lastSalaryDate().first())
         val freeze = computeBudgetFreeze(settings, live.liveValueCents, today)
+        DebugLog.log(
+            "ensureDailyBudgetFrozen: today=$today changed=${freeze.changed} " +
+                "frozenBudgetCents=${freeze.frozenBudgetCents} frozenBudgetEpochDay=${freeze.frozenBudgetEpochDay}"
+        )
         if (freeze.changed) {
             updateBudgetSettings(
                 settings.copy(
@@ -139,22 +161,23 @@ class FinanceRepository(
             fixedExpenseDao.getAll(),
             fixedExpensePeriodStateDao.getAll(),
             accountDao.getAll(),
-            transactionDao.getAll()
-        ) { rules, states, accounts, transactions ->
+            transactionDao.getAll(),
+            lastSalaryDate()
+        ) { rules, states, accounts, transactions, lastSalaryDate ->
             val accountById = accounts.associateBy { it.id }
             val stateByKey = states.associateBy { it.fixedExpenseId to it.periodKey }
             val paymentsByKey = transactions
                 .filter { it.fixedExpenseId != null && it.fixedExpensePeriodKey != null }
                 .groupBy { it.fixedExpenseId!! to it.fixedExpensePeriodKey!! }
             rules.filter { it.enabled }.map { rule ->
-                val periodKey = FixedExpensePeriod.currentPeriodKey(rule.frequency)
+                val periodKey = FixedExpensePeriod.currentPeriodKey(rule.frequency, lastSalaryDate = lastSalaryDate)
                 val state = stateByKey[rule.id to periodKey]
                 val payments = paymentsByKey[rule.id to periodKey].orEmpty()
                 PendingFixedExpense(
                     fixedExpense = rule,
                     periodKey = periodKey,
                     active = state?.active ?: true,
-                    started = FixedExpensePeriod.hasPeriodStarted(rule.frequency, rule.dayOfMonth, rule.quincenaOnly),
+                    started = FixedExpensePeriod.hasPeriodStarted(rule.frequency, rule.dayOfMonth, rule.quincenaOnly, lastSalaryDate = lastSalaryDate),
                     paidCents = payments.sumOf { -it.amountCents },
                     lastPaymentTransactionId = payments.maxByOrNull { it.date }?.id,
                     countsTowardTotal = accountById[rule.accountId]?.includeInTotal ?: false
@@ -342,13 +365,37 @@ class FinanceRepository(
 
     suspend fun addCategory(category: CategoryEntity): Long = categoryDao.insert(category)
 
-    suspend fun addTransaction(transaction: TransactionEntity): Long =
-        transactionDao.insert(transaction).also { refreshWidget() }
+    suspend fun addTransaction(transaction: TransactionEntity): Long {
+        val id = transactionDao.insert(transaction)
+        if (isSalaryIncome(transaction)) unfreezeDailyBudget()
+        refreshWidget()
+        return id
+    }
 
     suspend fun deleteTransaction(transaction: TransactionEntity) {
         attachmentDao.getForTransactionOnce(transaction.id).forEach { attachmentStorage.deleteFiles(attachmentDao, it) }
         transactionDao.delete(transaction)
+        if (isSalaryIncome(transaction)) unfreezeDailyBudget()
         refreshWidget()
+    }
+
+    private suspend fun isSalaryIncome(transaction: TransactionEntity): Boolean {
+        if (transaction.amountCents <= 0 || transaction.categoryId == null) return false
+        return categoryDao.getAll().first().any { it.id == transaction.categoryId && it.isSalary }
+    }
+
+    /**
+     * Forces the next [ensureDailyBudgetFrozen] call to re-freeze "presupuesto diario" from the current
+     * live value instead of keeping today's already-frozen number. Needed because a salary income can
+     * jump [lastSalaryDate]'s quincena forward mid-day (see [FixedExpensePeriod.currentPeriodKey]), and
+     * the freeze otherwise only rolls over once per calendar day — without this, both the in-app "Disponible
+     * hoy" and the home screen widget would keep showing the pre-salary number for the rest of the day.
+     */
+    private suspend fun unfreezeDailyBudget() {
+        val settings = budgetSettingsDao.get().first() ?: return
+        if (settings.frozenBudgetEpochDay != 0L) {
+            updateBudgetSettings(settings.copy(frozenBudgetEpochDay = 0))
+        }
     }
 
     fun attachmentsForTransaction(transactionId: Long): Flow<List<AttachmentEntity>> =

@@ -7,6 +7,7 @@ import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
 import androidx.compose.foundation.layout.FlowRow
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.aspectRatio
 import androidx.compose.foundation.layout.fillMaxWidth
@@ -23,6 +24,7 @@ import androidx.compose.material3.FilterChip
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedTextField
+import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
@@ -66,19 +68,23 @@ fun CategoryPicker(
 }
 
 /**
- * Create or edit a category. Pass [existing] to edit it in place (prefills name/icon, calls [onConfirm]
- * with the same id-less name/icon pair — the caller decides whether that's an insert or an update).
+ * Create or edit a category. Pass [existing] to edit it in place (prefills name/icon/salary flag,
+ * calls [onConfirm] with the same id-less name/icon/salary triple — the caller decides whether that's
+ * an insert or an update). [showSalaryOption] hides the salary toggle for expense-only contexts, where
+ * it wouldn't apply.
  */
 @Composable
 fun AddCategoryDialog(
     existing: CategoryEntity? = null,
+    showSalaryOption: Boolean = true,
     onDismiss: () -> Unit,
-    onConfirm: (name: String, icon: String) -> Unit
+    onConfirm: (name: String, icon: String, isSalary: Boolean) -> Unit
 ) {
     var name by remember { mutableStateOf(existing?.name ?: "") }
     var selectedIcon by remember {
         mutableStateOf(existing?.emoji?.takeIf { categoryIconOrNull(it) != null } ?: CategoryIcons.keys.first())
     }
+    var isSalary by remember { mutableStateOf(existing?.isSalary ?: false) }
 
     AlertDialog(
         onDismissRequest = onDismiss,
@@ -120,11 +126,29 @@ fun AddCategoryDialog(
                         }
                     }
                 }
+                if (showSalaryOption) {
+                    Spacer(Modifier.height(12.dp))
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween,
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column {
+                            Text("Es mi salario", style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Un ingreso con esta categoría inicia la quincena de inmediato",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        Switch(checked = isSalary, onCheckedChange = { isSalary = it })
+                    }
+                }
             }
         },
         confirmButton = {
             TextButton(onClick = {
-                if (name.isNotBlank()) onConfirm(name.trim(), selectedIcon)
+                if (name.isNotBlank()) onConfirm(name.trim(), selectedIcon, isSalary)
             }) { Text(if (existing != null) "Guardar" else "Crear") }
         },
         dismissButton = {

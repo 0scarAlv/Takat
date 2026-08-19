@@ -350,9 +350,10 @@ fun AddTransactionScreen(
 
     if (showAddCategory) {
         AddCategoryDialog(
+            showSalaryOption = !uiState.isExpense,
             onDismiss = { showAddCategory = false },
-            onConfirm = { name, emoji ->
-                viewModel.addCategory(name, emoji)
+            onConfirm = { name, emoji, isSalary ->
+                viewModel.addCategory(name, emoji, isSalary)
                 showAddCategory = false
             }
         )

@@ -67,6 +67,11 @@ object Changelog {
             "Arreglo: Valor diario ya no le daba todo el saldo al día anterior al pago dejando el día 15 (o el último día del mes) sin nada — ahora cada día, incluido el de pago, tiene su propio colchón por si el pago llega tarde.",
             "Nuevo ícono de categoría: Plaga.",
             "Nuevo: esta pantalla de novedades, que muestra los cambios de cada actualización."
+        )),
+        ChangelogEntry(11, "1.8.0", listOf(
+            "Nuevo: marcá una categoría de ingreso como \"Es mi salario\" para que un ingreso ahí inicie la quincena de inmediato, sin esperar a que el calendario llegue al día 16 o 1.",
+            "Arreglo: el presupuesto diario a veces no se congelaba a medianoche hasta abrir la app — ahora se fuerza con una tarea en segundo plano programada justo después de medianoche, más confiable que el refresco automático del widget.",
+            "Nuevo en Ajustes → Depuración: grabar un registro de la app (apagado por defecto) y compartirlo, para poder diagnosticar un problema que solo pasa en otro teléfono."
         ))
     )
 

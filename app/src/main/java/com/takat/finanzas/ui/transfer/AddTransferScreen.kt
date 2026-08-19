@@ -195,8 +195,9 @@ fun AddTransferScreen(
 
     if (showAddCategory) {
         AddCategoryDialog(
+            showSalaryOption = false,
             onDismiss = { showAddCategory = false },
-            onConfirm = { name, emoji ->
+            onConfirm = { name, emoji, _ ->
                 viewModel.addCategory(name, emoji)
                 showAddCategory = false
             }
