@@ -72,6 +72,17 @@ object Changelog {
             "Nuevo: marcá una categoría de ingreso como \"Es mi salario\" para que un ingreso ahí inicie la quincena de inmediato, sin esperar a que el calendario llegue al día 16 o 1.",
             "Arreglo: el presupuesto diario a veces no se congelaba a medianoche hasta abrir la app — ahora se fuerza con una tarea en segundo plano programada justo después de medianoche, más confiable que el refresco automático del widget.",
             "Nuevo en Ajustes → Depuración: grabar un registro de la app (apagado por defecto) y compartirlo, para poder diagnosticar un problema que solo pasa en otro teléfono."
+        )),
+        ChangelogEntry(12, "1.8.1", listOf(
+            "Arreglo: el respaldo (manual y el automático diario) ahora incluye los pagos programados (gastos fijos) — antes no se guardaban."
+        )),
+        ChangelogEntry(13, "1.9.0", listOf(
+            "Rediseño de navegación: Presupuesto / Inicio / Estadísticas ahora son pestañas fijas abajo.",
+            "Nuevo botón flotante \"+\" para agregar un movimiento o una transferencia.",
+            "Agregar una cuenta ahora se hace desde el \"+\" junto a \"Cuentas\" en Inicio.",
+            "Nuevo: marcá un gasto fijo como \"pago de deuda\" indicando el monto total y la cantidad de cuotas — la cuota queda fija y Takat te avisa cuánto te falta pagar en total.",
+            "Nuevo: elegir la fecha de un movimiento en vez de usar siempre la de hoy.",
+            "El recordatorio de un gasto fijo ahora avisa lo que realmente falta pagar ese período, no el monto completo."
         ))
     )
 

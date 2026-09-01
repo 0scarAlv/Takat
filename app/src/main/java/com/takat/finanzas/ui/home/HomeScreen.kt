@@ -1,5 +1,10 @@
 package com.takat.finanzas.ui.home
 
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.animation.expandVertically
+import androidx.compose.animation.fadeIn
+import androidx.compose.animation.fadeOut
+import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
 import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
@@ -21,8 +26,12 @@ import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
-import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.Add
+import androidx.compose.material.icons.filled.BarChart
+import androidx.compose.material.icons.filled.Close
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VisibilityOff
@@ -30,12 +39,15 @@ import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.FloatingActionButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.NavigationBar
 import androidx.compose.material3.NavigationBarItem
 import androidx.compose.material3.Scaffold
+import androidx.compose.material3.SmallFloatingActionButton
+import androidx.compose.material3.Surface
 import androidx.compose.material3.Text
 import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
@@ -49,8 +61,8 @@ import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.vector.ImageVector
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
@@ -89,6 +101,7 @@ fun HomeScreen(
     var selectedMovement by remember { mutableStateOf<Movement?>(null) }
     var titleTapCount by remember { mutableStateOf(0) }
     var showEasterEgg by remember { mutableStateOf(false) }
+    var fabExpanded by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
 
     Scaffold(
@@ -123,46 +136,49 @@ fun HomeScreen(
         bottomBar = {
             NavigationBar {
                 NavigationBarItem(
-                    selected = false,
-                    onClick = onAddAccount,
-                    icon = { Icon(Icons.Default.AccountBalanceWallet, contentDescription = null) },
-                    label = { Text("Cuenta") }
+                    selected = pagerState.currentPage == 0,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
+                    icon = { Icon(Icons.Default.PieChart, contentDescription = null) },
+                    label = { Text("Presupuesto") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = onAddTransaction,
-                    icon = { Icon(Icons.Default.Add, contentDescription = null) },
-                    label = { Text("Movimiento") }
+                    selected = pagerState.currentPage == 1,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(1) } },
+                    icon = { Icon(Icons.Default.Home, contentDescription = null) },
+                    label = { Text("Inicio") }
                 )
                 NavigationBarItem(
-                    selected = false,
-                    onClick = onAddTransfer,
-                    icon = { Icon(Icons.Default.SwapHoriz, contentDescription = null) },
-                    label = { Text("Transferencia") }
+                    selected = pagerState.currentPage == 2,
+                    onClick = { scope.launch { pagerState.animateScrollToPage(2) } },
+                    icon = { Icon(Icons.Default.BarChart, contentDescription = null) },
+                    label = { Text("Estadísticas") }
                 )
             }
+        },
+        floatingActionButton = {
+            AddActionFab(
+                expanded = fabExpanded,
+                onExpandedChange = { fabExpanded = it },
+                onAddTransaction = { fabExpanded = false; onAddTransaction() },
+                onAddTransfer = { fabExpanded = false; onAddTransfer() }
+            )
         }
     ) { innerPadding ->
-        Column(modifier = Modifier.fillMaxSize().padding(innerPadding)) {
-            SectionSelector(
-                currentPage = pagerState.currentPage,
-                onSectionClick = { page -> scope.launch { pagerState.animateScrollToPage(page) } },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .padding(horizontal = 16.dp, vertical = 8.dp)
-            )
-            HorizontalPager(state = pagerState, modifier = Modifier.fillMaxSize()) { page ->
-                when (page) {
-                    0 -> ChartsScreen()
-                    1 -> HomeContent(
-                        uiState = uiState,
-                        onOpenAccount = onOpenAccount,
-                        onMovementClick = { selectedMovement = it },
-                        onOpenFixedExpenses = onOpenFixedExpenses,
-                        onPayFixedExpense = onPayFixedExpense
-                    )
-                    else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses)
-                }
+        HorizontalPager(
+            state = pagerState,
+            modifier = Modifier.fillMaxSize().padding(innerPadding)
+        ) { page ->
+            when (page) {
+                0 -> ChartsScreen()
+                1 -> HomeContent(
+                    uiState = uiState,
+                    onOpenAccount = onOpenAccount,
+                    onAddAccount = onAddAccount,
+                    onMovementClick = { selectedMovement = it },
+                    onOpenFixedExpenses = onOpenFixedExpenses,
+                    onPayFixedExpense = onPayFixedExpense
+                )
+                else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses)
             }
         }
     }
@@ -199,6 +215,7 @@ fun HomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
+    onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
     onPayFixedExpense: (fixedExpenseId: Long) -> Unit
@@ -217,21 +234,26 @@ private fun HomeContent(
             )
         }
 
-        if (uiState.accounts.isNotEmpty()) {
-            item {
-                Text(
-                    "Cuentas",
-                    style = MaterialTheme.typography.titleMedium,
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+        item {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Cuentas", style = MaterialTheme.typography.titleMedium)
+                IconButton(onClick = onAddAccount) {
+                    Icon(Icons.Default.Add, contentDescription = "Nueva cuenta")
+                }
             }
+        }
+        if (uiState.accounts.isNotEmpty()) {
             items(uiState.accounts, key = { "acc_${it.account.id}" }) { accountWithBalance ->
                 AccountCard(accountWithBalance, onClick = { onOpenAccount(accountWithBalance.account.id) })
             }
         } else {
             item {
                 Text(
-                    "Todavía no tenés cuentas. Tocá \"Cuenta\" abajo para crear la primera.",
+                    "Todavía no tenés cuentas. Tocá + arriba para crear la primera.",
                     color = MaterialTheme.colorScheme.onSurfaceVariant
                 )
             }
@@ -266,40 +288,51 @@ private fun HomeContent(
     }
 }
 
-private val SectionLabels = listOf("Presupuesto", "Inicio", "Estadísticas")
+/** Speed-dial FAB: tap the main "+" to reveal Movimiento/Transferencia above it, tap again (or pick one) to collapse. */
+@Composable
+private fun AddActionFab(
+    expanded: Boolean,
+    onExpandedChange: (Boolean) -> Unit,
+    onAddTransaction: () -> Unit,
+    onAddTransfer: () -> Unit
+) {
+    Column(horizontalAlignment = Alignment.End) {
+        AnimatedVisibility(
+            visible = expanded,
+            enter = fadeIn() + expandVertically(),
+            exit = fadeOut() + shrinkVertically()
+        ) {
+            Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                LabeledMiniFab(label = "Transferencia", icon = Icons.Default.SwapHoriz, onClick = onAddTransfer)
+                LabeledMiniFab(label = "Movimiento", icon = Icons.AutoMirrored.Filled.ReceiptLong, onClick = onAddTransaction)
+                Spacer(Modifier.height(4.dp))
+            }
+        }
+        FloatingActionButton(onClick = { onExpandedChange(!expanded) }) {
+            Icon(
+                imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
+                contentDescription = if (expanded) "Cerrar" else "Agregar"
+            )
+        }
+    }
+}
 
 @Composable
-private fun SectionSelector(
-    currentPage: Int,
-    onSectionClick: (Int) -> Unit,
-    modifier: Modifier = Modifier
-) {
-    Row(
-        modifier = modifier,
-        horizontalArrangement = Arrangement.spacedBy(8.dp)
-    ) {
-        SectionLabels.forEachIndexed { page, label ->
-            val selected = page == currentPage
-            Box(
-                modifier = Modifier
-                    .weight(1f)
-                    .clip(RoundedCornerShape(14.dp))
-                    .background(
-                        if (selected) MaterialTheme.colorScheme.primary
-                        else MaterialTheme.colorScheme.surfaceVariant
-                    )
-                    .clickable { onSectionClick(page) }
-                    .padding(vertical = 14.dp),
-                contentAlignment = Alignment.Center
-            ) {
-                Text(
-                    label,
-                    style = MaterialTheme.typography.labelLarge,
-                    fontWeight = if (selected) FontWeight.Bold else FontWeight.Normal,
-                    color = if (selected) MaterialTheme.colorScheme.onPrimary
-                    else MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit) {
+    Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+        Surface(
+            shape = RoundedCornerShape(8.dp),
+            color = MaterialTheme.colorScheme.surfaceVariant,
+            shadowElevation = 2.dp
+        ) {
+            Text(
+                label,
+                style = MaterialTheme.typography.labelMedium,
+                modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
+            )
+        }
+        SmallFloatingActionButton(onClick = onClick) {
+            Icon(icon, contentDescription = label)
         }
     }
 }

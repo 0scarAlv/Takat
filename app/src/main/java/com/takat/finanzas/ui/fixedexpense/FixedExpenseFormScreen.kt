@@ -53,6 +53,7 @@ import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.centsToDisplay
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -105,14 +106,46 @@ fun FixedExpenseFormScreen(
                 singleLine = true
             )
 
-            OutlinedTextField(
-                value = uiState.amountText,
-                onValueChange = viewModel::onAmountChange,
-                label = { Text("Monto") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Row(modifier = Modifier.fillMaxWidth()) {
+                Text("Es un pago de deuda", modifier = Modifier.weight(1f))
+                Switch(checked = uiState.isDebt, onCheckedChange = viewModel::onIsDebtChange)
+            }
+
+            if (uiState.isDebt) {
+                OutlinedTextField(
+                    value = uiState.totalDebtText,
+                    onValueChange = viewModel::onTotalDebtChange,
+                    label = { Text("Monto total de la deuda") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.installmentsText,
+                    onValueChange = viewModel::onInstallmentsChange,
+                    label = { Text("Número de cuotas") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                uiState.debtInstallmentCents?.let { cuota ->
+                    Text(
+                        "Cuota: ${cuota.centsToDisplay()} por período. Si pagás de más en un período, la cuota " +
+                            "no cambia; solo se te va a avisar cuánto te queda de deuda total.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            } else {
+                OutlinedTextField(
+                    value = uiState.amountText,
+                    onValueChange = viewModel::onAmountChange,
+                    label = { Text("Monto") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+            }
 
             ExposedDropdownMenuBox(
                 expanded = accountMenuExpanded,

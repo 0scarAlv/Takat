@@ -30,9 +30,24 @@ data class FixedExpenseFormUiState(
     val quincenaOnly: Boolean = true,
     val notifyEnabled: Boolean = false,
     val enabled: Boolean = true,
+    val isDebt: Boolean = false,
+    val totalDebtText: String = "",
+    val installmentsText: String = "",
     val error: String? = null,
     val saved: Boolean = false
-)
+) {
+    /** Preview of the fixed cuota per period, computed live from [totalDebtText]/[installmentsText] while [isDebt] is on. */
+    val debtInstallmentCents: Long?
+        get() {
+            val total = totalDebtText.parseAmountToCents() ?: return null
+            val installments = installmentsText.toIntOrNull() ?: return null
+            if (total <= 0 || installments <= 0) return null
+            return ceilDiv(total, installments)
+        }
+}
+
+/** Ceiling division so the first N-1 cuotas round up and the last one absorbs whatever's left over. */
+private fun ceilDiv(total: Long, installments: Int): Long = (total + installments - 1) / installments
 
 class FixedExpenseFormViewModel(
     private val repository: FinanceRepository,
@@ -67,7 +82,10 @@ class FixedExpenseFormViewModel(
                         dayOfMonth = existing.dayOfMonth,
                         quincenaOnly = existing.quincenaOnly,
                         notifyEnabled = existing.notifyEnabled,
-                        enabled = existing.enabled
+                        enabled = existing.enabled,
+                        isDebt = existing.totalDebtCents != null,
+                        totalDebtText = existing.totalDebtCents?.toEditableAmountString() ?: "",
+                        installmentsText = existing.installmentsCount?.toString() ?: ""
                     )
                 }
             }
@@ -83,6 +101,9 @@ class FixedExpenseFormViewModel(
     fun onQuincenaOnlyChange(value: Boolean) = _uiState.update { it.copy(quincenaOnly = value) }
     fun onNotifyEnabledChange(value: Boolean) = _uiState.update { it.copy(notifyEnabled = value) }
     fun onEnabledChange(value: Boolean) = _uiState.update { it.copy(enabled = value) }
+    fun onIsDebtChange(value: Boolean) = _uiState.update { it.copy(isDebt = value, error = null) }
+    fun onTotalDebtChange(value: String) = _uiState.update { it.copy(totalDebtText = value, error = null) }
+    fun onInstallmentsChange(value: String) = _uiState.update { it.copy(installmentsText = value, error = null) }
 
     fun addCategory(name: String, emoji: String) {
         viewModelScope.launch {
@@ -102,10 +123,30 @@ class FixedExpenseFormViewModel(
             _uiState.update { it.copy(error = "Ingresá un nombre") }
             return
         }
-        val cents = state.amountText.parseAmountToCents()
-        if (cents == null || cents == 0L) {
-            _uiState.update { it.copy(error = "Ingresá un monto válido") }
-            return
+        val totalDebtCents: Long?
+        val installments: Int?
+        val cents: Long
+        if (state.isDebt) {
+            totalDebtCents = state.totalDebtText.parseAmountToCents()
+            if (totalDebtCents == null || totalDebtCents == 0L) {
+                _uiState.update { it.copy(error = "Ingresá el monto total de la deuda") }
+                return
+            }
+            installments = state.installmentsText.toIntOrNull()
+            if (installments == null || installments <= 0) {
+                _uiState.update { it.copy(error = "Ingresá el número de cuotas") }
+                return
+            }
+            cents = ceilDiv(totalDebtCents, installments)
+        } else {
+            totalDebtCents = null
+            installments = null
+            val parsed = state.amountText.parseAmountToCents()
+            if (parsed == null || parsed == 0L) {
+                _uiState.update { it.copy(error = "Ingresá un monto válido") }
+                return
+            }
+            cents = parsed
         }
         viewModelScope.launch {
             val entity = FixedExpenseEntity(
@@ -118,7 +159,9 @@ class FixedExpenseFormViewModel(
                 dayOfMonth = state.dayOfMonth,
                 quincenaOnly = state.quincenaOnly,
                 notifyEnabled = state.notifyEnabled,
-                enabled = state.enabled
+                enabled = state.enabled,
+                totalDebtCents = totalDebtCents,
+                installmentsCount = installments
             )
             if (fixedExpenseId == null) repository.addFixedExpense(entity) else repository.updateFixedExpense(entity)
             _uiState.update { it.copy(saved = true) }

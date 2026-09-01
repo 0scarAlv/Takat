@@ -32,7 +32,7 @@ class FixedExpenseReminderWorker(context: Context, params: WorkerParameters) : C
                     val pending = pendingByRuleId[rule.id] ?: return@forEach
                     if (!pending.isPending) return@forEach
                     if (repository.wasFixedExpenseNotified(rule.id, pending.periodKey, ReminderStage.DUE)) return@forEach
-                    NotificationHelper.notify(applicationContext, FixedExpenseNotificationKind.DUE, rule.id, rule.name, rule.amountCents)
+                    NotificationHelper.notify(applicationContext, FixedExpenseNotificationKind.DUE, rule.id, rule.name, pending.remainingCents)
                     repository.markFixedExpenseNotified(rule.id, pending.periodKey, ReminderStage.DUE, System.currentTimeMillis())
                 }
 
@@ -48,7 +48,7 @@ class FixedExpenseReminderWorker(context: Context, params: WorkerParameters) : C
                         ReminderStage.DUE -> {
                             val pending = pendingByRuleId[rule.id]
                             if (pending?.isPending != true) return@forEach
-                            NotificationHelper.notify(applicationContext, FixedExpenseNotificationKind.DUE, rule.id, rule.name, rule.amountCents)
+                            NotificationHelper.notify(applicationContext, FixedExpenseNotificationKind.DUE, rule.id, rule.name, pending.remainingCents)
                             repository.markFixedExpenseNotified(rule.id, periodKey, stage, System.currentTimeMillis())
                         }
                         ReminderStage.FOLLOW_UP -> {

@@ -1,6 +1,7 @@
 package com.takat.finanzas.data.csv
 
 import com.takat.finanzas.data.entity.CategoryKind
+import com.takat.finanzas.data.entity.FixedExpenseFrequency
 
 data class AccountRow(
     val name: String,
@@ -35,9 +36,32 @@ data class TransferRow(
     val note: String?
 )
 
+data class FixedExpenseRow(
+    val name: String,
+    val amountCents: Long,
+    val accountName: String,
+    val categoryName: String?,
+    val frequency: FixedExpenseFrequency,
+    val dayOfMonth: Int,
+    val quincenaOnly: Boolean,
+    val notifyEnabled: Boolean,
+    val enabled: Boolean,
+    val totalDebtCents: Long?,
+    val installmentsCount: Int?
+)
+
+/** References its [FixedExpenseRow] by name, the same way [TransactionRow] references accounts/categories. */
+data class FixedExpensePeriodStateRow(
+    val fixedExpenseName: String,
+    val periodKey: String,
+    val active: Boolean
+)
+
 data class ParsedBackup(
     val accounts: List<AccountRow>,
     val categories: List<CategoryRow>,
     val transactions: List<TransactionRow>,
-    val transfers: List<TransferRow>
+    val transfers: List<TransferRow>,
+    val fixedExpenses: List<FixedExpenseRow> = emptyList(),
+    val fixedExpensePeriodStates: List<FixedExpensePeriodStateRow> = emptyList()
 )

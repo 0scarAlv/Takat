@@ -117,6 +117,18 @@ fun FixedExpensesScreen(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        row.entity.totalDebtCents?.let { total ->
+                                            Text(
+                                                if (row.isDebtSettled) {
+                                                    "Deuda pagada por completo (${total.centsToDisplay()})"
+                                                } else {
+                                                    "Deuda: ${row.totalPaidCents.centsToDisplay()} pagado de ${total.centsToDisplay()} · " +
+                                                        "restan ${row.debtRemainingCents?.centsToDisplay()}"
+                                                },
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                     }
                                     Switch(checked = row.entity.enabled, onCheckedChange = { viewModel.toggleEnabled(row.entity) })
                                     IconButton(onClick = { onEdit(row.entity.id) }) {

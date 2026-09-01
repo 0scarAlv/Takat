@@ -31,7 +31,7 @@ fun FixedExpensePicker(
             FilterChip(
                 selected = item.fixedExpense.id == selectedId,
                 onClick = { onToggle(item.fixedExpense.id) },
-                label = { Text("${item.fixedExpense.name} · ${item.fixedExpense.amountCents.centsToDisplay()}") }
+                label = { Text("${item.fixedExpense.name} · ${item.remainingCents.centsToDisplay()}") }
             )
         }
     }

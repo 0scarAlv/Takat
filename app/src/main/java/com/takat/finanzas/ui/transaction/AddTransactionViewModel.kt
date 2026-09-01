@@ -16,6 +16,10 @@ import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
+import java.time.Instant
+import java.time.LocalTime
+import java.time.ZoneId
+import java.time.ZoneOffset
 
 /** An attachment the user picked/captured that hasn't been persisted yet (no transactionId until save()). */
 data class PendingAttachment(
@@ -77,6 +81,18 @@ class AddTransactionViewModel(
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
     fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
+
+    /**
+     * [utcDateMillis] comes from Compose's DatePicker, which works in UTC-midnight terms regardless of
+     * device time zone. Re-anchoring to the current time-of-day (rather than local midnight) keeps a
+     * same-day transaction's ordering relative to others sane and matches the default (System.currentTimeMillis()).
+     */
+    fun onDateChange(utcDateMillis: Long) {
+        val pickedDate = Instant.ofEpochMilli(utcDateMillis).atZone(ZoneOffset.UTC).toLocalDate()
+        val newMillis = pickedDate.atTime(LocalTime.now()).atZone(ZoneId.systemDefault()).toInstant().toEpochMilli()
+        _uiState.update { it.copy(dateMillis = newMillis) }
+    }
+
     fun onAttachmentPicked(attachment: PendingAttachment) =
         _uiState.update { it.copy(pendingAttachments = it.pendingAttachments + attachment) }
 

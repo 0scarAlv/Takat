@@ -372,8 +372,8 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
             text = {
                 Text(
                     "Se agregaron ${result.accountsAdded} cuentas, ${result.categoriesAdded} categorías, " +
-                        "${result.transactionsAdded} movimientos, ${result.transfersAdded} transferencias y " +
-                        "${result.attachmentsAdded} comprobantes." +
+                        "${result.transactionsAdded} movimientos, ${result.transfersAdded} transferencias, " +
+                        "${result.fixedExpensesAdded} pagos programados y ${result.attachmentsAdded} comprobantes." +
                         if (result.skipped > 0) {
                             "\n\n${result.skipped} filas se saltearon por referenciar una cuenta que no se pudo resolver."
                         } else {

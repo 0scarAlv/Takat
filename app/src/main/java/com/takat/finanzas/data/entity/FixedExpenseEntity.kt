@@ -43,5 +43,13 @@ data class FixedExpenseEntity(
     val quincenaOnly: Boolean = true,
     val notifyEnabled: Boolean = false,
     val enabled: Boolean = true,
-    val createdAt: Long = System.currentTimeMillis()
+    val createdAt: Long = System.currentTimeMillis(),
+    /**
+     * Non-null marks this fixed expense as a debt payment plan: [amountCents] is the fixed cuota per
+     * period (never re-amortized, even if a period is overpaid), but the rule stops counting as pending
+     * once total lifetime payments reach [totalDebtCents] — see [com.takat.finanzas.data.model.PendingFixedExpense].
+     */
+    val totalDebtCents: Long? = null,
+    /** Installments the debt was originally planned over. Informational only (used to prefill the edit form); not enforced. */
+    val installmentsCount: Int? = null
 )

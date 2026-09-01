@@ -169,6 +169,10 @@ class FinanceRepository(
             val paymentsByKey = transactions
                 .filter { it.fixedExpenseId != null && it.fixedExpensePeriodKey != null }
                 .groupBy { it.fixedExpenseId!! to it.fixedExpensePeriodKey!! }
+            val totalPaidByRule = transactions
+                .filter { it.fixedExpenseId != null }
+                .groupBy { it.fixedExpenseId!! }
+                .mapValues { (_, txs) -> txs.sumOf { -it.amountCents } }
             rules.filter { it.enabled }.map { rule ->
                 val periodKey = FixedExpensePeriod.currentPeriodKey(rule.frequency, lastSalaryDate = lastSalaryDate)
                 val state = stateByKey[rule.id to periodKey]
@@ -179,6 +183,7 @@ class FinanceRepository(
                     active = state?.active ?: true,
                     started = FixedExpensePeriod.hasPeriodStarted(rule.frequency, rule.dayOfMonth, rule.quincenaOnly, lastSalaryDate = lastSalaryDate),
                     paidCents = payments.sumOf { -it.amountCents },
+                    totalPaidCents = totalPaidByRule[rule.id] ?: 0,
                     lastPaymentTransactionId = payments.maxByOrNull { it.date }?.id,
                     countsTowardTotal = accountById[rule.accountId]?.includeInTotal ?: false
                 )
@@ -189,10 +194,12 @@ class FinanceRepository(
     suspend fun remainingCentsForPeriod(rule: FixedExpenseEntity, periodKey: String): Long {
         val active = fixedExpensePeriodStateDao.find(rule.id, periodKey)?.active ?: true
         if (!active) return 0
-        val paidCents = transactionDao.getAll().first()
-            .filter { it.fixedExpenseId == rule.id && it.fixedExpensePeriodKey == periodKey }
-            .sumOf { -it.amountCents }
-        return (rule.amountCents - paidCents).coerceAtLeast(0)
+        val allForRule = transactionDao.getAll().first().filter { it.fixedExpenseId == rule.id }
+        val paidCents = allForRule.filter { it.fixedExpensePeriodKey == periodKey }.sumOf { -it.amountCents }
+        val periodRemaining = (rule.amountCents - paidCents).coerceAtLeast(0)
+        val totalDebtCents = rule.totalDebtCents ?: return periodRemaining
+        val debtRemaining = (totalDebtCents - allForRule.sumOf { -it.amountCents }).coerceAtLeast(0)
+        return minOf(periodRemaining, debtRemaining)
     }
 
     fun fixedExpenses(): Flow<List<FixedExpenseEntity>> = fixedExpenseDao.getAll()
@@ -430,6 +437,8 @@ class FinanceRepository(
         val categories = categoryDao.getAll().first()
         val transactions = transactionDao.getAll().first()
         val transfers = transferDao.getAll().first()
+        val fixedExpenses = fixedExpenseDao.getAll().first()
+        val fixedExpensePeriodStates = fixedExpensePeriodStateDao.getAll().first()
         val attachmentsByTransaction = attachmentDao.getAll().first().groupBy { it.transactionId }
 
         val files = mutableMapOf<String, ByteArray>()
@@ -443,7 +452,10 @@ class FinanceRepository(
             if (entries.isNotEmpty()) entryNamesByTransaction[tx.id] = entries
         }
 
-        val csv = BackupCsv.encode(accounts, categories, transactions, transfers, entryNamesByTransaction)
+        val csv = BackupCsv.encode(
+            accounts, categories, transactions, transfers, entryNamesByTransaction,
+            fixedExpenses, fixedExpensePeriodStates
+        )
         BackupZip.write(output, csv, files)
     }
 
@@ -531,8 +543,56 @@ class FinanceRepository(
             transfersAdded++
         }
 
+        val fixedExpenseIdByName = fixedExpenseDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
+        var fixedExpensesAdded = 0
+        parsed.fixedExpenses.forEach { row ->
+            if (fixedExpenseIdByName.containsKey(row.name)) return@forEach
+            val accountId = accountIdByName[row.accountName]
+            if (accountId == null) {
+                skipped++
+                return@forEach
+            }
+            val id = fixedExpenseDao.insert(
+                FixedExpenseEntity(
+                    name = row.name,
+                    amountCents = row.amountCents,
+                    accountId = accountId,
+                    categoryId = row.categoryName?.let { categoryIdByName[it] },
+                    frequency = row.frequency,
+                    dayOfMonth = row.dayOfMonth,
+                    quincenaOnly = row.quincenaOnly,
+                    notifyEnabled = row.notifyEnabled,
+                    enabled = row.enabled,
+                    totalDebtCents = row.totalDebtCents,
+                    installmentsCount = row.installmentsCount
+                )
+            )
+            fixedExpenseIdByName[row.name] = id
+            fixedExpensesAdded++
+        }
+
+        parsed.fixedExpensePeriodStates.forEach { row ->
+            val fixedExpenseId = fixedExpenseIdByName[row.fixedExpenseName]
+            if (fixedExpenseId == null) {
+                skipped++
+                return@forEach
+            }
+            if (fixedExpensePeriodStateDao.find(fixedExpenseId, row.periodKey) == null) {
+                fixedExpensePeriodStateDao.insert(
+                    FixedExpensePeriodStateEntity(
+                        fixedExpenseId = fixedExpenseId,
+                        periodKey = row.periodKey,
+                        active = row.active
+                    )
+                )
+            }
+        }
+
         refreshWidget()
-        return ImportResult(accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped, attachmentsAdded)
+        return ImportResult(
+            accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped, attachmentsAdded,
+            fixedExpensesAdded
+        )
     }
 
     private fun extensionFor(type: AttachmentType): String = when (type) {
