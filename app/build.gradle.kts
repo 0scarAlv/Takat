@@ -23,8 +23,8 @@ android {
         applicationId = "com.takat.finanzas"
         minSdk = 26
         targetSdk = 36
-        versionCode = 13
-        versionName = "1.9.0"
+        versionCode = 15
+        versionName = "1.9.2"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
     }

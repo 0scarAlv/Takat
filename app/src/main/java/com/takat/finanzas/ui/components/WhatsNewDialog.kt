@@ -66,8 +66,9 @@ fun WhatsNewGate(repository: FinanceRepository) {
     }
 }
 
+/** Also used as a manual "ver novedades" dialog from the top bar, not just the auto-show gate above. */
 @Composable
-private fun WhatsNewDialog(entries: List<ChangelogEntry>, onDismiss: () -> Unit) {
+fun WhatsNewDialog(entries: List<ChangelogEntry>, onDismiss: () -> Unit) {
     AlertDialog(
         onDismissRequest = onDismiss,
         title = { Text("Novedades") },

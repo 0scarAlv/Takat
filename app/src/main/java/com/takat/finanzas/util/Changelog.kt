@@ -83,6 +83,13 @@ object Changelog {
             "Nuevo: marcá un gasto fijo como \"pago de deuda\" indicando el monto total y la cantidad de cuotas — la cuota queda fija y Takat te avisa cuánto te falta pagar en total.",
             "Nuevo: elegir la fecha de un movimiento en vez de usar siempre la de hoy.",
             "El recordatorio de un gasto fijo ahora avisa lo que realmente falta pagar ese período, no el monto completo."
+        )),
+        ChangelogEntry(14, "1.9.1", listOf(
+            "Nuevo acceso rápido en el panel de ajustes rápidos del sistema para crear un movimiento sin abrir la app ni usar un widget."
+        )),
+        ChangelogEntry(15, "1.9.2", listOf(
+            "El ícono del acceso rápido en ajustes rápidos ahora son las flechas de movimiento en vez del \"+\".",
+            "Nuevo botón de info junto a Ajustes en Inicio para ver las novedades cuando quieras, por si el aviso automático no aparece."
         ))
     )
 

@@ -31,6 +31,7 @@ import androidx.compose.material.icons.filled.Add
 import androidx.compose.material.icons.filled.BarChart
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
@@ -73,6 +74,8 @@ import com.takat.finanzas.data.model.key
 import com.takat.finanzas.ui.charts.ChartsScreen
 import com.takat.finanzas.ui.components.MovementDetailDialog
 import com.takat.finanzas.ui.components.MovementRow
+import com.takat.finanzas.ui.components.WhatsNewDialog
+import com.takat.finanzas.util.Changelog
 import com.takat.finanzas.ui.stats.StatsScreen
 import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.theme.NegativeRed
@@ -102,6 +105,7 @@ fun HomeScreen(
     var titleTapCount by remember { mutableStateOf(0) }
     var showEasterEgg by remember { mutableStateOf(false) }
     var fabExpanded by remember { mutableStateOf(false) }
+    var showChangelog by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
 
     Scaffold(
@@ -124,6 +128,9 @@ fun HomeScreen(
                     )
                 },
                 actions = {
+                    IconButton(onClick = { showChangelog = true }) {
+                        Icon(Icons.Default.Info, contentDescription = "Novedades")
+                    }
                     IconButton(onClick = onOpenSettings) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
                     }
@@ -196,6 +203,13 @@ fun HomeScreen(
                     selectedMovement = null
                 }
             }
+        )
+    }
+
+    if (showChangelog) {
+        WhatsNewDialog(
+            entries = Changelog.entries,
+            onDismiss = { showChangelog = false }
         )
     }
 

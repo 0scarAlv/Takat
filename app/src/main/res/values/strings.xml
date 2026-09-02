@@ -1,3 +1,4 @@
 <resources>
     <string name="app_name">Takat</string>
+    <string name="quick_settings_tile_label">Nueva transacción</string>
 </resources>
