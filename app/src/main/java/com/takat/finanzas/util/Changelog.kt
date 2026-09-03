@@ -117,6 +117,9 @@ object Changelog {
         )),
         ChangelogEntry(23, "1.12.1", listOf(
             "Panel de PC: los desplegables del formulario de nuevo movimiento ya no se ven con el estilo por defecto del navegador."
+        )),
+        ChangelogEntry(24, "1.12.2", listOf(
+            "Panel de PC: nombre \"Takat\" más grande arriba, e ícono de Takat en la pestaña del navegador."
         ))
     )
 
