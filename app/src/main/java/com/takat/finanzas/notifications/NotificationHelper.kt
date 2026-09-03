@@ -20,6 +20,8 @@ object NotificationHelper {
     const val CHANNEL_ID = "fixed_expenses"
     const val EXTRA_FIXED_EXPENSE_ID = "fixed_expense_id"
 
+    const val PC_ACCESS_CHANNEL_ID = "pc_access"
+
     fun createChannel(context: Context) {
         val channel = NotificationChannel(
             CHANNEL_ID,
@@ -27,6 +29,13 @@ object NotificationHelper {
             NotificationManager.IMPORTANCE_DEFAULT
         ).apply { description = "Avisos de gastos fijos pendientes de pago" }
         context.getSystemService(NotificationManager::class.java).createNotificationChannel(channel)
+
+        val pcAccessChannel = NotificationChannel(
+            PC_ACCESS_CHANNEL_ID,
+            "Acceso desde PC",
+            NotificationManager.IMPORTANCE_LOW
+        ).apply { description = "Aviso mientras el panel web para PC está activo" }
+        context.getSystemService(NotificationManager::class.java).createNotificationChannel(pcAccessChannel)
     }
 
     fun notify(context: Context, kind: FixedExpenseNotificationKind, fixedExpenseId: Long, name: String, amountCents: Long) {

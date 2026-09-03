@@ -90,6 +90,16 @@ object Changelog {
         ChangelogEntry(15, "1.9.2", listOf(
             "El ícono del acceso rápido en ajustes rápidos ahora son las flechas de movimiento en vez del \"+\".",
             "Nuevo botón de info junto a Ajustes en Inicio para ver las novedades cuando quieras, por si el aviso automático no aparece."
+        )),
+        ChangelogEntry(16, "1.10.0", listOf(
+            "Primer paso de Acceso desde PC: activalo en Ajustes y vinculá una PC en tu misma wifi escaneando un código QR — sin servidor externo, todo cifrado de punta a punta entre el teléfono y el navegador.",
+            "Todavía en construcción: por ahora solo se puede vincular; el panel con tus cuentas y movimientos llega en una próxima actualización."
+        )),
+        ChangelogEntry(17, "1.10.1", listOf(
+            "Arreglo: vincular una PC fallaba con \"Cannot read properties of undefined (reading 'generateKey')\" porque el navegador no da cifrado nativo en direcciones de red local sin https — ahora Takat trae su propia librería de cifrado, así que sigue funcionando igual de simple."
+        )),
+        ChangelogEntry(18, "1.10.2", listOf(
+            "Arreglo: el interruptor de \"Acceso desde PC\" en Ajustes aparecía apagado al volver a entrar, aunque el servicio siguiera activo de verdad."
         ))
     )
 

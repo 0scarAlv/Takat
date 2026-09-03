@@ -8,6 +8,7 @@ import com.takat.finanzas.backup.DailyBackupWorker
 import com.takat.finanzas.data.AppDatabase
 import com.takat.finanzas.data.attachment.AttachmentStorage
 import com.takat.finanzas.data.repository.FinanceRepository
+import com.takat.finanzas.network.PairingManager
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.notifications.NotificationHelper
 import com.takat.finanzas.util.DebugLog
@@ -23,12 +24,16 @@ import java.util.concurrent.TimeUnit
 class TakatApplication : Application() {
     lateinit var repository: FinanceRepository
         private set
+    lateinit var pairingManager: PairingManager
+        private set
 
     override fun onCreate() {
         super.onCreate()
         DebugLog.init(this)
         DebugLog.log("TakatApplication.onCreate")
-        repository = FinanceRepository(AppDatabase.getInstance(this), AttachmentStorage(this), this)
+        val database = AppDatabase.getInstance(this)
+        repository = FinanceRepository(database, AttachmentStorage(this), this)
+        pairingManager = PairingManager(database.trustedDeviceDao())
         CoroutineScope(Dispatchers.IO).launch { repository.ensureDailyBudgetFrozen() }
         NotificationHelper.createChannel(this)
         val request = PeriodicWorkRequestBuilder<FixedExpenseReminderWorker>(24, TimeUnit.HOURS).build()

@@ -17,6 +17,7 @@ import com.takat.finanzas.data.dao.FixedExpenseDao
 import com.takat.finanzas.data.dao.FixedExpensePeriodStateDao
 import com.takat.finanzas.data.dao.TransactionDao
 import com.takat.finanzas.data.dao.TransferDao
+import com.takat.finanzas.data.dao.TrustedDeviceDao
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
@@ -27,6 +28,7 @@ import com.takat.finanzas.data.entity.FixedExpenseEntity
 import com.takat.finanzas.data.entity.FixedExpensePeriodStateEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
+import com.takat.finanzas.data.entity.TrustedDeviceEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -41,9 +43,10 @@ import kotlinx.coroutines.launch
         BudgetSettingsEntity::class,
         FixedExpenseEntity::class,
         FixedExpensePeriodStateEntity::class,
-        AppSettingsEntity::class
+        AppSettingsEntity::class,
+        TrustedDeviceEntity::class
     ],
-    version = 17,
+    version = 18,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -57,6 +60,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fixedExpenseDao(): FixedExpenseDao
     abstract fun fixedExpensePeriodStateDao(): FixedExpensePeriodStateDao
     abstract fun appSettingsDao(): AppSettingsDao
+    abstract fun trustedDeviceDao(): TrustedDeviceDao
 
     companion object {
         @Volatile
@@ -74,7 +78,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -357,6 +361,25 @@ abstract class AppDatabase : RoomDatabase() {
                 // fixed cuota per period, totalDebtCents is the overall amount owed (null = not a debt).
                 db.execSQL("ALTER TABLE `fixed_expenses` ADD COLUMN `totalDebtCents` INTEGER")
                 db.execSQL("ALTER TABLE `fixed_expenses` ADD COLUMN `installmentsCount` INTEGER")
+            }
+        }
+
+        private val MIGRATION_17_18 = object : Migration(17, 18) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                // Devices (browsers) paired to the PC-access panel (Takat 2.0). secretBase64 is the
+                // ECDH-derived session secret used to key every request/response — see
+                // network/crypto/SessionCrypto.kt. Never leaves this table over the network.
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `trusted_devices` (
+                        `deviceToken` TEXT NOT NULL PRIMARY KEY,
+                        `name` TEXT NOT NULL,
+                        `secretBase64` TEXT NOT NULL,
+                        `createdAt` INTEGER NOT NULL,
+                        `lastUsedAt` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
             }
         }
 

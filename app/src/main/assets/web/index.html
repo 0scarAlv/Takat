@@ -1,0 +1,64 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Takat — Acceso desde PC</title>
+<style>
+  :root { color-scheme: light dark; }
+  body {
+    font-family: system-ui, sans-serif;
+    max-width: 420px;
+    margin: 10vh auto 0;
+    padding: 0 24px;
+    text-align: center;
+  }
+  h1 { font-size: 1.25rem; margin-bottom: 0.25rem; }
+  p.hint { opacity: 0.7; font-size: 0.9rem; }
+  #qr { margin: 24px auto; border-radius: 8px; }
+  #status { font-weight: 600; margin-top: 12px; }
+  #status.approved { color: #2e7d32; }
+  #status.error { color: #c62828; }
+</style>
+</head>
+<body>
+  <h1>Vincular esta PC con Takat</h1>
+  <p class="hint">Abre Takat en tu teléfono → Ajustes → Acceso desde PC → Vincular nueva PC, y escanea este código.</p>
+  <img id="qr" width="260" height="260" alt="Código QR de vinculación" />
+  <div id="status">Generando código…</div>
+  <!-- Generated from the exact static-import closure of nist.js + hkdf.js + sha2.js + aes.js +
+       ciphers/utils.js — see the Takat 2.0 plan for why this is vendored instead of using the
+       browser's native Web Crypto (unavailable outside a secure context / plain http://). -->
+  <script type="importmap">
+  {
+    "imports": {
+      "@noble/ciphers/_polyval.js": "./vendor/@noble/ciphers/_polyval.js",
+      "@noble/ciphers/aes.js": "./vendor/@noble/ciphers/aes.js",
+      "@noble/ciphers/utils.js": "./vendor/@noble/ciphers/utils.js",
+      "@noble/curves/abstract/curve.js": "./vendor/@noble/curves/abstract/curve.js",
+      "@noble/curves/abstract/edwards.js": "./vendor/@noble/curves/abstract/edwards.js",
+      "@noble/curves/abstract/fft.js": "./vendor/@noble/curves/abstract/fft.js",
+      "@noble/curves/abstract/frost.js": "./vendor/@noble/curves/abstract/frost.js",
+      "@noble/curves/abstract/hash-to-curve.js": "./vendor/@noble/curves/abstract/hash-to-curve.js",
+      "@noble/curves/abstract/modular.js": "./vendor/@noble/curves/abstract/modular.js",
+      "@noble/curves/abstract/montgomery.js": "./vendor/@noble/curves/abstract/montgomery.js",
+      "@noble/curves/abstract/oprf.js": "./vendor/@noble/curves/abstract/oprf.js",
+      "@noble/curves/abstract/weierstrass.js": "./vendor/@noble/curves/abstract/weierstrass.js",
+      "@noble/curves/ed25519.js": "./vendor/@noble/curves/ed25519.js",
+      "@noble/curves/misc.js": "./vendor/@noble/curves/misc.js",
+      "@noble/curves/nist.js": "./vendor/@noble/curves/nist.js",
+      "@noble/curves/utils.js": "./vendor/@noble/curves/utils.js",
+      "@noble/hashes/blake1.js": "./vendor/@noble/hashes/blake1.js",
+      "@noble/hashes/blake2.js": "./vendor/@noble/hashes/blake2.js",
+      "@noble/hashes/hkdf.js": "./vendor/@noble/hashes/hkdf.js",
+      "@noble/hashes/hmac.js": "./vendor/@noble/hashes/hmac.js",
+      "@noble/hashes/legacy.js": "./vendor/@noble/hashes/legacy.js",
+      "@noble/hashes/sha2.js": "./vendor/@noble/hashes/sha2.js",
+      "@noble/hashes/sha3.js": "./vendor/@noble/hashes/sha3.js",
+      "@noble/hashes/utils.js": "./vendor/@noble/hashes/utils.js"
+    }
+  }
+  </script>
+  <script type="module" src="pair.js"></script>
+</body>
+</html>

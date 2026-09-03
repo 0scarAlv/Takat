@@ -3,6 +3,9 @@ package com.takat.finanzas.ui.settings
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
+import com.takat.finanzas.network.LocalIpAddress
+import com.takat.finanzas.network.LocalApiServer
+import com.takat.finanzas.network.PcAccessForegroundService
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
@@ -64,7 +67,12 @@ import java.util.Date
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
-fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCategories: () -> Unit) {
+fun SettingsScreen(
+    onBack: () -> Unit,
+    onOpenFixedExpenses: () -> Unit,
+    onOpenCategories: () -> Unit,
+    onOpenPairScan: () -> Unit
+) {
     val repository = rememberRepository()
     val viewModel: SettingsViewModel = viewModel(factory = LambdaViewModelFactory { SettingsViewModel(repository) })
     val uiState by viewModel.uiState.collectAsState()
@@ -183,6 +191,43 @@ fun SettingsScreen(onBack: () -> Unit, onOpenFixedExpenses: () -> Unit, onOpenCa
             Spacer(Modifier.height(16.dp))
             OutlinedButton(onClick = onOpenCategories, modifier = Modifier.fillMaxWidth()) {
                 Text("Gestionar categorías")
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Text("Acceso desde PC", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Activá esto y abrí la dirección de abajo en el navegador de una PC en la misma wifi " +
+                    "para vincularla. Los datos viajan cifrados de punta a punta, sin pasar por ningún servidor externo.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            var pcAccessEnabled by remember { mutableStateOf(PcAccessForegroundService.isRunning) }
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text("Permitir conexiones", style = MaterialTheme.typography.bodyMedium)
+                Switch(
+                    checked = pcAccessEnabled,
+                    onCheckedChange = { enabled ->
+                        pcAccessEnabled = enabled
+                        val serviceIntent = Intent(context, PcAccessForegroundService::class.java)
+                        if (enabled) context.startForegroundService(serviceIntent) else context.stopService(serviceIntent)
+                    }
+                )
+            }
+            if (pcAccessEnabled) {
+                Spacer(Modifier.height(8.dp))
+                val ip = remember(pcAccessEnabled) { LocalIpAddress.current() }
+                Text(
+                    if (ip != null) "http://$ip:${LocalApiServer.DEFAULT_PORT}" else "No se detectó una red wifi activa.",
+                    style = MaterialTheme.typography.bodyMedium
+                )
+                Spacer(Modifier.height(12.dp))
+                OutlinedButton(onClick = onOpenPairScan, modifier = Modifier.fillMaxWidth()) {
+                    Text("Vincular nueva PC")
+                }
             }
 
             Spacer(Modifier.height(32.dp))

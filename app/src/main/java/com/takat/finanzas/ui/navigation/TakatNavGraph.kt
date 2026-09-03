@@ -19,6 +19,7 @@ import com.takat.finanzas.ui.category.CategoriesScreen
 import com.takat.finanzas.ui.fixedexpense.FixedExpenseFormScreen
 import com.takat.finanzas.ui.fixedexpense.FixedExpensesScreen
 import com.takat.finanzas.ui.home.HomeScreen
+import com.takat.finanzas.ui.pairing.PairScanScreen
 import com.takat.finanzas.ui.settings.SettingsScreen
 import com.takat.finanzas.ui.stats.CategoryExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
@@ -37,6 +38,7 @@ private object Routes {
     const val CATEGORIES = "categories"
     const val FIXED_EXPENSES = "fixed-expenses"
     const val FIXED_EXPENSE_FORM = "fixed-expenses/form?id={id}"
+    const val PAIR_SCAN = "pair-scan"
 
     fun accountDetail(id: Long) = "account/$id"
     fun accountEdit(id: Long) = "account/$id/edit"
@@ -185,7 +187,15 @@ fun TakatNavGraph(
             SettingsScreen(
                 onBack = { navController.popBackStack() },
                 onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
-                onOpenCategories = { navController.navigate(Routes.CATEGORIES) }
+                onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
+                onOpenPairScan = { navController.navigate(Routes.PAIR_SCAN) }
+            )
+        }
+
+        composable(Routes.PAIR_SCAN) {
+            PairScanScreen(
+                onDone = { navController.popBackStack() },
+                onCancel = { navController.popBackStack() }
             )
         }
 

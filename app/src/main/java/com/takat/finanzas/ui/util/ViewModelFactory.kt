@@ -6,6 +6,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.ViewModelProvider
 import com.takat.finanzas.TakatApplication
 import com.takat.finanzas.data.repository.FinanceRepository
+import com.takat.finanzas.network.PairingManager
 
 class LambdaViewModelFactory<T : ViewModel>(private val creator: () -> T) : ViewModelProvider.Factory {
     @Suppress("UNCHECKED_CAST")
@@ -16,4 +17,10 @@ class LambdaViewModelFactory<T : ViewModel>(private val creator: () -> T) : View
 fun rememberRepository(): FinanceRepository {
     val context = LocalContext.current
     return (context.applicationContext as TakatApplication).repository
+}
+
+@Composable
+fun rememberPairingManager(): PairingManager {
+    val context = LocalContext.current
+    return (context.applicationContext as TakatApplication).pairingManager
 }
