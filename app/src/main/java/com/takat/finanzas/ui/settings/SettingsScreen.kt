@@ -25,6 +25,7 @@ import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
+import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -50,8 +51,11 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.platform.LocalClipboardManager
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.text.AnnotatedString
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.work.OneTimeWorkRequestBuilder
@@ -232,10 +236,21 @@ fun SettingsScreen(
                 )
                 Spacer(Modifier.height(8.dp))
                 val ip = remember(pcAccessEnabled) { LocalIpAddress.current() }
-                Text(
-                    if (ip != null) "http://$ip:${LocalApiServer.DEFAULT_PORT}" else "No se detectó una red wifi activa.",
-                    style = MaterialTheme.typography.bodyMedium
-                )
+                if (ip != null) {
+                    val url = "http://$ip:${LocalApiServer.DEFAULT_PORT}"
+                    val clipboard = LocalClipboardManager.current
+                    Row(verticalAlignment = Alignment.CenterVertically) {
+                        Text(url, style = MaterialTheme.typography.bodyMedium, modifier = Modifier.weight(1f))
+                        IconButton(onClick = {
+                            clipboard.setText(AnnotatedString(url))
+                            Toast.makeText(context, "Dirección copiada", Toast.LENGTH_SHORT).show()
+                        }) {
+                            Icon(Icons.Filled.ContentCopy, contentDescription = "Copiar dirección")
+                        }
+                    }
+                } else {
+                    Text("No se detectó una red wifi activa.", style = MaterialTheme.typography.bodyMedium)
+                }
                 Text(
                     "Se anuncia en la red como \"${MdnsAdvertiser.serviceNameFor(uiState.pcAccessNickname)}\" — " +
                         "útil para herramientas de descubrimiento, pero la mayoría de navegadores en Windows " +

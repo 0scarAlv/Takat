@@ -107,6 +107,9 @@ object Changelog {
         ChangelogEntry(20, "1.11.1", listOf(
             "Panel de PC: rediseño del tablero, \"Disponible\" ahora usa el mismo cálculo que la app (antes era una suma simple e ignoraba deuda y gastos fijos pendientes), soporte para transferencias, movimientos agrupados por día.",
             "Nuevo en Ajustes: revocar una PC vinculada, y un apodo opcional para distinguir tu teléfono en la red (se anuncia por mDNS, aunque en Windows casi siempre vas a necesitar igual la dirección IP)."
+        )),
+        ChangelogEntry(21, "1.11.2", listOf(
+            "Acceso desde PC: botón para copiar la dirección al portapapeles, para pasarla fácil por WhatsApp o donde sea."
         ))
     )
 
