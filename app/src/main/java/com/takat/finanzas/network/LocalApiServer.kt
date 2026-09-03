@@ -132,6 +132,11 @@ class LocalApiServer(
                     call.respondEncrypted(secret, json.encodeToString(repository.accountTotals().first().toDto()))
                 }
 
+                get("/api/export.csv") {
+                    val secret = call.deviceSecret() ?: return@get
+                    call.respondEncrypted(secret, repository.exportCsv())
+                }
+
                 post("/api/transactions") {
                     val secret = call.deviceSecret() ?: return@post
                     val bytes = call.decryptBody(secret) ?: return@post

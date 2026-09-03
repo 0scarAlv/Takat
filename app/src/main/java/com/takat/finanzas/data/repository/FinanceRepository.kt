@@ -431,6 +431,17 @@ class FinanceRepository(
         refreshWidget()
     }
 
+    /** Plain backup.csv, no attachments — for the PC-access panel's "Exportar CSV" (opening in Excel etc). */
+    suspend fun exportCsv(): String {
+        val accounts = accountDao.getAll().first()
+        val categories = categoryDao.getAll().first()
+        val transactions = transactionDao.getAll().first()
+        val transfers = transferDao.getAll().first()
+        val fixedExpenses = fixedExpenseDao.getAll().first()
+        val fixedExpensePeriodStates = fixedExpensePeriodStateDao.getAll().first()
+        return BackupCsv.encode(accounts, categories, transactions, transfers, emptyMap(), fixedExpenses, fixedExpensePeriodStates)
+    }
+
     /** Writes a single .zip backup: backup.csv plus every transaction's receipts, decrypted, under adjuntos/. */
     suspend fun exportBackup(output: OutputStream) {
         val accounts = accountDao.getAll().first()

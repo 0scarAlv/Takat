@@ -15,28 +15,22 @@ function escapeHtml(text) {
   return div.innerHTML;
 }
 
-function dayLabel(dateMs) {
-  const d = new Date(dateMs);
-  const today = new Date();
-  const startOfDay = (x) => new Date(x.getFullYear(), x.getMonth(), x.getDate()).getTime();
-  const diffDays = Math.round((startOfDay(today) - startOfDay(d)) / 86400000);
-  if (diffDays === 0) return "Hoy";
-  if (diffDays === 1) return "Ayer";
-  return d.toLocaleDateString("es-MX", { day: "2-digit", month: "long", year: diffDays > 300 ? "numeric" : undefined });
+function shortDate(dateMs) {
+  return new Date(dateMs).toLocaleDateString("es-MX", { day: "2-digit", month: "short", year: "2-digit" });
 }
 
 function renderTotals(totals) {
   document.getElementById("total-balance").textContent = centsToDisplay(totals.availableCents);
   const breakdown = document.getElementById("hero-breakdown");
   breakdown.innerHTML = "";
-  const chips = [];
-  if (totals.debtCents !== 0) chips.push(["Deuda", totals.debtCents]);
-  if (totals.pendingFixedExpensesCents !== 0) chips.push(["Gastos fijos pendientes", -totals.pendingFixedExpensesCents]);
-  for (const [label, cents] of chips) {
-    const chip = document.createElement("span");
-    chip.className = "chip";
-    chip.innerHTML = `${escapeHtml(label)}: <strong>${centsToDisplay(cents)}</strong>`;
-    breakdown.appendChild(chip);
+  const rows = [["Capital", totals.capitalCents]];
+  if (totals.debtCents !== 0) rows.push(["Deuda", totals.debtCents]);
+  if (totals.pendingFixedExpensesCents !== 0) rows.push(["Gastos fijos pendientes", -totals.pendingFixedExpensesCents]);
+  for (const [label, cents] of rows) {
+    const row = document.createElement("div");
+    row.className = "row";
+    row.innerHTML = `<span>${escapeHtml(label)}</span><strong>${centsToDisplay(cents)}</strong>`;
+    breakdown.appendChild(row);
   }
 }
 
@@ -44,38 +38,41 @@ function renderAccounts(list) {
   const el = document.getElementById("accounts");
   el.innerHTML = "";
   for (const account of list) {
-    const card = document.createElement("div");
-    card.className = "account-card";
-    card.innerHTML =
-      `<div class="account-name"><span class="account-dot" style="background:${argbToCss(account.colorArgb)}"></span>${escapeHtml(account.name)}</div>` +
-      `<div class="account-balance">${centsToDisplay(account.balanceCents)}</div>`;
-    el.appendChild(card);
+    const row = document.createElement("div");
+    row.className = "account-row";
+    row.innerHTML =
+      `<span class="account-name"><span class="account-dot" style="background:${argbToCss(account.colorArgb)}"></span>${escapeHtml(account.name)}</span>` +
+      `<span class="account-balance">${centsToDisplay(account.balanceCents)}</span>`;
+    el.appendChild(row);
   }
 }
 
 function movementRowEl(m) {
-  const row = document.createElement("div");
-  row.className = "movement-row";
+  const tr = document.createElement("tr");
 
   const title = m.type === "transfer"
     ? `${m.fromAccountName ?? "?"} → ${m.toAccountName ?? "?"}`
     : (m.categoryName ?? "Sin categoría");
   const subtitleParts = m.type === "transfer" ? ["Transferencia"] : [m.accountName, m.note].filter(Boolean);
 
-  const info = document.createElement("div");
-  info.className = "movement-info";
-  info.innerHTML =
-    `<div class="movement-title">${escapeHtml(title)}</div>` +
-    `<div class="movement-subtitle">${escapeHtml(subtitleParts.join(" · "))}</div>`;
+  const dateTd = document.createElement("td");
+  dateTd.className = "mv-date";
+  dateTd.textContent = shortDate(m.date);
 
-  const amount = document.createElement("div");
+  const infoTd = document.createElement("td");
+  infoTd.innerHTML =
+    `<div class="mv-title">${escapeHtml(title)}</div>` +
+    `<div class="mv-subtitle">${escapeHtml(subtitleParts.join(" · "))}</div>`;
+
+  const amountTd = document.createElement("td");
+  amountTd.className = "num";
   const amountClass = m.type === "transfer" ? "neutral" : (m.amountCents < 0 ? "negative" : "positive");
-  amount.className = "movement-amount " + amountClass;
-  amount.textContent = m.type === "transfer" ? centsToDisplay(m.amountCents) : centsToDisplay(m.amountCents, true);
+  const amountSpan = document.createElement("span");
+  amountSpan.className = "amount " + amountClass;
+  amountSpan.textContent = m.type === "transfer" ? centsToDisplay(m.amountCents) : centsToDisplay(m.amountCents, true);
+  amountTd.appendChild(amountSpan);
 
-  row.appendChild(info);
-  row.appendChild(amount);
-
+  const actionsTd = document.createElement("td");
   const del = document.createElement("button");
   del.className = "delete-btn";
   del.textContent = "✕";
@@ -86,30 +83,26 @@ function movementRowEl(m) {
     else await api.deleteTransfer(m.id);
     await loadAll();
   });
-  row.appendChild(del);
+  actionsTd.appendChild(del);
 
-  return row;
+  tr.append(dateTd, infoTd, amountTd, actionsTd);
+  return tr;
 }
 
 function renderMovements(list) {
-  const el = document.getElementById("movements");
-  el.innerHTML = "";
+  const body = document.getElementById("movements-body");
+  body.innerHTML = "";
   if (list.length === 0) {
-    el.innerHTML = '<p class="empty">Todavía no hay movimientos.</p>';
+    const tr = document.createElement("tr");
+    const td = document.createElement("td");
+    td.colSpan = 4;
+    td.className = "empty";
+    td.textContent = "Todavía no hay movimientos.";
+    tr.appendChild(td);
+    body.appendChild(tr);
     return;
   }
-  let lastLabel = null;
-  for (const m of list) {
-    const label = dayLabel(m.date);
-    if (label !== lastLabel) {
-      const header = document.createElement("div");
-      header.className = "date-header";
-      header.textContent = label;
-      el.appendChild(header);
-      lastLabel = label;
-    }
-    el.appendChild(movementRowEl(m));
-  }
+  for (const m of list) body.appendChild(movementRowEl(m));
 }
 
 function populateCategorySelect() {
@@ -157,7 +150,7 @@ document.querySelectorAll(".type-toggle button").forEach((btn) => {
 });
 
 const dialog = document.getElementById("add-dialog");
-document.getElementById("fab").addEventListener("click", () => {
+document.getElementById("add-btn").addEventListener("click", () => {
   document.getElementById("add-form").reset();
   setType("expense");
   document.getElementById("f-date").value = new Date().toISOString().slice(0, 10);
@@ -199,6 +192,32 @@ document.getElementById("add-form").addEventListener("submit", async (e) => {
   }
 });
 
+document.getElementById("export-csv").addEventListener("click", async (e) => {
+  const btn = e.currentTarget;
+  const originalText = btn.textContent;
+  btn.disabled = true;
+  btn.textContent = "Generando…";
+  try {
+    const csv = await api.exportCsv();
+    const blob = new Blob([csv], { type: "text/csv;charset=utf-8" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    const stamp = new Date().toISOString().slice(0, 10);
+    a.href = url;
+    a.download = `takat_${stamp}.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+  } catch (err) {
+    alert("No se pudo exportar: " + err.message);
+  } finally {
+    btn.disabled = false;
+    btn.textContent = originalText;
+  }
+});
+
 loadAll().catch((err) => {
-  document.getElementById("movements").innerHTML = `<p class="empty">Error: ${escapeHtml(err.message)}</p>`;
+  document.getElementById("movements-body").innerHTML =
+    `<tr><td colspan="4" class="empty">Error: ${escapeHtml(err.message)}</td></tr>`;
 });

@@ -33,7 +33,7 @@ export function forgetDevice() {
   localStorage.removeItem(STORAGE_KEY);
 }
 
-async function request(method, path, body) {
+async function requestText(method, path, body) {
   const device = getDevice();
   if (!device) throw new Error("No hay una PC vinculada.");
   const secret = base64ToBytes(device.secret);
@@ -60,7 +60,11 @@ async function request(method, path, body) {
   const iv = base64ToBytes(envelope.iv);
   const ciphertext = base64ToBytes(envelope.ciphertext);
   const plaintext = gcm(secret, iv).decrypt(ciphertext);
-  return JSON.parse(new TextDecoder().decode(plaintext));
+  return new TextDecoder().decode(plaintext);
+}
+
+async function request(method, path, body) {
+  return JSON.parse(await requestText(method, path, body));
 }
 
 export const api = {
@@ -71,5 +75,6 @@ export const api = {
   addTransaction: (body) => request("POST", "/api/transactions", body),
   deleteTransaction: (id) => request("DELETE", `/api/transactions/${id}`),
   addTransfer: (body) => request("POST", "/api/transfers", body),
-  deleteTransfer: (id) => request("DELETE", `/api/transfers/${id}`)
+  deleteTransfer: (id) => request("DELETE", `/api/transfers/${id}`),
+  exportCsv: () => requestText("GET", "/api/export.csv")
 };

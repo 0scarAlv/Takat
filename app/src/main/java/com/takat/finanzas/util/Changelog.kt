@@ -110,6 +110,10 @@ object Changelog {
         )),
         ChangelogEntry(21, "1.11.2", listOf(
             "Acceso desde PC: botón para copiar la dirección al portapapeles, para pasarla fácil por WhatsApp o donde sea."
+        )),
+        ChangelogEntry(22, "1.12.0", listOf(
+            "Panel de PC: rediseño para pantalla de escritorio (barra lateral con cuentas + disponible, tabla de movimientos en vez de tarjetas apiladas).",
+            "Nuevo: botón \"Exportar CSV\" en el panel de PC para bajar tus datos y manipularlos en Excel."
         ))
     )
 
