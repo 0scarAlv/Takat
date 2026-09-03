@@ -4,7 +4,6 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.util.monthLabel
-import com.takat.finanzas.util.monthRange
 import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.SharingStarted
@@ -29,8 +28,7 @@ class ChartsViewModel(repository: FinanceRepository) : ViewModel() {
 
     val uiState: StateFlow<ChartsUiState> = selectedMonth
         .flatMapLatest { month ->
-            val (start, end) = monthRange(month)
-            repository.incomeExpenseSummary(start, end).map { summary ->
+            repository.incomeExpenseSummary(month).map { summary ->
                 ChartsUiState(monthLabel(month), summary.incomeCents, summary.expenseCents)
             }
         }

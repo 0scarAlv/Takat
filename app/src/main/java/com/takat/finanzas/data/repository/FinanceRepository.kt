@@ -32,6 +32,7 @@ import com.takat.finanzas.util.DebugLog
 import com.takat.finanzas.util.computeBudgetFreeze
 import com.takat.finanzas.util.computeLiveBudget
 import com.takat.finanzas.util.dayRange
+import com.takat.finanzas.util.monthRange
 import com.takat.finanzas.widget.WidgetUpdater
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.combine
@@ -40,6 +41,7 @@ import kotlinx.coroutines.flow.map
 import java.io.OutputStream
 import java.time.Instant
 import java.time.LocalDate
+import java.time.YearMonth
 import java.time.ZoneId
 
 class FinanceRepository(
@@ -290,12 +292,30 @@ class FinanceRepository(
                 }
         }
 
-    fun incomeExpenseSummary(fromInclusive: Long, toExclusive: Long): Flow<IncomeExpenseSummary> =
-        transactionDao.getAll().map { transactions ->
-            val inRange = transactions.filter { it.date >= fromInclusive && it.date < toExclusive }
+    /**
+     * Same "day <=15 funds this Q2, day >15 funds next Q1" logic as
+     * [com.takat.finanzas.data.model.FixedExpensePeriod], applied to the Ingresos vs Gastos report: a
+     * salary logged in the back half of a month (e.g. paid on the 31st) isn't really that month's
+     * income — it's what covers the first half of next month — so it's reattributed there instead.
+     * Only salary income shifts; regular income and all expenses stay on their literal calendar date.
+     */
+    fun incomeExpenseSummary(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Flow<IncomeExpenseSummary> =
+        combine(transactionDao.getAll(), categoryDao.getAll()) { transactions, categories ->
+            val salaryCategoryIds = categories.filter { it.isSalary }.map { it.id }.toSet()
+            fun isLateSalary(t: TransactionEntity): Boolean {
+                if (t.amountCents <= 0 || t.categoryId !in salaryCategoryIds) return false
+                return Instant.ofEpochMilli(t.date).atZone(zone).toLocalDate().dayOfMonth > 15
+            }
+
+            val (start, end) = monthRange(month, zone)
+            val (prevStart, _) = monthRange(month.minusMonths(1), zone)
+            val thisMonth = transactions.filter { it.date >= start && it.date < end }
+            val reattributedFromPrevMonth = transactions.filter { it.date >= prevStart && it.date < start && isLateSalary(it) }
+
             IncomeExpenseSummary(
-                incomeCents = inRange.filter { it.amountCents > 0 }.sumOf { it.amountCents },
-                expenseCents = inRange.filter { it.amountCents < 0 }.sumOf { -it.amountCents }
+                incomeCents = thisMonth.filter { it.amountCents > 0 && !isLateSalary(it) }.sumOf { it.amountCents } +
+                    reattributedFromPrevMonth.sumOf { it.amountCents },
+                expenseCents = thisMonth.filter { it.amountCents < 0 }.sumOf { -it.amountCents }
             )
         }
 

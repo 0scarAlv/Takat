@@ -120,6 +120,9 @@ object Changelog {
         )),
         ChangelogEntry(24, "1.12.2", listOf(
             "Panel de PC: nombre \"Takat\" más grande arriba, e ícono de Takat en la pestaña del navegador."
+        )),
+        ChangelogEntry(25, "1.13.0", listOf(
+            "Arreglo: Ingresos vs Gastos ya no cuenta un sueldo pagado en la segunda mitad del mes (por ejemplo el día 31) como ingreso de ese mes — ahora se atribuye al mes que realmente financia, igual que ya hacía Presupuesto/Gastos fijos con la quincena."
         ))
     )
 
