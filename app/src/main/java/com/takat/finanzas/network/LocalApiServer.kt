@@ -1,9 +1,16 @@
 package com.takat.finanzas.network
 
 import android.content.Context
+import com.takat.finanzas.data.entity.TransactionEntity
+import com.takat.finanzas.data.entity.TransferEntity
+import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.network.crypto.SessionCrypto
 import com.takat.finanzas.network.dto.EncryptedEnvelope
+import com.takat.finanzas.network.dto.IdResponse
+import com.takat.finanzas.network.dto.NewTransactionRequest
+import com.takat.finanzas.network.dto.NewTransferRequest
+import com.takat.finanzas.network.dto.OkResponse
 import com.takat.finanzas.network.dto.PairInitRequest
 import com.takat.finanzas.network.dto.PairInitResponse
 import com.takat.finanzas.network.dto.PairStatusPayload
@@ -21,10 +28,12 @@ import io.ktor.server.plugins.contentnegotiation.ContentNegotiation
 import io.ktor.server.request.receive
 import io.ktor.server.response.respond
 import io.ktor.server.response.respondBytes
+import io.ktor.server.routing.delete
 import io.ktor.server.routing.get
 import io.ktor.server.routing.post
 import io.ktor.server.routing.routing
 import kotlinx.coroutines.flow.first
+import kotlinx.serialization.decodeFromString
 import kotlinx.serialization.encodeToString
 import kotlinx.serialization.json.Json
 import java.util.Base64
@@ -105,6 +114,92 @@ class LocalApiServer(
                     val accounts = repository.accountsWithBalance().first().map { it.toDto() }
                     call.respondEncrypted(secret, json.encodeToString(accounts))
                 }
+
+                get("/api/categories") {
+                    val secret = call.deviceSecret() ?: return@get
+                    val categories = repository.categories.first().map { it.toDto() }
+                    call.respondEncrypted(secret, json.encodeToString(categories))
+                }
+
+                get("/api/movements") {
+                    val secret = call.deviceSecret() ?: return@get
+                    val movements = repository.allMovements().first().map { it.toDto() }
+                    call.respondEncrypted(secret, json.encodeToString(movements))
+                }
+
+                get("/api/totals") {
+                    val secret = call.deviceSecret() ?: return@get
+                    call.respondEncrypted(secret, json.encodeToString(repository.accountTotals().first().toDto()))
+                }
+
+                post("/api/transactions") {
+                    val secret = call.deviceSecret() ?: return@post
+                    val bytes = call.decryptBody(secret) ?: return@post
+                    val req = json.decodeFromString<NewTransactionRequest>(bytes.decodeToString())
+                    val id = repository.addTransaction(
+                        TransactionEntity(
+                            accountId = req.accountId,
+                            categoryId = req.categoryId,
+                            amountCents = req.amountCents,
+                            note = req.note,
+                            date = req.date
+                        )
+                    )
+                    call.respondEncrypted(secret, json.encodeToString(IdResponse(id)))
+                }
+
+                delete("/api/transactions/{id}") {
+                    val secret = call.deviceSecret() ?: return@delete
+                    val id = call.parameters["id"]?.toLongOrNull()
+                    if (id == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@delete
+                    }
+                    val movement = repository.allMovements().first()
+                        .filterIsInstance<Movement.TransactionMovement>()
+                        .find { it.transaction.id == id }
+                    if (movement == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@delete
+                    }
+                    repository.deleteTransaction(movement.transaction)
+                    call.respondEncrypted(secret, json.encodeToString(OkResponse()))
+                }
+
+                post("/api/transfers") {
+                    val secret = call.deviceSecret() ?: return@post
+                    val bytes = call.decryptBody(secret) ?: return@post
+                    val req = json.decodeFromString<NewTransferRequest>(bytes.decodeToString())
+                    val id = repository.addTransfer(
+                        TransferEntity(
+                            fromAccountId = req.fromAccountId,
+                            toAccountId = req.toAccountId,
+                            categoryId = null,
+                            amountCents = req.amountCents,
+                            note = req.note,
+                            date = req.date
+                        )
+                    )
+                    call.respondEncrypted(secret, json.encodeToString(IdResponse(id)))
+                }
+
+                delete("/api/transfers/{id}") {
+                    val secret = call.deviceSecret() ?: return@delete
+                    val id = call.parameters["id"]?.toLongOrNull()
+                    if (id == null) {
+                        call.respond(HttpStatusCode.BadRequest)
+                        return@delete
+                    }
+                    val movement = repository.allMovements().first()
+                        .filterIsInstance<Movement.TransferMovement>()
+                        .find { it.transfer.id == id }
+                    if (movement == null) {
+                        call.respond(HttpStatusCode.NotFound)
+                        return@delete
+                    }
+                    repository.deleteTransfer(movement.transfer)
+                    call.respondEncrypted(secret, json.encodeToString(OkResponse()))
+                }
             }
         }.start(wait = false)
     }
@@ -123,6 +218,27 @@ class LocalApiServer(
 
     private suspend fun ApplicationCall.respondEncrypted(secret: ByteArray, plaintextJson: String) {
         respond(SessionCrypto.encrypt(secret, plaintextJson.toByteArray()).toEnvelope())
+    }
+
+    private suspend fun ApplicationCall.decryptBody(secret: ByteArray): ByteArray? {
+        val envelope = try {
+            receive<EncryptedEnvelope>()
+        } catch (e: Exception) {
+            respond(HttpStatusCode.BadRequest)
+            return null
+        }
+        return try {
+            SessionCrypto.decrypt(
+                secret,
+                SessionCrypto.EncryptedPayload(
+                    iv = Base64.getDecoder().decode(envelope.iv),
+                    ciphertext = Base64.getDecoder().decode(envelope.ciphertext)
+                )
+            )
+        } catch (e: Exception) {
+            respond(HttpStatusCode.BadRequest)
+            null
+        }
     }
 
     private suspend fun serveAsset(call: ApplicationCall, requestedPath: String) {

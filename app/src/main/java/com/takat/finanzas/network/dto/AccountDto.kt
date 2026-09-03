@@ -1,7 +1,23 @@
 package com.takat.finanzas.network.dto
 
+import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import kotlinx.serialization.Serializable
+
+@Serializable
+data class AccountTotalsDto(
+    val availableCents: Long,
+    val capitalCents: Long,
+    val debtCents: Long,
+    val pendingFixedExpensesCents: Long
+)
+
+fun AccountTotals.toDto() = AccountTotalsDto(
+    availableCents = availableCents,
+    capitalCents = capitalCents,
+    debtCents = debtCents,
+    pendingFixedExpensesCents = pendingFixedExpensesCents
+)
 
 @Serializable
 data class AccountDto(

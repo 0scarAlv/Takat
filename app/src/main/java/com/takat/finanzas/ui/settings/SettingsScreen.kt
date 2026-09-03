@@ -5,7 +5,9 @@ import android.net.Uri
 import android.widget.Toast
 import com.takat.finanzas.network.LocalIpAddress
 import com.takat.finanzas.network.LocalApiServer
+import com.takat.finanzas.network.MdnsAdvertiser
 import com.takat.finanzas.network.PcAccessForegroundService
+import com.takat.finanzas.ui.util.rememberPairingManager
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
@@ -30,6 +32,7 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.OutlinedButton
+import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
 import androidx.compose.material3.SegmentedButtonDefaults
@@ -74,7 +77,8 @@ fun SettingsScreen(
     onOpenPairScan: () -> Unit
 ) {
     val repository = rememberRepository()
-    val viewModel: SettingsViewModel = viewModel(factory = LambdaViewModelFactory { SettingsViewModel(repository) })
+    val pairingManager = rememberPairingManager()
+    val viewModel: SettingsViewModel = viewModel(factory = LambdaViewModelFactory { SettingsViewModel(repository, pairingManager) })
     val uiState by viewModel.uiState.collectAsState()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -218,15 +222,53 @@ fun SettingsScreen(
                 )
             }
             if (pcAccessEnabled) {
+                Spacer(Modifier.height(12.dp))
+                OutlinedTextField(
+                    value = uiState.pcAccessNickname ?: "",
+                    onValueChange = viewModel::onPcAccessNicknameChange,
+                    label = { Text("Apodo (para distinguirlo en la red)") },
+                    singleLine = true,
+                    modifier = Modifier.fillMaxWidth()
+                )
                 Spacer(Modifier.height(8.dp))
                 val ip = remember(pcAccessEnabled) { LocalIpAddress.current() }
                 Text(
                     if (ip != null) "http://$ip:${LocalApiServer.DEFAULT_PORT}" else "No se detectó una red wifi activa.",
                     style = MaterialTheme.typography.bodyMedium
                 )
+                Text(
+                    "Se anuncia en la red como \"${MdnsAdvertiser.serviceNameFor(uiState.pcAccessNickname)}\" — " +
+                        "útil para herramientas de descubrimiento, pero la mayoría de navegadores en Windows " +
+                        "necesitan igual la dirección de arriba, no un nombre .local.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 Spacer(Modifier.height(12.dp))
                 OutlinedButton(onClick = onOpenPairScan, modifier = Modifier.fillMaxWidth()) {
                     Text("Vincular nueva PC")
+                }
+            }
+            if (uiState.pairedDevices.isNotEmpty()) {
+                Spacer(Modifier.height(16.dp))
+                Text("Dispositivos vinculados", style = MaterialTheme.typography.bodyMedium)
+                Spacer(Modifier.height(8.dp))
+                uiState.pairedDevices.forEach { device ->
+                    Row(
+                        modifier = Modifier.fillMaxWidth(),
+                        horizontalArrangement = Arrangement.SpaceBetween
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Text(device.name, style = MaterialTheme.typography.bodyMedium)
+                            Text(
+                                "Último uso: ${DateFormat.getDateTimeInstance(DateFormat.MEDIUM, DateFormat.SHORT).format(Date(device.lastUsedAt))}",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        TextButton(onClick = { viewModel.revokeDevice(device.deviceToken) }) {
+                            Text("Revocar")
+                        }
+                    }
                 }
             }
 

@@ -1,0 +1,238 @@
+<!doctype html>
+<html lang="es">
+<head>
+<meta charset="utf-8" />
+<meta name="viewport" content="width=device-width, initial-scale=1" />
+<title>Takat</title>
+<style>
+  :root {
+    color-scheme: light dark;
+    --bg: #f2f3f7;
+    --surface: #ffffff;
+    --surface-2: #f7f8fb;
+    --text: #16171b;
+    --text-dim: #6b6f7b;
+    --border: #e7e8ee;
+    --positive: #1f9254;
+    --negative: #d64545;
+    --accent: #4c6fff;
+    --accent-soft: #eef1ff;
+    --shadow: 0 1px 2px rgba(16,20,40,0.04), 0 8px 24px rgba(16,20,40,0.06);
+  }
+  @media (prefers-color-scheme: dark) {
+    :root {
+      --bg: #0e0f13;
+      --surface: #1a1b20;
+      --surface-2: #202128;
+      --text: #f2f3f6;
+      --text-dim: #9498a3;
+      --border: #2a2c34;
+      --accent-soft: #1f2440;
+      --shadow: 0 1px 2px rgba(0,0,0,0.3), 0 8px 24px rgba(0,0,0,0.35);
+    }
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0;
+    font-family: -apple-system, "Segoe UI", system-ui, sans-serif;
+    background: var(--bg);
+    color: var(--text);
+    padding-bottom: 100px;
+  }
+  .page { max-width: 640px; margin: 0 auto; padding: 0 20px; }
+
+  header { padding: 28px 0 0; }
+  .brand { display: flex; align-items: center; gap: 8px; color: var(--text-dim); font-size: 0.85rem; font-weight: 600; letter-spacing: 0.02em; text-transform: uppercase; }
+
+  .hero {
+    background: var(--surface);
+    border-radius: 20px;
+    box-shadow: var(--shadow);
+    padding: 20px 22px;
+    margin-top: 12px;
+  }
+  .hero-label { font-size: 0.85rem; color: var(--text-dim); }
+  .hero-amount { font-size: 2.25rem; font-weight: 700; margin-top: 2px; letter-spacing: -0.02em; }
+  .hero-breakdown { display: flex; gap: 8px; margin-top: 14px; flex-wrap: wrap; }
+  .chip {
+    font-size: 0.78rem;
+    padding: 5px 10px;
+    border-radius: 999px;
+    background: var(--surface-2);
+    color: var(--text-dim);
+  }
+  .chip strong { color: var(--text); font-weight: 600; }
+
+  .section-title { font-size: 0.8rem; font-weight: 600; color: var(--text-dim); text-transform: uppercase; letter-spacing: 0.03em; margin: 24px 0 10px; }
+
+  .accounts { display: flex; gap: 10px; overflow-x: auto; padding-bottom: 4px; }
+  .account-card {
+    flex: 0 0 auto;
+    min-width: 130px;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 12px 14px;
+  }
+  .account-dot { width: 8px; height: 8px; border-radius: 50%; display: inline-block; margin-right: 6px; }
+  .account-name { font-size: 0.8rem; color: var(--text-dim); display: flex; align-items: center; }
+  .account-balance { font-size: 1.05rem; font-weight: 700; margin-top: 6px; }
+
+  .date-header { font-size: 0.78rem; color: var(--text-dim); margin: 18px 0 6px; font-weight: 600; }
+
+  .movement-row {
+    display: flex;
+    align-items: center;
+    gap: 12px;
+    background: var(--surface);
+    border-radius: 14px;
+    box-shadow: var(--shadow);
+    padding: 12px 14px;
+    margin-bottom: 8px;
+  }
+  .movement-info { flex: 1; min-width: 0; }
+  .movement-title { font-weight: 600; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; font-size: 0.95rem; }
+  .movement-subtitle { font-size: 0.78rem; color: var(--text-dim); margin-top: 2px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+  .movement-amount { font-weight: 700; white-space: nowrap; font-size: 0.95rem; }
+  .movement-amount.positive { color: var(--positive); }
+  .movement-amount.negative { color: var(--negative); }
+  .movement-amount.neutral { color: var(--text-dim); }
+  .delete-btn {
+    background: none;
+    border: none;
+    color: var(--text-dim);
+    font-size: 0.95rem;
+    cursor: pointer;
+    padding: 4px 6px;
+    border-radius: 8px;
+    line-height: 1;
+  }
+  .delete-btn:hover { color: var(--negative); background: var(--surface-2); }
+  .empty { color: var(--text-dim); text-align: center; padding: 48px 0; font-size: 0.9rem; }
+
+  .fab {
+    position: fixed;
+    right: 24px;
+    bottom: 24px;
+    width: 56px;
+    height: 56px;
+    border-radius: 50%;
+    border: none;
+    background: var(--accent);
+    color: white;
+    font-size: 1.8rem;
+    line-height: 1;
+    cursor: pointer;
+    box-shadow: 0 6px 16px rgba(76,111,255,0.4);
+  }
+  .fab:hover { filter: brightness(1.08); }
+
+  dialog {
+    border: none;
+    border-radius: 18px;
+    padding: 0;
+    background: var(--surface);
+    color: var(--text);
+    width: min(380px, 92vw);
+  }
+  dialog::backdrop { background: rgba(10,12,20,0.5); }
+  #add-form { padding: 22px; display: flex; flex-direction: column; gap: 14px; }
+  #add-form h2 { margin: 0; font-size: 1.15rem; }
+  #fields-single, .fields-transfer { display: flex; flex-direction: column; gap: 14px; }
+  .type-toggle { display: flex; gap: 6px; background: var(--surface-2); padding: 4px; border-radius: 10px; }
+  .type-toggle button {
+    flex: 1;
+    padding: 8px 4px;
+    border-radius: 8px;
+    border: none;
+    background: transparent;
+    color: var(--text-dim);
+    cursor: pointer;
+    font-size: 0.85rem;
+    font-weight: 600;
+  }
+  .type-toggle button.active { background: var(--surface); color: var(--text); box-shadow: var(--shadow); }
+  label { display: flex; flex-direction: column; gap: 5px; font-size: 0.8rem; color: var(--text-dim); font-weight: 500; }
+  input, select {
+    font-size: 0.95rem;
+    padding: 9px 11px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: var(--surface-2);
+    color: var(--text);
+  }
+  input:focus, select:focus { outline: 2px solid var(--accent); outline-offset: -1px; }
+  .dialog-actions { display: flex; justify-content: flex-end; gap: 8px; margin-top: 6px; }
+  .dialog-actions button {
+    padding: 9px 18px;
+    border-radius: 10px;
+    border: 1px solid var(--border);
+    background: transparent;
+    color: var(--text);
+    cursor: pointer;
+    font-weight: 600;
+    font-size: 0.9rem;
+  }
+  .dialog-actions button[type="submit"] { background: var(--accent); border-color: var(--accent); color: white; }
+</style>
+</head>
+<body>
+  <div class="page">
+    <header>
+      <div class="brand">Takat</div>
+      <div class="hero">
+        <div class="hero-label">Disponible</div>
+        <div class="hero-amount" id="total-balance">—</div>
+        <div class="hero-breakdown" id="hero-breakdown"></div>
+      </div>
+    </header>
+
+    <div class="section-title">Cuentas</div>
+    <section class="accounts" id="accounts"></section>
+
+    <div class="section-title">Movimientos</div>
+    <section id="movements"></section>
+  </div>
+
+  <button class="fab" id="fab" title="Agregar movimiento">+</button>
+
+  <dialog id="add-dialog">
+    <form id="add-form">
+      <h2>Nuevo movimiento</h2>
+      <div class="type-toggle">
+        <button type="button" data-type="expense" class="active">Gasto</button>
+        <button type="button" data-type="income">Ingreso</button>
+        <button type="button" data-type="transfer">Transferencia</button>
+      </div>
+
+      <div id="fields-single">
+        <label>Cuenta <select id="f-account"></select></label>
+        <label>Categoría <select id="f-category"></select></label>
+      </div>
+      <div id="fields-transfer" class="fields-transfer">
+        <label>De <select id="f-from-account"></select></label>
+        <label>A <select id="f-to-account"></select></label>
+      </div>
+
+      <label>Monto <input id="f-amount" type="text" inputmode="decimal" placeholder="0.00" required /></label>
+      <label>Nota <input id="f-note" type="text" maxlength="200" /></label>
+      <label>Fecha <input id="f-date" type="date" required /></label>
+      <div class="dialog-actions">
+        <button type="button" id="f-cancel">Cancelar</button>
+        <button type="submit">Guardar</button>
+      </div>
+    </form>
+  </dialog>
+
+  <script type="importmap">
+  {
+    "imports": {
+      "@noble/ciphers/_polyval.js": "./vendor/@noble/ciphers/_polyval.js",
+      "@noble/ciphers/aes.js": "./vendor/@noble/ciphers/aes.js",
+      "@noble/ciphers/utils.js": "./vendor/@noble/ciphers/utils.js"
+    }
+  }
+  </script>
+  <script type="module" src="dashboard.js"></script>
+</body>
+</html>

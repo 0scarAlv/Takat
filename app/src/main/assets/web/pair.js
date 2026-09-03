@@ -47,8 +47,7 @@ function setStatus(text, cls) {
 async function main() {
   const existing = localStorage.getItem(STORAGE_KEY);
   if (existing) {
-    setStatus("Esta PC ya está vinculada.", "approved");
-    document.getElementById("qr").style.display = "none";
+    window.location.href = "/dashboard.html";
     return;
   }
 
@@ -90,8 +89,9 @@ async function main() {
           deviceToken: payload.deviceToken,
           secret: bytesToBase64(sessionKey)
         }));
-        setStatus("¡Vinculado! Ya puedes cerrar y volver a abrir esta pestaña.", "approved");
+        setStatus("¡Vinculado! Abriendo Takat…", "approved");
         document.getElementById("qr").style.display = "none";
+        window.location.href = "/dashboard.html";
       }
     } catch (err) {
       clearInterval(pollTimer);

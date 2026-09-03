@@ -10,6 +10,12 @@ import com.takat.finanzas.R
 import com.takat.finanzas.TakatApplication
 import com.takat.finanzas.notifications.NotificationHelper
 import com.takat.finanzas.util.DebugLog
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.cancel
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 
 /**
  * Keeps [LocalApiServer] alive while "Acceso desde PC" is toggled on in Settings. Only runs while
@@ -18,11 +24,14 @@ import com.takat.finanzas.util.DebugLog
 class PcAccessForegroundService : Service() {
 
     private lateinit var apiServer: LocalApiServer
+    private lateinit var mdnsAdvertiser: MdnsAdvertiser
+    private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
     override fun onCreate() {
         super.onCreate()
         val app = application as TakatApplication
         apiServer = LocalApiServer(applicationContext, app.repository, app.pairingManager)
+        mdnsAdvertiser = MdnsAdvertiser(applicationContext)
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
@@ -34,6 +43,10 @@ class PcAccessForegroundService : Service() {
             ServiceInfo.FOREGROUND_SERVICE_TYPE_DATA_SYNC
         )
         apiServer.start()
+        scope.launch {
+            val nickname = (application as TakatApplication).repository.appSettings().first()?.pcAccessNickname
+            mdnsAdvertiser.start(nickname, LocalApiServer.DEFAULT_PORT)
+        }
         isRunning = true
         return START_STICKY
     }
@@ -41,6 +54,8 @@ class PcAccessForegroundService : Service() {
     override fun onDestroy() {
         DebugLog.log("PcAccessForegroundService: stopping")
         apiServer.stop()
+        mdnsAdvertiser.stop()
+        scope.cancel()
         isRunning = false
         super.onDestroy()
     }

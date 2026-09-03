@@ -16,5 +16,7 @@ data class AppSettingsEntity(
     /** Toggles the joke asides like "(Eres irresponsable financieramente)" and "(te deseo suerte)". */
     val sarcasticMessagesEnabled: Boolean = true,
     /** Highest [com.takat.finanzas.util.ChangelogEntry.versionCode] already shown in the "qué hay de nuevo" dialog. */
-    val lastSeenVersionCode: Int = 0
+    val lastSeenVersionCode: Int = 0,
+    /** Nickname used to build the mDNS service/hostname for the PC-access panel (e.g. "oscar" -> takat-oscar.local). */
+    val pcAccessNickname: String? = null
 )

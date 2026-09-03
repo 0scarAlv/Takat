@@ -8,6 +8,7 @@ import java.security.SecureRandom
 import java.util.Base64
 import java.util.UUID
 import java.util.concurrent.ConcurrentHashMap
+import kotlinx.coroutines.flow.Flow
 
 private const val PAIRING_INFO = "takat-pairing-v1"
 private val PAIRING_TTL_MILLIS = 2 * 60 * 1000L
@@ -86,6 +87,13 @@ class PairingManager(private val trustedDeviceDao: TrustedDeviceDao) {
         val device = trustedDeviceDao.getByToken(deviceToken) ?: return null
         trustedDeviceDao.update(device.copy(lastUsedAt = System.currentTimeMillis()))
         return Base64.getDecoder().decode(device.secretBase64)
+    }
+
+    /** For Settings' "Dispositivos vinculados" list. */
+    fun devices(): Flow<List<TrustedDeviceEntity>> = trustedDeviceDao.getAll()
+
+    suspend fun revoke(deviceToken: String) {
+        trustedDeviceDao.getByToken(deviceToken)?.let { trustedDeviceDao.delete(it) }
     }
 
     private fun pruneExpired() {

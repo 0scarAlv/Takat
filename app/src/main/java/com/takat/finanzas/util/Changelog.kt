@@ -100,6 +100,13 @@ object Changelog {
         )),
         ChangelogEntry(18, "1.10.2", listOf(
             "Arreglo: el interruptor de \"Acceso desde PC\" en Ajustes aparecía apagado al volver a entrar, aunque el servicio siguiera activo de verdad."
+        )),
+        ChangelogEntry(19, "1.11.0", listOf(
+            "El panel de PC ya tiene un tablero real: cuentas y saldos, disponible total, movimientos recientes y agregar/eliminar un movimiento — todo desde el navegador, sincronizado al instante con el teléfono."
+        )),
+        ChangelogEntry(20, "1.11.1", listOf(
+            "Panel de PC: rediseño del tablero, \"Disponible\" ahora usa el mismo cálculo que la app (antes era una suma simple e ignoraba deuda y gastos fijos pendientes), soporte para transferencias, movimientos agrupados por día.",
+            "Nuevo en Ajustes: revocar una PC vinculada, y un apodo opcional para distinguir tu teléfono en la red (se anuncia por mDNS, aunque en Windows casi siempre vas a necesitar igual la dirección IP)."
         ))
     )
 

@@ -7,8 +7,10 @@ import com.takat.finanzas.data.csv.BackupZip
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.ThemeMode
+import com.takat.finanzas.data.entity.TrustedDeviceEntity
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.repository.FinanceRepository
+import com.takat.finanzas.network.PairingManager
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
@@ -26,10 +28,15 @@ data class SettingsUiState(
     val backupFolderUri: String? = null,
     val lastBackupEpochMillis: Long? = null,
     val lastBackupError: String? = null,
-    val sarcasticMessagesEnabled: Boolean = true
+    val sarcasticMessagesEnabled: Boolean = true,
+    val pairedDevices: List<TrustedDeviceEntity> = emptyList(),
+    val pcAccessNickname: String? = null
 )
 
-class SettingsViewModel(private val repository: FinanceRepository) : ViewModel() {
+class SettingsViewModel(
+    private val repository: FinanceRepository,
+    private val pairingManager: PairingManager
+) : ViewModel() {
     private val _uiState = MutableStateFlow(SettingsUiState())
     val uiState: StateFlow<SettingsUiState> = _uiState.asStateFlow()
 
@@ -42,10 +49,27 @@ class SettingsViewModel(private val repository: FinanceRepository) : ViewModel()
                         backupFolderUri = settings?.backupFolderUri,
                         lastBackupEpochMillis = settings?.lastBackupEpochMillis,
                         lastBackupError = settings?.lastBackupError,
-                        sarcasticMessagesEnabled = settings?.sarcasticMessagesEnabled ?: true
+                        sarcasticMessagesEnabled = settings?.sarcasticMessagesEnabled ?: true,
+                        pcAccessNickname = settings?.pcAccessNickname
                     )
                 }
             }
+        }
+        viewModelScope.launch {
+            pairingManager.devices().collect { devices ->
+                _uiState.update { it.copy(pairedDevices = devices) }
+            }
+        }
+    }
+
+    fun revokeDevice(deviceToken: String) {
+        viewModelScope.launch { pairingManager.revoke(deviceToken) }
+    }
+
+    fun onPcAccessNicknameChange(nickname: String) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(pcAccessNickname = nickname.ifBlank { null }))
         }
     }
 
