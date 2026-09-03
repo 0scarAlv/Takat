@@ -114,6 +114,9 @@ object Changelog {
         ChangelogEntry(22, "1.12.0", listOf(
             "Panel de PC: rediseño para pantalla de escritorio (barra lateral con cuentas + disponible, tabla de movimientos en vez de tarjetas apiladas).",
             "Nuevo: botón \"Exportar CSV\" en el panel de PC para bajar tus datos y manipularlos en Excel."
+        )),
+        ChangelogEntry(23, "1.12.1", listOf(
+            "Panel de PC: los desplegables del formulario de nuevo movimiento ya no se ven con el estilo por defecto del navegador."
         ))
     )
 
