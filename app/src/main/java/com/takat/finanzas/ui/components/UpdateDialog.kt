@@ -27,27 +27,27 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.unit.dp
 import com.takat.finanzas.BuildConfig
-import com.takat.finanzas.network.UpdateChecker
 import com.takat.finanzas.network.UpdateInfo
 import com.takat.finanzas.network.UpdateInstaller
+import com.takat.finanzas.network.UpdateState
 import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.launch
 
 /**
  * Checks GitHub once per app open (after [WhatsNewGate] has settled, so the two dialogs never
  * stack) and offers [UpdateAvailableDialog] if a newer signed release exists. Silent no-op
- * otherwise — see UpdateChecker for why this never surfaces an error to the user.
+ * otherwise — see UpdateChecker for why this never surfaces an error to the user. The result is
+ * shared via [UpdateState], which also drives the persistent "Actualizar" button in HomeScreen.
  */
 @Composable
 fun UpdateCheckGate() {
-    var updateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     var dismissed by remember { mutableStateOf(false) }
 
     LaunchedEffect(Unit) {
-        updateInfo = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+        UpdateState.checkOnce(BuildConfig.VERSION_NAME)
     }
 
-    val info = updateInfo
+    val info = UpdateState.available.value
     if (info != null && !dismissed) {
         UpdateAvailableDialog(info = info, onDismiss = { dismissed = true })
     }

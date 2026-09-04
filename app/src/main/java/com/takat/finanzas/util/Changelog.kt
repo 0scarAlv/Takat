@@ -127,6 +127,9 @@ object Changelog {
         ChangelogEntry(26, "1.14.0", listOf(
             "Nuevo: como Takat no está en ninguna tienda de apps, ahora se fija solo si hay una versión nueva publicada en GitHub cada vez que abrís la app, y te deja descargarla e instalarla sin salir de Takat.",
             "Nuevo botón \"Buscar actualizaciones\" en Ajustes → Acerca de, para revisar manualmente cuando quieras."
+        )),
+        ChangelogEntry(27, "2.0.0", listOf(
+            "Cuando hay una actualización disponible, ahora aparece un botón verde \"Actualizar\" junto al título Takat en Inicio, para descargarla e instalarla cuando quieras aunque hayas cerrado el aviso automático."
         ))
     )
 

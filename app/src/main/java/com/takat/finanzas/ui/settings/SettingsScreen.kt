@@ -65,6 +65,7 @@ import com.takat.finanzas.backup.DailyBackupWorker
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.network.UpdateChecker
 import com.takat.finanzas.network.UpdateInfo
+import com.takat.finanzas.network.UpdateState
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
 import com.takat.finanzas.ui.components.UpdateAvailableDialog
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
@@ -423,6 +424,7 @@ fun SettingsScreen(
                     checkingUpdate = true
                     scope.launch {
                         val info = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                        UpdateState.record(info)
                         checkingUpdate = false
                         if (info != null) {
                             manualUpdateInfo = info

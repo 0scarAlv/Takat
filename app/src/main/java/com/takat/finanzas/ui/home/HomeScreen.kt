@@ -37,6 +37,7 @@ import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
+import androidx.compose.material3.Button
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -72,8 +73,10 @@ import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.key
 import com.takat.finanzas.ui.charts.ChartsScreen
+import com.takat.finanzas.network.UpdateState
 import com.takat.finanzas.ui.components.MovementDetailDialog
 import com.takat.finanzas.ui.components.MovementRow
+import com.takat.finanzas.ui.components.UpdateAvailableDialog
 import com.takat.finanzas.ui.components.WhatsNewDialog
 import com.takat.finanzas.util.Changelog
 import com.takat.finanzas.ui.stats.StatsScreen
@@ -106,26 +109,40 @@ fun HomeScreen(
     var showEasterEgg by remember { mutableStateOf(false) }
     var fabExpanded by remember { mutableStateOf(false) }
     var showChangelog by remember { mutableStateOf(false) }
+    var showUpdateDialog by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
 
     Scaffold(
         topBar = {
             TopAppBar(
                 title = {
-                    Text(
-                        when (pagerState.currentPage) {
-                            0 -> "Presupuesto"
-                            1 -> "Takat"
-                            else -> "Estadísticas"
-                        },
-                        modifier = Modifier.clickable {
-                            titleTapCount++
-                            if (titleTapCount >= 5) {
-                                showEasterEgg = true
-                                titleTapCount = 0
+                    if (pagerState.currentPage == 1) {
+                        Row(verticalAlignment = Alignment.CenterVertically) {
+                            Text(
+                                "Takat",
+                                modifier = Modifier.clickable {
+                                    titleTapCount++
+                                    if (titleTapCount >= 5) {
+                                        showEasterEgg = true
+                                        titleTapCount = 0
+                                    }
+                                }
+                            )
+                            val updateInfo by UpdateState.available
+                            if (updateInfo != null) {
+                                Spacer(Modifier.width(10.dp))
+                                Button(
+                                    onClick = { showUpdateDialog = true },
+                                    contentPadding = PaddingValues(horizontal = 14.dp, vertical = 6.dp),
+                                    modifier = Modifier.height(32.dp)
+                                ) {
+                                    Text("Actualizar", style = MaterialTheme.typography.labelMedium)
+                                }
                             }
                         }
-                    )
+                    } else {
+                        Text(if (pagerState.currentPage == 0) "Presupuesto" else "Estadísticas")
+                    }
                 },
                 actions = {
                     IconButton(onClick = { showChangelog = true }) {
@@ -222,6 +239,12 @@ fun HomeScreen(
                 TextButton(onClick = { showEasterEgg = false }) { Text("Cerrar") }
             }
         )
+    }
+
+    if (showUpdateDialog) {
+        UpdateState.available.value?.let { info ->
+            UpdateAvailableDialog(info = info, onDismiss = { showUpdateDialog = false })
+        }
     }
 }
 
