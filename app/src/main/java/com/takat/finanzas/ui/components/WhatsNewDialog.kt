@@ -32,9 +32,12 @@ import kotlinx.coroutines.launch
  * Checks once (on first composition) whether there are unseen changelog entries for the current
  * install and, if so, shows [WhatsNewDialog]. Never fires on a fresh install — see
  * AppDatabase's onCreate callback, which seeds `lastSeenVersionCode` to the current version there.
+ *
+ * [onSettled] fires exactly once the gate has resolved (nothing to show, or the dialog was
+ * dismissed) — [UpdateCheckGate] waits on it so the two dialogs never stack.
  */
 @Composable
-fun WhatsNewGate(repository: FinanceRepository) {
+fun WhatsNewGate(repository: FinanceRepository, onSettled: () -> Unit = {}) {
     var pendingEntries by remember { mutableStateOf<List<ChangelogEntry>?>(null) }
     var baseSettings by remember { mutableStateOf<AppSettingsEntity?>(null) }
     val scope = rememberCoroutineScope()
@@ -45,8 +48,11 @@ fun WhatsNewGate(repository: FinanceRepository) {
         val entries = Changelog.entriesAfter(settings?.lastSeenVersionCode ?: 0)
         if (entries.isNotEmpty()) {
             pendingEntries = entries
-        } else if ((settings?.lastSeenVersionCode ?: 0) != BuildConfig.VERSION_CODE) {
-            repository.updateAppSettings((settings ?: AppSettingsEntity()).copy(lastSeenVersionCode = BuildConfig.VERSION_CODE))
+        } else {
+            if ((settings?.lastSeenVersionCode ?: 0) != BuildConfig.VERSION_CODE) {
+                repository.updateAppSettings((settings ?: AppSettingsEntity()).copy(lastSeenVersionCode = BuildConfig.VERSION_CODE))
+            }
+            onSettled()
         }
     }
 
@@ -60,6 +66,7 @@ fun WhatsNewGate(repository: FinanceRepository) {
                     repository.updateAppSettings(
                         (baseSettings ?: AppSettingsEntity()).copy(lastSeenVersionCode = BuildConfig.VERSION_CODE)
                     )
+                    onSettled()
                 }
             }
         )

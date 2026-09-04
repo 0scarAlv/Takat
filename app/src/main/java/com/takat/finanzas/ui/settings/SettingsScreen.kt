@@ -63,7 +63,10 @@ import androidx.work.WorkManager
 import com.takat.finanzas.BuildConfig
 import com.takat.finanzas.backup.DailyBackupWorker
 import com.takat.finanzas.data.entity.ThemeMode
+import com.takat.finanzas.network.UpdateChecker
+import com.takat.finanzas.network.UpdateInfo
 import com.takat.finanzas.notifications.FixedExpenseReminderWorker
+import com.takat.finanzas.ui.components.UpdateAvailableDialog
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.DebugLog
@@ -406,6 +409,35 @@ fun SettingsScreen(
 
             Spacer(Modifier.height(32.dp))
             Text("Acerca de", style = MaterialTheme.typography.titleMedium)
+            Text(
+                "Takat no se distribuye por ninguna tienda de apps, así que las actualizaciones se " +
+                    "revisan acá, contra los releases publicados en GitHub.",
+                style = MaterialTheme.typography.bodySmall,
+                color = MaterialTheme.colorScheme.onSurfaceVariant
+            )
+            Spacer(Modifier.height(16.dp))
+            var checkingUpdate by remember { mutableStateOf(false) }
+            var manualUpdateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
+            OutlinedButton(
+                onClick = {
+                    checkingUpdate = true
+                    scope.launch {
+                        val info = UpdateChecker.checkForUpdate(BuildConfig.VERSION_NAME)
+                        checkingUpdate = false
+                        if (info != null) {
+                            manualUpdateInfo = info
+                        } else {
+                            Toast.makeText(context, "Ya tenés la última versión instalada.", Toast.LENGTH_SHORT).show()
+                        }
+                    }
+                },
+                enabled = !checkingUpdate,
+                modifier = Modifier.fillMaxWidth()
+            ) { Text(if (checkingUpdate) "Buscando…" else "Buscar actualizaciones") }
+            manualUpdateInfo?.let { info ->
+                UpdateAvailableDialog(info = info, onDismiss = { manualUpdateInfo = null })
+            }
+            Spacer(Modifier.height(16.dp))
             var secretTapCount by remember { mutableIntStateOf(0) }
             var lastTapAt by remember { mutableLongStateOf(0L) }
             Text(

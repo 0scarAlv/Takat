@@ -10,9 +10,12 @@ import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.NotificationHelper
 import com.takat.finanzas.share.ShareIntentUtil
+import com.takat.finanzas.ui.components.UpdateCheckGate
 import com.takat.finanzas.ui.components.WhatsNewGate
 import com.takat.finanzas.ui.navigation.TakatNavGraph
 import com.takat.finanzas.ui.theme.TakatTheme
@@ -44,7 +47,11 @@ class MainActivity : ComponentActivity() {
                     pendingFixedExpenseId = pendingFixedExpenseId,
                     pendingShareUris = pendingShareUris
                 )
-                WhatsNewGate(repository)
+                var whatsNewSettled by remember { mutableStateOf(false) }
+                WhatsNewGate(repository, onSettled = { whatsNewSettled = true })
+                if (whatsNewSettled) {
+                    UpdateCheckGate()
+                }
             }
         }
     }

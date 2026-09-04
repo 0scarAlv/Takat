@@ -123,6 +123,10 @@ object Changelog {
         )),
         ChangelogEntry(25, "1.13.0", listOf(
             "Arreglo: Ingresos vs Gastos ya no cuenta un sueldo pagado en la segunda mitad del mes (por ejemplo el día 31) como ingreso de ese mes — ahora se atribuye al mes que realmente financia, igual que ya hacía Presupuesto/Gastos fijos con la quincena."
+        )),
+        ChangelogEntry(26, "1.14.0", listOf(
+            "Nuevo: como Takat no está en ninguna tienda de apps, ahora se fija solo si hay una versión nueva publicada en GitHub cada vez que abrís la app, y te deja descargarla e instalarla sin salir de Takat.",
+            "Nuevo botón \"Buscar actualizaciones\" en Ajustes → Acerca de, para revisar manualmente cuando quieras."
         ))
     )
 
