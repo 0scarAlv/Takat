@@ -286,6 +286,31 @@ class FinanceRepository(
             }
         }
 
+    /** Every expense on [date], regardless of category, for the day-detail screen off the "gasto por día" chart. */
+    fun expenseTransactionsForDay(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Flow<List<Movement.TransactionMovement>> =
+        combine(
+            transactionDao.getAll(),
+            categoryDao.getAll(),
+            accountDao.getAll(),
+            attachmentDao.getAll()
+        ) { transactions, categories, accounts, attachments ->
+            val (start, end) = dayRange(date, zone)
+            val categoryById = categories.associateBy { it.id }
+            val accountById = accounts.associateBy { it.id }
+            val attachmentsByTransaction = attachments.groupBy { it.transactionId }
+            transactions
+                .filter { it.amountCents < 0 && it.date >= start && it.date < end }
+                .sortedByDescending { it.date }
+                .map {
+                    Movement.TransactionMovement(
+                        it,
+                        categoryById[it.categoryId],
+                        accountById[it.accountId],
+                        attachmentsByTransaction[it.id].orEmpty()
+                    )
+                }
+        }
+
     fun expenseTransactionsForCategory(categoryId: Long?, fromInclusive: Long, toExclusive: Long): Flow<List<Movement.TransactionMovement>> =
         combine(
             transactionDao.getAll(),

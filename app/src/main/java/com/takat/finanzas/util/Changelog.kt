@@ -143,6 +143,9 @@ object Changelog {
         ChangelogEntry(30, "2.2.0", listOf(
             "Antes de instalar una actualización, Takat ahora revisa el respaldo automático: si está activo, hace una copia de seguridad antes de aplicar el cambio; si no está activo, te pregunta si querés activarlo (y te dice dónde) o seguir sin él.",
             "Nuevo gráfico de barras en Estadísticas: gasto por día del mes, con el día de mayor gasto marcado — tocá cualquier barra para ver el gasto de ese día."
+        )),
+        ChangelogEntry(31, "2.2.1", listOf(
+            "En el gráfico de gasto por día, tocá el detalle del día seleccionado para ver todos sus movimientos, igual que ya podías hacer con una categoría."
         ))
     )
 

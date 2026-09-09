@@ -87,6 +87,7 @@ import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.launch
+import java.time.LocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,6 +97,7 @@ fun HomeScreen(
     onAddTransaction: () -> Unit,
     onAddTransfer: () -> Unit,
     onOpenCategoryExpenses: (categoryId: Long?, from: Long, to: Long) -> Unit,
+    onOpenDayExpenses: (date: LocalDate) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenFixedExpenses: () -> Unit,
     onPayFixedExpense: (fixedExpenseId: Long) -> Unit
@@ -202,7 +204,7 @@ fun HomeScreen(
                     onOpenFixedExpenses = onOpenFixedExpenses,
                     onPayFixedExpense = onPayFixedExpense
                 )
-                else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses)
+                else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses, onDayClick = onOpenDayExpenses)
             }
         }
     }

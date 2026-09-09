@@ -68,12 +68,14 @@ import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
 import java.time.DayOfWeek
+import java.time.LocalDate
 import kotlin.math.atan2
 import kotlin.math.hypot
 
 @Composable
 fun StatsScreen(
     onCategoryClick: (categoryId: Long?, from: Long, to: Long) -> Unit,
+    onDayClick: (date: LocalDate) -> Unit,
     modifier: Modifier = Modifier
 ) {
     val repository = rememberRepository()
@@ -112,7 +114,7 @@ fun StatsScreen(
                     style = MaterialTheme.typography.titleMedium
                 )
             }
-            item { DailyExpenseBarChart(uiState.dailyExpenses) }
+            item { DailyExpenseBarChart(uiState.dailyExpenses, onDayClick) }
         }
 
         if (uiState.categoryExpenses.isEmpty()) {
@@ -328,7 +330,7 @@ private fun chunkIntoWeeks(days: List<DailyExpense>): List<List<DailyExpense>> {
  * time (less crowded when you want to look at something specific), navigable with the arrows.
  */
 @Composable
-private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>) {
+private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: (date: LocalDate) -> Unit) {
     var range by remember(dailyExpenses) { mutableStateOf(DayChartRange.MONTH) }
     val weeks = remember(dailyExpenses) { chunkIntoWeeks(dailyExpenses) }
     val defaultWeekIndex = remember(dailyExpenses, weeks) {
@@ -419,7 +421,10 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>) {
                     .pointerInput(shownDays) {
                         detectTapGestures { offset ->
                             val slotWidth = size.width.toFloat() / shownDays.size
-                            selectedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
+                            val tappedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
+                            selectedIndex = tappedIndex
+                            val tappedDay = shownDays[tappedIndex]
+                            if (tappedDay.totalCents > 0) onDayClick(tappedDay.date)
                         }
                     }
             ) {

@@ -22,9 +22,11 @@ import com.takat.finanzas.ui.home.HomeScreen
 import com.takat.finanzas.ui.pairing.PairScanScreen
 import com.takat.finanzas.ui.settings.SettingsScreen
 import com.takat.finanzas.ui.stats.CategoryExpensesScreen
+import com.takat.finanzas.ui.stats.DayExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
 import com.takat.finanzas.ui.transfer.AddTransferScreen
 import com.takat.finanzas.widget.WidgetActions
+import java.time.LocalDate
 
 private object Routes {
     const val HOME = "home"
@@ -34,6 +36,7 @@ private object Routes {
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}&fixedExpenseId={fixedExpenseId}"
     const val TRANSFER_NEW = "transfer/new"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
+    const val DAY_EXPENSES = "stats/day/{epochDay}"
     const val SETTINGS = "settings"
     const val CATEGORIES = "categories"
     const val FIXED_EXPENSES = "fixed-expenses"
@@ -45,6 +48,7 @@ private object Routes {
     fun transactionNew(accountId: Long? = null, fixedExpenseId: Long? = null) =
         "transaction/new?accountId=${accountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
     fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
+    fun dayExpenses(date: LocalDate) = "stats/day/${date.toEpochDay()}"
     fun fixedExpenseForm(id: Long? = null) = "fixed-expenses/form?id=${id ?: -1L}"
 }
 
@@ -96,6 +100,7 @@ fun TakatNavGraph(
                 onOpenCategoryExpenses = { categoryId, from, to ->
                     navController.navigate(Routes.categoryExpenses(categoryId, from, to))
                 },
+                onOpenDayExpenses = { date -> navController.navigate(Routes.dayExpenses(date)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
                 onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) }
@@ -181,6 +186,19 @@ fun TakatNavGraph(
                 toMillis = args?.getLong("to") ?: 0L,
                 onBack = { navController.popBackStack() }
             )
+        }
+
+        composable(
+            Routes.DAY_EXPENSES,
+            arguments = listOf(navArgument("epochDay") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val epochDay = backStackEntry.arguments?.getLong("epochDay")
+            if (epochDay != null) {
+                DayExpensesScreen(
+                    date = LocalDate.ofEpochDay(epochDay),
+                    onBack = { navController.popBackStack() }
+                )
+            }
         }
 
         composable(Routes.SETTINGS) {
