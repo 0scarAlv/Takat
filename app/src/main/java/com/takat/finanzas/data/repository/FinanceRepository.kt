@@ -21,6 +21,7 @@ import com.takat.finanzas.data.entity.TransferEntity
 import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.CategoryExpense
+import com.takat.finanzas.data.model.DailyExpense
 import com.takat.finanzas.data.model.FixedExpensePaymentRecord
 import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ImportResult
@@ -269,6 +270,20 @@ class FinanceRepository(
                 .groupBy { it.categoryId }
                 .map { (categoryId, txs) -> CategoryExpense(categoryById[categoryId], txs.sumOf { -it.amountCents }) }
                 .sortedByDescending { it.totalCents }
+        }
+
+    /** One entry per calendar day of [month] (including zero-expense days), for the "día que más gastaste" bar chart. */
+    fun expensesByDay(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DailyExpense>> =
+        transactionDao.getAll().map { transactions ->
+            val (start, end) = monthRange(month, zone)
+            val totalsByDate = transactions
+                .filter { it.amountCents < 0 && it.date >= start && it.date < end }
+                .groupBy { Instant.ofEpochMilli(it.date).atZone(zone).toLocalDate() }
+                .mapValues { (_, txs) -> txs.sumOf { -it.amountCents } }
+            (1..month.lengthOfMonth()).map { day ->
+                val date = month.atDay(day)
+                DailyExpense(date, totalsByDate[date] ?: 0L)
+            }
         }
 
     fun expenseTransactionsForCategory(categoryId: Long?, fromInclusive: Long, toExclusive: Long): Flow<List<Movement.TransactionMovement>> =

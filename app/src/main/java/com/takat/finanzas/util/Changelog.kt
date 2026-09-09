@@ -139,6 +139,10 @@ object Changelog {
         )),
         ChangelogEntry(29, "2.1.1", listOf(
             "Ajuste: eliminar una cuenta con movimientos ya no la deja archivada con opción de restaurarla — se elimina directo, y sus movimientos y transferencias siguen intactos igual que antes."
+        )),
+        ChangelogEntry(30, "2.2.0", listOf(
+            "Antes de instalar una actualización, Takat ahora revisa el respaldo automático: si está activo, hace una copia de seguridad antes de aplicar el cambio; si no está activo, te pregunta si querés activarlo (y te dice dónde) o seguir sin él.",
+            "Nuevo gráfico de barras en Estadísticas: gasto por día del mes, con el día de mayor gasto marcado — tocá cualquier barra para ver el gasto de ese día."
         ))
     )
 

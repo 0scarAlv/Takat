@@ -23,9 +23,17 @@ import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ChevronLeft
+import androidx.compose.material.icons.filled.ChevronRight
 import androidx.compose.material3.Card
 import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.SegmentedButton
+import androidx.compose.material3.SegmentedButtonDefaults
+import androidx.compose.material3.SingleChoiceSegmentedButtonRow
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
@@ -46,7 +54,9 @@ import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import androidx.compose.ui.geometry.CornerRadius
 import com.takat.finanzas.data.model.CategoryExpense
+import com.takat.finanzas.data.model.DailyExpense
 import com.takat.finanzas.ui.components.CategoryLabel
 import com.takat.finanzas.ui.components.MonthSelector
 import com.takat.finanzas.ui.theme.CategoricalOtherGray
@@ -56,6 +66,8 @@ import com.takat.finanzas.ui.theme.EmeraldPrimary
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.util.toDisplayDate
+import java.time.DayOfWeek
 import kotlin.math.atan2
 import kotlin.math.hypot
 
@@ -76,7 +88,7 @@ fun StatsScreen(
         item {
             Column {
                 Text(
-                    "Gastos por categoría",
+                    "Resumen del mes",
                     style = MaterialTheme.typography.titleMedium
                 )
                 MonthSelector(
@@ -93,6 +105,16 @@ fun StatsScreen(
             }
         }
 
+        if (uiState.dailyExpenses.any { it.totalCents > 0 }) {
+            item {
+                Text(
+                    "Gasto por día",
+                    style = MaterialTheme.typography.titleMedium
+                )
+            }
+            item { DailyExpenseBarChart(uiState.dailyExpenses) }
+        }
+
         if (uiState.categoryExpenses.isEmpty()) {
             item {
                 Text(
@@ -102,6 +124,13 @@ fun StatsScreen(
                 )
             }
         } else {
+            item {
+                Text(
+                    "Gastos por categoría",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
             item { CategoryDonutChart(uiState.categoryExpenses, uiState.totalExpenseCents) }
 
             val maxCents = uiState.categoryExpenses.maxOf { it.totalCents }.coerceAtLeast(1)
@@ -277,6 +306,160 @@ private fun hitTestSlice(offset: Offset, widthPx: Float, heightPx: Float, slices
         cumStart += rawSweep
     }
     return null
+}
+
+private const val DAY_CHART_HEIGHT_DP = 120
+
+private enum class DayChartRange { MONTH, WEEK }
+
+/** Splits a month's days (already in ascending date order) into real calendar weeks (Mon–Sun), first/last possibly partial. */
+private fun chunkIntoWeeks(days: List<DailyExpense>): List<List<DailyExpense>> {
+    val weeks = mutableListOf<MutableList<DailyExpense>>()
+    days.forEach { day ->
+        if (weeks.isEmpty() || day.date.dayOfWeek == DayOfWeek.MONDAY) weeks.add(mutableListOf())
+        weeks.last().add(day)
+    }
+    return weeks
+}
+
+/**
+ * One bar per calendar day; tapping a bar inspects that day, defaulting to the shown range's
+ * peak-spending day. "Mes" shows the whole month; "Semana" narrows it to one calendar week at a
+ * time (less crowded when you want to look at something specific), navigable with the arrows.
+ */
+@Composable
+private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>) {
+    var range by remember(dailyExpenses) { mutableStateOf(DayChartRange.MONTH) }
+    val weeks = remember(dailyExpenses) { chunkIntoWeeks(dailyExpenses) }
+    val defaultWeekIndex = remember(dailyExpenses, weeks) {
+        val peakDate = dailyExpenses.maxBy { it.totalCents }.date
+        weeks.indexOfFirst { week -> week.any { it.date == peakDate } }.coerceAtLeast(0)
+    }
+    var weekIndex by remember(dailyExpenses) { mutableStateOf(defaultWeekIndex) }
+
+    val shownDays = if (range == DayChartRange.MONTH) dailyExpenses else weeks.getOrElse(weekIndex) { dailyExpenses }
+    val maxCents = shownDays.maxOf { it.totalCents }.coerceAtLeast(1)
+    val peakIndex = remember(shownDays) { shownDays.indices.maxBy { shownDays[it].totalCents } }
+    var selectedIndex by remember(shownDays) { mutableStateOf(peakIndex) }
+    val selected = shownDays.getOrNull(selectedIndex)
+    val barColor = EmeraldPrimary
+
+    Card(
+        modifier = Modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+    ) {
+        Column(modifier = Modifier.padding(16.dp)) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column {
+                    Text(
+                        if (selectedIndex == peakIndex) "Día con más gasto" else "Ese día gastaste",
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    Text(
+                        if (selected != null && selected.totalCents > 0) {
+                            "${selected.date.toDisplayDate()} · ${selected.totalCents.centsToDisplay()}"
+                        } else {
+                            "Sin gastos ese día"
+                        },
+                        style = MaterialTheme.typography.titleMedium,
+                        fontWeight = FontWeight.Bold
+                    )
+                }
+                SingleChoiceSegmentedButtonRow {
+                    SegmentedButton(
+                        selected = range == DayChartRange.MONTH,
+                        onClick = { range = DayChartRange.MONTH },
+                        shape = SegmentedButtonDefaults.itemShape(0, 2)
+                    ) { Text("Mes") }
+                    SegmentedButton(
+                        selected = range == DayChartRange.WEEK,
+                        onClick = { range = DayChartRange.WEEK; weekIndex = defaultWeekIndex },
+                        shape = SegmentedButtonDefaults.itemShape(1, 2)
+                    ) { Text("Semana") }
+                }
+            }
+
+            if (range == DayChartRange.WEEK && weeks.isNotEmpty()) {
+                Spacer(Modifier.height(8.dp))
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    horizontalArrangement = Arrangement.SpaceBetween,
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    IconButton(onClick = { weekIndex = (weekIndex - 1).coerceAtLeast(0) }, enabled = weekIndex > 0) {
+                        Icon(Icons.Filled.ChevronLeft, contentDescription = "Semana anterior")
+                    }
+                    val week = weeks.getOrElse(weekIndex) { weeks.last() }
+                    Text(
+                        "${week.first().date.toDisplayDate()} – ${week.last().date.toDisplayDate()}",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                    IconButton(
+                        onClick = { weekIndex = (weekIndex + 1).coerceAtMost(weeks.lastIndex) },
+                        enabled = weekIndex < weeks.lastIndex
+                    ) {
+                        Icon(Icons.Filled.ChevronRight, contentDescription = "Semana siguiente")
+                    }
+                }
+            }
+
+            Spacer(Modifier.height(16.dp))
+
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(DAY_CHART_HEIGHT_DP.dp)
+                    .pointerInput(shownDays) {
+                        detectTapGestures { offset ->
+                            val slotWidth = size.width.toFloat() / shownDays.size
+                            selectedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
+                        }
+                    }
+            ) {
+                val slotWidth = size.width / shownDays.size
+                val gap = (slotWidth * 0.2f).coerceAtMost(4.dp.toPx())
+                val barWidth = (slotWidth - gap).coerceAtLeast(1f)
+                val minBarHeight = 2.dp.toPx()
+                val cornerRadius = CornerRadius(2.dp.toPx(), 2.dp.toPx())
+
+                shownDays.forEachIndexed { index, day ->
+                    val fraction = day.totalCents.toFloat() / maxCents.toFloat()
+                    val barHeight = (size.height * fraction).coerceAtLeast(minBarHeight)
+                    val color = if (index == selectedIndex) barColor else barColor.copy(alpha = 0.35f)
+                    drawRoundRect(
+                        color = color,
+                        topLeft = Offset(index * slotWidth + gap / 2, size.height - barHeight),
+                        size = Size(barWidth, barHeight),
+                        cornerRadius = cornerRadius
+                    )
+                }
+            }
+            Spacer(Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                shownDays.forEach { day ->
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        val showLabel = range == DayChartRange.WEEK || day.date.dayOfMonth == 1 || day.date.dayOfMonth % 5 == 0
+                        if (showLabel) {
+                            Text(
+                                day.date.dayOfMonth.toString(),
+                                style = MaterialTheme.typography.labelSmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1,
+                                softWrap = false
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
 }
 
 @Composable
