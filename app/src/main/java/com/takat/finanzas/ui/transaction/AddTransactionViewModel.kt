@@ -2,13 +2,14 @@ package com.takat.finanzas.ui.transaction
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.TransactionEntity
+import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.repository.FinanceRepository
+import com.takat.finanzas.util.capitalizeFirst
 import com.takat.finanzas.util.parseAmountToCents
 import com.takat.finanzas.util.toEditableAmountString
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -29,7 +30,7 @@ data class PendingAttachment(
 )
 
 data class AddTransactionUiState(
-    val accounts: List<AccountEntity> = emptyList(),
+    val accounts: List<AccountWithBalance> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
     val accountId: Long? = null,
     val isExpense: Boolean = true,
@@ -55,10 +56,9 @@ class AddTransactionViewModel(
 
     init {
         viewModelScope.launch {
-            repository.accountsWithBalance().collect { list ->
+            repository.accountsWithBalance().collect { accounts ->
                 _uiState.update { state ->
-                    val accounts = list.map { it.account }
-                    state.copy(accounts = accounts, accountId = state.accountId ?: accounts.firstOrNull()?.id)
+                    state.copy(accounts = accounts, accountId = state.accountId ?: accounts.firstOrNull()?.account?.id)
                 }
             }
         }
@@ -80,7 +80,7 @@ class AddTransactionViewModel(
     fun onTypeChange(isExpense: Boolean) = _uiState.update { it.copy(isExpense = isExpense, categoryId = null) }
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
-    fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
+    fun onNoteChange(value: String) = _uiState.update { it.copy(note = value.capitalizeFirst()) }
 
     /**
      * [utcDateMillis] comes from Compose's DatePicker, which works in UTC-midnight terms regardless of

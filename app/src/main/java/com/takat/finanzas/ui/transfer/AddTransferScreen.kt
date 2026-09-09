@@ -39,10 +39,14 @@ import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.takat.finanzas.ui.components.AccountColorDot
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
+import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.util.parseAmountToCents
 import kotlinx.coroutines.launch
 
 @OptIn(ExperimentalMaterial3Api::class)
@@ -64,8 +68,14 @@ fun AddTransferScreen(
 
     LaunchedEffect(uiState.saved) { if (uiState.saved) onDone() }
 
-    val fromAccount = uiState.accounts.find { it.id == uiState.fromAccountId }
-    val toAccount = uiState.accounts.find { it.id == uiState.toAccountId }
+    val fromAccount = uiState.accounts.find { it.account.id == uiState.fromAccountId }
+    val toAccount = uiState.accounts.find { it.account.id == uiState.toAccountId }
+    val amountCents = uiState.amountText.parseAmountToCents()
+    val overBalanceWarning = fromAccount?.let { account ->
+        if (!account.account.isDebt && amountCents != null && amountCents > account.balanceCents) {
+            "Esa cuenta solo tiene ${account.balanceCents.centsToDisplay()} disponibles"
+        } else null
+    }
 
     Scaffold(
         topBar = {
@@ -93,10 +103,13 @@ fun AddTransferScreen(
                 onExpandedChange = { fromMenuExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = fromAccount?.name ?: "",
+                    value = fromAccount?.account?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Desde") },
+                    leadingIcon = {
+                        fromAccount?.let { AccountColorDot(it.account.colorArgb) }
+                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromMenuExpanded) },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -108,9 +121,10 @@ fun AddTransferScreen(
                 ) {
                     uiState.accounts.forEach { account ->
                         DropdownMenuItem(
-                            text = { Text(account.name) },
+                            leadingIcon = { AccountColorDot(account.account.colorArgb) },
+                            text = { Text(account.account.name) },
                             onClick = {
-                                viewModel.onFromAccountChange(account.id)
+                                viewModel.onFromAccountChange(account.account.id)
                                 fromMenuExpanded = false
                             }
                         )
@@ -123,10 +137,13 @@ fun AddTransferScreen(
                 onExpandedChange = { toMenuExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = toAccount?.name ?: "",
+                    value = toAccount?.account?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Hacia") },
+                    leadingIcon = {
+                        toAccount?.let { AccountColorDot(it.account.colorArgb) }
+                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toMenuExpanded) },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -138,9 +155,10 @@ fun AddTransferScreen(
                 ) {
                     uiState.accounts.forEach { account ->
                         DropdownMenuItem(
-                            text = { Text(account.name) },
+                            leadingIcon = { AccountColorDot(account.account.colorArgb) },
+                            text = { Text(account.account.name) },
                             onClick = {
-                                viewModel.onToAccountChange(account.id)
+                                viewModel.onToAccountChange(account.account.id)
                                 toMenuExpanded = false
                             }
                         )
@@ -148,14 +166,24 @@ fun AddTransferScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = uiState.amountText,
-                onValueChange = viewModel::onAmountChange,
-                label = { Text("Monto") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Column {
+                OutlinedTextField(
+                    value = uiState.amountText,
+                    onValueChange = viewModel::onAmountChange,
+                    label = { Text("Monto") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (overBalanceWarning != null) {
+                    Text(
+                        overBalanceWarning,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AmberAccent,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                    )
+                }
+            }
 
             Column {
                 Text("Motivo (opcional)", style = MaterialTheme.typography.labelLarge)

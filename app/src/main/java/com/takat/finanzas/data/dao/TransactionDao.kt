@@ -15,6 +15,9 @@ interface TransactionDao {
     @Query("SELECT * FROM transactions WHERE accountId = :accountId ORDER BY date DESC")
     fun getForAccount(accountId: Long): Flow<List<TransactionEntity>>
 
+    @Query("SELECT COUNT(*) FROM transactions WHERE accountId = :accountId")
+    suspend fun countForAccount(accountId: Long): Int
+
     @Insert
     suspend fun insert(transaction: TransactionEntity): Long
 

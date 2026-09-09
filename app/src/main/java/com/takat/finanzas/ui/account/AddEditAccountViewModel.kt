@@ -22,6 +22,7 @@ data class AddEditAccountUiState(
     val colorArgb: Int = AccountSwatches.first(),
     val isEditing: Boolean = false,
     val existingAccount: AccountEntity? = null,
+    val hasMovements: Boolean = false,
     val saved: Boolean = false,
     val deleted: Boolean = false,
     val error: String? = null
@@ -40,6 +41,7 @@ class AddEditAccountViewModel(
             viewModelScope.launch {
                 val existing = repository.accountWithBalance(accountId).first()?.account
                 if (existing != null) {
+                    val hasMovements = repository.movementCountForAccount(accountId) > 0
                     _uiState.update {
                         it.copy(
                             name = existing.name,
@@ -47,7 +49,8 @@ class AddEditAccountViewModel(
                             isDebt = existing.isDebt,
                             includeInTotal = existing.includeInTotal,
                             colorArgb = existing.colorArgb,
-                            existingAccount = existing
+                            existingAccount = existing,
+                            hasMovements = hasMovements
                         )
                     }
                 }
@@ -101,10 +104,20 @@ class AddEditAccountViewModel(
         }
     }
 
+    /**
+     * Accounts with saved movements are archived under the hood (hidden from pickers/totals, never
+     * shown again) rather than hard-deleted, so their transactions/transfers keep a valid accountId
+     * to resolve historical name/color from — but this reads as a real deletion to the user.
+     */
     fun delete() {
-        val existing = _uiState.value.existingAccount ?: return
+        val state = _uiState.value
+        val existing = state.existingAccount ?: return
         viewModelScope.launch {
-            repository.deleteAccount(existing)
+            if (state.hasMovements) {
+                repository.archiveAccount(existing)
+            } else {
+                repository.deleteAccount(existing)
+            }
             _uiState.update { it.copy(deleted = true) }
         }
     }

@@ -189,7 +189,15 @@ fun AddEditAccountScreen(
         AlertDialog(
             onDismissRequest = { showDeleteConfirm = false },
             title = { Text("¿Eliminar esta cuenta?") },
-            text = { Text("Se van a borrar también todos sus movimientos y transferencias. Esta acción no se puede deshacer.") },
+            text = {
+                Text(
+                    if (uiState.hasMovements) {
+                        "Se eliminará la cuenta, pero los movimientos y transferencias relacionados con ella van a quedar intactos. Esta acción no se puede deshacer."
+                    } else {
+                        "No tiene movimientos guardados, así que se puede borrar sin perder nada. Esta acción no se puede deshacer."
+                    }
+                )
+            },
             confirmButton = {
                 TextButton(onClick = { showDeleteConfirm = false; viewModel.delete() }) {
                     Text("Eliminar", color = MaterialTheme.colorScheme.error)

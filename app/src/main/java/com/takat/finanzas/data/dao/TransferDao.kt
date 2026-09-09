@@ -15,6 +15,9 @@ interface TransferDao {
     @Query("SELECT * FROM transfers WHERE fromAccountId = :accountId OR toAccountId = :accountId ORDER BY date DESC")
     fun getForAccount(accountId: Long): Flow<List<TransferEntity>>
 
+    @Query("SELECT COUNT(*) FROM transfers WHERE fromAccountId = :accountId OR toAccountId = :accountId")
+    suspend fun countForAccount(accountId: Long): Int
+
     @Insert
     suspend fun insert(transfer: TransferEntity): Long
 

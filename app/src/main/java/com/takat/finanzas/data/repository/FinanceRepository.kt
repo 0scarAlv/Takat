@@ -92,9 +92,11 @@ class FinanceRepository(
     suspend fun updateAppSettings(settings: AppSettingsEntity) =
         appSettingsDao.upsert(settings.copy(id = 0))
 
-    fun accountsWithBalance(): Flow<List<AccountWithBalance>> =
+    fun accountsWithBalance(includeArchived: Boolean = false): Flow<List<AccountWithBalance>> =
         combine(accountDao.getAll(), transactionDao.getAll(), transferDao.getAll()) { accounts, transactions, transfers ->
-            accounts.map { account -> AccountWithBalance(account, balanceFor(account.id, account.initialBalanceCents, transactions, transfers)) }
+            accounts
+                .filter { includeArchived || !it.isArchived }
+                .map { account -> AccountWithBalance(account, balanceFor(account.id, account.initialBalanceCents, transactions, transfers)) }
         }
 
     fun accountTotals(): Flow<AccountTotals> =
@@ -120,7 +122,7 @@ class FinanceRepository(
     fun spentTodayCents(zone: ZoneId = ZoneId.systemDefault()): Flow<Long> =
         combine(transactionDao.getAll(), accountDao.getAll()) { transactions, accounts ->
             val (start, end) = dayRange(LocalDate.now(zone), zone)
-            val includedAccountIds = accounts.filter { it.includeInTotal }.map { it.id }.toSet()
+            val includedAccountIds = accounts.filter { it.includeInTotal && !it.isArchived }.map { it.id }.toSet()
             transactions
                 .filter {
                     it.accountId in includedAccountIds && it.amountCents < 0 &&
@@ -320,7 +322,7 @@ class FinanceRepository(
         }
 
     fun accountWithBalance(accountId: Long): Flow<AccountWithBalance?> =
-        accountsWithBalance().map { list -> list.find { it.account.id == accountId } }
+        accountsWithBalance(includeArchived = true).map { list -> list.find { it.account.id == accountId } }
 
     private fun balanceFor(
         accountId: Long,
@@ -387,6 +389,18 @@ class FinanceRepository(
     }
     suspend fun deleteAccount(account: AccountEntity) {
         accountDao.delete(account)
+        refreshWidget()
+    }
+
+    suspend fun movementCountForAccount(accountId: Long): Int =
+        transactionDao.countForAccount(accountId) + transferDao.countForAccount(accountId)
+
+    /**
+     * Hides the account from pickers/totals for good (no way back from the UI) while keeping its
+     * transactions/transfers pointing at a valid accountId, so their history stays intact.
+     */
+    suspend fun archiveAccount(account: AccountEntity) {
+        accountDao.update(account.copy(isArchived = true))
         refreshWidget()
     }
 

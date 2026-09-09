@@ -130,6 +130,15 @@ object Changelog {
         )),
         ChangelogEntry(27, "2.0.0", listOf(
             "Cuando hay una actualización disponible, ahora aparece un botón verde \"Actualizar\" junto al título Takat en Inicio, para descargarla e instalarla cuando quieras aunque hayas cerrado el aviso automático."
+        )),
+        ChangelogEntry(28, "2.1.0", listOf(
+            "Eliminar una cuenta con movimientos guardados ya no borra también sus movimientos y transferencias: quedan intactos, aunque la cuenta desaparezca.",
+            "Al cargar un gasto o una transferencia, si la cuenta de origen no es de deuda y el monto supera lo que tiene disponible, ahora te avisa (sin bloquearte).",
+            "La nota opcional de movimientos y transferencias ahora empieza siempre con mayúscula.",
+            "Los desplegables de cuenta en movimientos y transferencias ahora muestran el color de la cuenta, para no confundirte al elegir."
+        )),
+        ChangelogEntry(29, "2.1.1", listOf(
+            "Ajuste: eliminar una cuenta con movimientos ya no la deja archivada con opción de restaurarla — se elimina directo, y sus movimientos y transferencias siguen intactos igual que antes."
         ))
     )
 

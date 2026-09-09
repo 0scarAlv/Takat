@@ -71,11 +71,15 @@ import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryKind
+import com.takat.finanzas.ui.components.AccountColorDot
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.components.FixedExpensePicker
+import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.util.parseAmountToCents
 import com.takat.finanzas.util.toDisplayDate
 import kotlinx.coroutines.launch
 import java.io.File
@@ -178,9 +182,15 @@ fun AddTransactionScreen(
         }
     }
 
-    val selectedAccount = uiState.accounts.find { it.id == uiState.accountId }
+    val selectedAccount = uiState.accounts.find { it.account.id == uiState.accountId }
     val relevantKind = if (uiState.isExpense) CategoryKind.EXPENSE else CategoryKind.INCOME
     val filteredCategories = uiState.categories.filter { it.kind == relevantKind || it.kind == CategoryKind.BOTH }
+    val amountCents = uiState.amountText.parseAmountToCents()
+    val overBalanceWarning = selectedAccount?.let { account ->
+        if (uiState.isExpense && !account.account.isDebt && amountCents != null && amountCents > account.balanceCents) {
+            "Esa cuenta solo tiene ${account.balanceCents.centsToDisplay()} disponibles"
+        } else null
+    }
 
     Scaffold(
         topBar = {
@@ -233,10 +243,13 @@ fun AddTransactionScreen(
                 onExpandedChange = { accountMenuExpanded = it }
             ) {
                 OutlinedTextField(
-                    value = selectedAccount?.name ?: "",
+                    value = selectedAccount?.account?.name ?: "",
                     onValueChange = {},
                     readOnly = true,
                     label = { Text("Cuenta") },
+                    leadingIcon = {
+                        selectedAccount?.let { AccountColorDot(it.account.colorArgb) }
+                    },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountMenuExpanded) },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
@@ -248,9 +261,10 @@ fun AddTransactionScreen(
                 ) {
                     uiState.accounts.forEach { account ->
                         DropdownMenuItem(
-                            text = { Text(account.name) },
+                            leadingIcon = { AccountColorDot(account.account.colorArgb) },
+                            text = { Text(account.account.name) },
                             onClick = {
-                                viewModel.onAccountChange(account.id)
+                                viewModel.onAccountChange(account.account.id)
                                 accountMenuExpanded = false
                             }
                         )
@@ -258,14 +272,24 @@ fun AddTransactionScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = uiState.amountText,
-                onValueChange = viewModel::onAmountChange,
-                label = { Text("Monto") },
-                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
-                singleLine = true
-            )
+            Column {
+                OutlinedTextField(
+                    value = uiState.amountText,
+                    onValueChange = viewModel::onAmountChange,
+                    label = { Text("Monto") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                if (overBalanceWarning != null) {
+                    Text(
+                        overBalanceWarning,
+                        style = MaterialTheme.typography.bodySmall,
+                        color = AmberAccent,
+                        modifier = Modifier.padding(top = 4.dp, start = 4.dp)
+                    )
+                }
+            }
 
             OutlinedTextField(
                 value = uiState.dateMillis.toDisplayDate(),

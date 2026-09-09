@@ -2,11 +2,12 @@ package com.takat.finanzas.ui.transfer
 
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
-import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.CategoryEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.TransferEntity
+import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.repository.FinanceRepository
+import com.takat.finanzas.util.capitalizeFirst
 import com.takat.finanzas.util.parseAmountToCents
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
@@ -15,7 +16,7 @@ import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
 data class AddTransferUiState(
-    val accounts: List<AccountEntity> = emptyList(),
+    val accounts: List<AccountWithBalance> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
     val fromAccountId: Long? = null,
     val toAccountId: Long? = null,
@@ -34,13 +35,12 @@ class AddTransferViewModel(private val repository: FinanceRepository) : ViewMode
 
     init {
         viewModelScope.launch {
-            repository.accountsWithBalance().collect { list ->
+            repository.accountsWithBalance().collect { accounts ->
                 _uiState.update { state ->
-                    val accounts = list.map { it.account }
                     state.copy(
                         accounts = accounts,
-                        fromAccountId = state.fromAccountId ?: accounts.firstOrNull()?.id,
-                        toAccountId = state.toAccountId ?: accounts.getOrNull(1)?.id
+                        fromAccountId = state.fromAccountId ?: accounts.firstOrNull()?.account?.id,
+                        toAccountId = state.toAccountId ?: accounts.getOrNull(1)?.account?.id
                     )
                 }
             }
@@ -54,7 +54,7 @@ class AddTransferViewModel(private val repository: FinanceRepository) : ViewMode
     fun onToAccountChange(id: Long) = _uiState.update { it.copy(toAccountId = id) }
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
-    fun onNoteChange(value: String) = _uiState.update { it.copy(note = value) }
+    fun onNoteChange(value: String) = _uiState.update { it.copy(note = value.capitalizeFirst()) }
 
     fun addCategory(name: String, emoji: String) {
         viewModelScope.launch {

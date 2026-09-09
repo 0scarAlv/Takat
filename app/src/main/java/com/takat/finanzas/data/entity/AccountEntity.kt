@@ -12,5 +12,6 @@ data class AccountEntity(
     val sortOrder: Int = 0,
     val createdAt: Long = System.currentTimeMillis(),
     val isDebt: Boolean = false,
-    val includeInTotal: Boolean = true
+    val includeInTotal: Boolean = true,
+    val isArchived: Boolean = false
 )
