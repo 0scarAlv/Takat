@@ -146,6 +146,10 @@ object Changelog {
         )),
         ChangelogEntry(31, "2.2.1", listOf(
             "En el gráfico de gasto por día, tocá el detalle del día seleccionado para ver todos sus movimientos, igual que ya podías hacer con una categoría."
+        )),
+        ChangelogEntry(32, "2.2.2", listOf(
+            "En el gráfico de gasto por día, un toque solo resalta la barra; ahora hace falta doble toque para abrir el detalle del día (un toque solo se hacía molesto).",
+            "Nuevo: ícono de ojo en Inicio para ocultar/mostrar Disponible, Capital total, Gasto fijo y Deuda total."
         ))
     )
 
