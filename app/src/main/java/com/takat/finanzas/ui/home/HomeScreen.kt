@@ -297,7 +297,11 @@ private fun HomeContent(
         }
         if (uiState.accounts.isNotEmpty()) {
             items(uiState.accounts, key = { "acc_${it.account.id}" }) { accountWithBalance ->
-                AccountCard(accountWithBalance, onClick = { onOpenAccount(accountWithBalance.account.id) })
+                AccountCard(
+                    item = accountWithBalance,
+                    amountsHidden = uiState.amountsHidden,
+                    onClick = { onOpenAccount(accountWithBalance.account.id) }
+                )
             }
         } else {
             item {
@@ -465,7 +469,7 @@ private fun TotalsCard(
 }
 
 @Composable
-private fun AccountCard(item: AccountWithBalance, onClick: () -> Unit) {
+private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
     Card(
         modifier = Modifier
             .fillMaxWidth()
@@ -499,7 +503,7 @@ private fun AccountCard(item: AccountWithBalance, onClick: () -> Unit) {
                 }
             }
             Text(
-                item.balanceCents.centsToDisplay(),
+                if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),
                 fontWeight = FontWeight.SemiBold,
                 color = if (item.balanceCents < 0) NegativeRed else MaterialTheme.colorScheme.onSurface
             )
