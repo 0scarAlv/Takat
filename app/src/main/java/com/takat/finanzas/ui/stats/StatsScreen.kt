@@ -419,13 +419,20 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: 
                     .fillMaxWidth()
                     .height(DAY_CHART_HEIGHT_DP.dp)
                     .pointerInput(shownDays) {
-                        detectTapGestures { offset ->
-                            val slotWidth = size.width.toFloat() / shownDays.size
-                            val tappedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
-                            selectedIndex = tappedIndex
-                            val tappedDay = shownDays[tappedIndex]
-                            if (tappedDay.totalCents > 0) onDayClick(tappedDay.date)
-                        }
+                        detectTapGestures(
+                            onTap = { offset ->
+                                val slotWidth = size.width.toFloat() / shownDays.size
+                                val tappedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
+                                selectedIndex = tappedIndex
+                            },
+                            onDoubleTap = { offset ->
+                                val slotWidth = size.width.toFloat() / shownDays.size
+                                val tappedIndex = (offset.x / slotWidth).toInt().coerceIn(0, shownDays.lastIndex)
+                                selectedIndex = tappedIndex
+                                val tappedDay = shownDays[tappedIndex]
+                                if (tappedDay.totalCents > 0) onDayClick(tappedDay.date)
+                            }
+                        )
                     }
             ) {
                 val slotWidth = size.width / shownDays.size
