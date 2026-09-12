@@ -18,5 +18,7 @@ data class AppSettingsEntity(
     /** Highest [com.takat.finanzas.util.ChangelogEntry.versionCode] already shown in the "qué hay de nuevo" dialog. */
     val lastSeenVersionCode: Int = 0,
     /** Nickname used to build the mDNS service/hostname for the PC-access panel (e.g. "oscar" -> takat-oscar.local). */
-    val pcAccessNickname: String? = null
+    val pcAccessNickname: String? = null,
+    /** Hides Disponible/Capital total/Gasto fijo/Deuda total behind "••••" on the home screen. */
+    val amountsHidden: Boolean = false
 )

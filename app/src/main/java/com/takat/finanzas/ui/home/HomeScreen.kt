@@ -35,6 +35,7 @@ import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PieChart
 import androidx.compose.material.icons.filled.Settings
 import androidx.compose.material.icons.filled.SwapHoriz
+import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
@@ -202,7 +203,8 @@ fun HomeScreen(
                     onAddAccount = onAddAccount,
                     onMovementClick = { selectedMovement = it },
                     onOpenFixedExpenses = onOpenFixedExpenses,
-                    onPayFixedExpense = onPayFixedExpense
+                    onPayFixedExpense = onPayFixedExpense,
+                    onToggleAmountsHidden = viewModel::toggleAmountsHidden
                 )
                 else -> StatsScreen(onCategoryClick = onOpenCategoryExpenses, onDayClick = onOpenDayExpenses)
             }
@@ -257,14 +259,22 @@ private fun HomeContent(
     onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
-    onPayFixedExpense: (fixedExpenseId: Long) -> Unit
+    onPayFixedExpense: (fixedExpenseId: Long) -> Unit,
+    onToggleAmountsHidden: () -> Unit
 ) {
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
         contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
         verticalArrangement = Arrangement.spacedBy(10.dp)
     ) {
-        item { TotalsCard(uiState.totals, uiState.sarcasticMessagesEnabled) }
+        item {
+            TotalsCard(
+                totals = uiState.totals,
+                sarcasticMessagesEnabled = uiState.sarcasticMessagesEnabled,
+                amountsHidden = uiState.amountsHidden,
+                onToggleAmountsHidden = onToggleAmountsHidden
+            )
+        }
 
         item {
             FixedExpensesSection(
@@ -377,7 +387,14 @@ private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit
 }
 
 @Composable
-private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean, modifier: Modifier = Modifier) {
+private fun TotalsCard(
+    totals: AccountTotals,
+    sarcasticMessagesEnabled: Boolean,
+    amountsHidden: Boolean,
+    onToggleAmountsHidden: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val mask = "••••••"
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
@@ -385,13 +402,28 @@ private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean,
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
         Column(modifier = Modifier.padding(24.dp)) {
-            Text("Disponible", color = MaterialTheme.colorScheme.onSurfaceVariant)
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween,
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Text("Disponible", color = MaterialTheme.colorScheme.onSurfaceVariant)
+                IconButton(onClick = onToggleAmountsHidden, modifier = Modifier.size(28.dp)) {
+                    Icon(
+                        if (amountsHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                        contentDescription = if (amountsHidden) "Mostrar montos" else "Ocultar montos",
+                        modifier = Modifier.size(18.dp),
+                        tint = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
             Spacer(Modifier.height(8.dp))
             Text(
-                if (totals.availableCents < 0 && sarcasticMessagesEnabled) {
-                    "${totals.availableCents.centsToDisplay()} (Eres irresponsable financieramente)"
-                } else {
-                    totals.availableCents.centsToDisplay()
+                when {
+                    amountsHidden -> mask
+                    totals.availableCents < 0 && sarcasticMessagesEnabled ->
+                        "${totals.availableCents.centsToDisplay()} (Eres irresponsable financieramente)"
+                    else -> totals.availableCents.centsToDisplay()
                 },
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
@@ -402,7 +434,7 @@ private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean,
                 Column {
                     Text("Capital total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        totals.capitalCents.centsToDisplay(),
+                        if (amountsHidden) mask else totals.capitalCents.centsToDisplay(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold
                     )
@@ -411,7 +443,7 @@ private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean,
                     Column(horizontalAlignment = Alignment.CenterHorizontally) {
                         Text("Gasto fijo este período", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                         Text(
-                            totals.pendingFixedExpensesCents.centsToDisplay(),
+                            if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
                             color = AmberAccent
@@ -421,7 +453,7 @@ private fun TotalsCard(totals: AccountTotals, sarcasticMessagesEnabled: Boolean,
                 Column(horizontalAlignment = Alignment.End) {
                     Text("Deuda total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
                     Text(
-                        totals.debtCents.centsToDisplay(),
+                        if (amountsHidden) mask else totals.debtCents.centsToDisplay(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
                         color = if (totals.debtCents > 0) NegativeRed else MaterialTheme.colorScheme.onSurface
