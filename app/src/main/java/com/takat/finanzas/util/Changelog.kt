@@ -150,6 +150,9 @@ object Changelog {
         ChangelogEntry(32, "2.2.2", listOf(
             "En el gráfico de gasto por día, un toque solo resalta la barra; ahora hace falta doble toque para abrir el detalle del día (un toque solo se hacía molesto).",
             "Nuevo: ícono de ojo en Inicio para ocultar/mostrar Disponible, Capital total, Gasto fijo y Deuda total."
+        )),
+        ChangelogEntry(33, "2.2.3", listOf(
+            "El ícono de ojo para ocultar montos ahora también oculta el saldo de cada cuenta en \"Cuentas\", no solo los 4 totales."
         ))
     )
 
