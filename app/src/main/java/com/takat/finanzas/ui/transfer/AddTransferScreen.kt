@@ -111,6 +111,15 @@ fun AddTransferScreen(
                         fromAccount?.let { AccountColorDot(it.account.colorArgb) }
                     },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = fromMenuExpanded) },
+                    suffix = {
+                        fromAccount?.let {
+                            Text(
+                                it.balanceCents.centsToDisplay(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth()
@@ -123,6 +132,13 @@ fun AddTransferScreen(
                         DropdownMenuItem(
                             leadingIcon = { AccountColorDot(account.account.colorArgb) },
                             text = { Text(account.account.name) },
+                            trailingIcon = {
+                                Text(
+                                    account.balanceCents.centsToDisplay(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
                             onClick = {
                                 viewModel.onFromAccountChange(account.account.id)
                                 fromMenuExpanded = false
@@ -145,6 +161,15 @@ fun AddTransferScreen(
                         toAccount?.let { AccountColorDot(it.account.colorArgb) }
                     },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = toMenuExpanded) },
+                    suffix = {
+                        toAccount?.let {
+                            Text(
+                                it.balanceCents.centsToDisplay(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth()
@@ -157,6 +182,13 @@ fun AddTransferScreen(
                         DropdownMenuItem(
                             leadingIcon = { AccountColorDot(account.account.colorArgb) },
                             text = { Text(account.account.name) },
+                            trailingIcon = {
+                                Text(
+                                    account.balanceCents.centsToDisplay(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
                             onClick = {
                                 viewModel.onToAccountChange(account.account.id)
                                 toMenuExpanded = false

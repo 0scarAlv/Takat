@@ -153,6 +153,19 @@ object Changelog {
         )),
         ChangelogEntry(33, "2.2.3", listOf(
             "El ícono de ojo para ocultar montos ahora también oculta el saldo de cada cuenta en \"Cuentas\", no solo los 4 totales."
+        )),
+        ChangelogEntry(34, "2.3.0", listOf(
+            "En la lista de movimientos, ahora la nota se muestra grande y la categoría chica (antes era al revés).",
+            "Estadísticas: se sacó la lista de categorías individuales debajo del gráfico de dona (ocupaba mucho espacio) — ahora tocá una porción o su nombre en la leyenda para ver el detalle de esa categoría."
+        )),
+        ChangelogEntry(35, "2.3.1", listOf(
+            "Nuevo gráfico en Estadísticas: gasto total de los últimos 6 meses debajo del gráfico de dona — tocá un mes para ver su detalle completo."
+        )),
+        ChangelogEntry(36, "2.3.2", listOf(
+            "El gráfico de los últimos 6 meses ahora es de líneas en vez de barras."
+        )),
+        ChangelogEntry(37, "2.3.3", listOf(
+            "Los desplegables de cuenta en movimientos y transferencias ahora muestran el saldo actual junto al nombre."
         ))
     )
 

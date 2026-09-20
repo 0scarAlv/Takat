@@ -16,6 +16,7 @@ private val spanishLocale = Locale.Builder().setLanguage("es").setRegion("ES").b
 
 private val displayFormatter = DateTimeFormatter.ofPattern("d MMM yyyy", spanishLocale)
 private val monthLabelFormatter = DateTimeFormatter.ofPattern("MMMM yyyy", spanishLocale)
+private val shortMonthLabelFormatter = DateTimeFormatter.ofPattern("MMM", spanishLocale)
 
 fun Long.toDisplayDate(): String =
     Instant.ofEpochMilli(this).atZone(ZoneId.systemDefault()).format(displayFormatter)
@@ -48,6 +49,10 @@ fun dayRange(date: LocalDate, zone: ZoneId = ZoneId.systemDefault()): Pair<Long,
 
 fun monthLabel(month: YearMonth): String =
     month.atDay(1).format(monthLabelFormatter).replaceFirstChar { it.uppercase() }
+
+/** Short label for chart axes, e.g. "Ene", "Feb". */
+fun shortMonthLabel(month: YearMonth): String =
+    month.atDay(1).format(shortMonthLabelFormatter).replaceFirstChar { it.uppercase() }
 
 fun LocalDate.toDisplayDate(): String = format(displayFormatter)
 

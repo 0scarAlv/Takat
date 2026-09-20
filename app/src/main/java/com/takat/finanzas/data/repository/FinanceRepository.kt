@@ -26,6 +26,7 @@ import com.takat.finanzas.data.model.FixedExpensePaymentRecord
 import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
+import com.takat.finanzas.data.model.MonthExpense
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.model.ReminderStage
@@ -270,6 +271,22 @@ class FinanceRepository(
                 .groupBy { it.categoryId }
                 .map { (categoryId, txs) -> CategoryExpense(categoryById[categoryId], txs.sumOf { -it.amountCents }) }
                 .sortedByDescending { it.totalCents }
+        }
+
+    /** One entry per calendar month in the [monthsBack]-month window ending at [endMonth] (including zero-expense months), for the "últimos meses" trend chart. */
+    fun expensesByMonthRange(endMonth: YearMonth, monthsBack: Int, zone: ZoneId = ZoneId.systemDefault()): Flow<List<MonthExpense>> =
+        transactionDao.getAll().map { transactions ->
+            val startMonth = endMonth.minusMonths((monthsBack - 1).toLong())
+            val (start, _) = monthRange(startMonth, zone)
+            val (_, end) = monthRange(endMonth, zone)
+            val totalsByMonth = transactions
+                .filter { it.amountCents < 0 && it.date >= start && it.date < end }
+                .groupBy { YearMonth.from(Instant.ofEpochMilli(it.date).atZone(zone).toLocalDate()) }
+                .mapValues { (_, txs) -> txs.sumOf { -it.amountCents } }
+            (0 until monthsBack).map { offset ->
+                val month = startMonth.plusMonths(offset.toLong())
+                MonthExpense(month, totalsByMonth[month] ?: 0L)
+            }
         }
 
     /** One entry per calendar day of [month] (including zero-expense days), for the "día que más gastaste" bar chart. */

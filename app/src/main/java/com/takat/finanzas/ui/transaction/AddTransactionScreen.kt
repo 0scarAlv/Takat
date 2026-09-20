@@ -251,6 +251,15 @@ fun AddTransactionScreen(
                         selectedAccount?.let { AccountColorDot(it.account.colorArgb) }
                     },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountMenuExpanded) },
+                    suffix = {
+                        selectedAccount?.let {
+                            Text(
+                                it.balanceCents.centsToDisplay(),
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                    },
                     modifier = Modifier
                         .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
                         .fillMaxWidth()
@@ -263,6 +272,13 @@ fun AddTransactionScreen(
                         DropdownMenuItem(
                             leadingIcon = { AccountColorDot(account.account.colorArgb) },
                             text = { Text(account.account.name) },
+                            trailingIcon = {
+                                Text(
+                                    account.balanceCents.centsToDisplay(),
+                                    style = MaterialTheme.typography.bodySmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                                )
+                            },
                             onClick = {
                                 viewModel.onAccountChange(account.account.id)
                                 accountMenuExpanded = false

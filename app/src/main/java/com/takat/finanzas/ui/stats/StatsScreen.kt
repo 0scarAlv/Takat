@@ -20,7 +20,6 @@ import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
-import androidx.compose.foundation.lazy.items
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
@@ -47,6 +46,7 @@ import androidx.compose.ui.draw.blur
 import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.graphics.Path
 import androidx.compose.ui.graphics.StrokeCap
 import androidx.compose.ui.graphics.drawscope.Stroke
 import androidx.compose.ui.graphics.luminance
@@ -57,6 +57,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import androidx.compose.ui.geometry.CornerRadius
 import com.takat.finanzas.data.model.CategoryExpense
 import com.takat.finanzas.data.model.DailyExpense
+import com.takat.finanzas.data.model.MonthExpense
 import com.takat.finanzas.ui.components.CategoryLabel
 import com.takat.finanzas.ui.components.MonthSelector
 import com.takat.finanzas.ui.theme.CategoricalOtherGray
@@ -66,9 +67,11 @@ import com.takat.finanzas.ui.theme.EmeraldPrimary
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.util.shortMonthLabel
 import com.takat.finanzas.util.toDisplayDate
 import java.time.DayOfWeek
 import java.time.LocalDate
+import java.time.YearMonth
 import kotlin.math.atan2
 import kotlin.math.hypot
 
@@ -133,15 +136,28 @@ fun StatsScreen(
                     modifier = Modifier.padding(top = 8.dp)
                 )
             }
-            item { CategoryDonutChart(uiState.categoryExpenses, uiState.totalExpenseCents) }
-
-            val maxCents = uiState.categoryExpenses.maxOf { it.totalCents }.coerceAtLeast(1)
-            items(uiState.categoryExpenses, key = { it.category?.id ?: -1L }) { expense ->
-                CategoryExpenseRow(
-                    expense = expense,
+            item {
+                CategoryDonutChart(
+                    expenses = uiState.categoryExpenses,
                     totalCents = uiState.totalExpenseCents,
-                    maxCents = maxCents,
-                    onClick = { onCategoryClick(expense.category?.id, uiState.fromMillis, uiState.toMillis) }
+                    onCategoryClick = { categoryId -> onCategoryClick(categoryId, uiState.fromMillis, uiState.toMillis) }
+                )
+            }
+        }
+
+        if (uiState.monthlyExpenses.any { it.totalCents > 0 }) {
+            item {
+                Text(
+                    "Últimos meses",
+                    style = MaterialTheme.typography.titleMedium,
+                    modifier = Modifier.padding(top = 8.dp)
+                )
+            }
+            item {
+                MonthlyExpenseLineChart(
+                    monthlyExpenses = uiState.monthlyExpenses,
+                    selectedMonth = uiState.selectedMonth,
+                    onMonthClick = viewModel::selectMonth
                 )
             }
         }
@@ -158,7 +174,7 @@ private const val DONUT_GAP_DEGREES = 3f
 private const val DONUT_START_ANGLE = -90f
 
 @Composable
-private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long) {
+private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long, onCategoryClick: (categoryId: Long?) -> Unit) {
     val isDark = MaterialTheme.colorScheme.background.luminance() < 0.5f
     val palette = if (isDark) CategoricalPaletteDark else CategoricalPaletteLight
 
@@ -210,7 +226,12 @@ private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long
                         .size(130.dp)
                         .pointerInput(slices, totalCents) {
                             detectTapGestures { offset ->
-                                selectedIndex = hitTestSlice(offset, size.width.toFloat(), size.height.toFloat(), slices, totalCents)
+                                val hit = hitTestSlice(offset, size.width.toFloat(), size.height.toFloat(), slices, totalCents)
+                                if (hit != null && hit < shown.size) {
+                                    onCategoryClick(shown[hit].category?.id)
+                                } else {
+                                    selectedIndex = hit
+                                }
                             }
                         }
                 ) {
@@ -278,7 +299,11 @@ private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long
                         iconSize = 16.dp,
                         textStyle = MaterialTheme.typography.bodySmall.copy(color = MaterialTheme.colorScheme.onSurfaceVariant),
                         modifier = Modifier.clickable {
-                            selectedIndex = if (selectedIndex == index) null else index
+                            if (index < shown.size) {
+                                onCategoryClick(shown[index].category?.id)
+                            } else {
+                                selectedIndex = if (selectedIndex == index) null else index
+                            }
                         }
                     )
                 }
@@ -474,50 +499,95 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: 
     }
 }
 
+private const val MONTH_CHART_HEIGHT_DP = 90
+private const val MONTH_CHART_TOP_PAD_DP = 14
+
+/**
+ * One point per month in the trend window, connected by a line, with the area beneath it filled;
+ * tapping a point (or its column) jumps the whole Estadísticas screen to that month (reusing the
+ * existing month navigation instead of opening a separate detail screen).
+ */
 @Composable
-private fun CategoryExpenseRow(expense: CategoryExpense, totalCents: Long, maxCents: Long, onClick: () -> Unit) {
+private fun MonthlyExpenseLineChart(
+    monthlyExpenses: List<MonthExpense>,
+    selectedMonth: YearMonth,
+    onMonthClick: (YearMonth) -> Unit
+) {
+    val maxCents = monthlyExpenses.maxOf { it.totalCents }.coerceAtLeast(1)
+    val lineColor = EmeraldPrimary
+
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
     ) {
-        Column(modifier = Modifier.padding(14.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+        Column(modifier = Modifier.padding(16.dp)) {
+            Canvas(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .height(MONTH_CHART_HEIGHT_DP.dp)
+                    .pointerInput(monthlyExpenses) {
+                        detectTapGestures { offset ->
+                            val slotWidth = size.width.toFloat() / monthlyExpenses.size
+                            val tappedIndex = (offset.x / slotWidth).toInt().coerceIn(0, monthlyExpenses.lastIndex)
+                            onMonthClick(monthlyExpenses[tappedIndex].month)
+                        }
+                    }
             ) {
-                CategoryLabel(
-                    value = expense.category?.emoji,
-                    name = expense.category?.name ?: "Sin categoría",
-                    textStyle = MaterialTheme.typography.bodyLarge
-                )
-                Column(horizontalAlignment = Alignment.End) {
-                    Text(expense.totalCents.centsToDisplay(), fontWeight = FontWeight.SemiBold)
-                    val percent = if (totalCents > 0) (expense.totalCents * 100 / totalCents) else 0
-                    Text(
-                        "$percent%",
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                val slotWidth = size.width / monthlyExpenses.size
+                val topPad = MONTH_CHART_TOP_PAD_DP.dp.toPx()
+                val usableHeight = size.height - topPad
+
+                val points = monthlyExpenses.mapIndexed { index, monthExpense ->
+                    val fraction = monthExpense.totalCents.toFloat() / maxCents.toFloat()
+                    val x = index * slotWidth + slotWidth / 2
+                    val y = size.height - fraction * usableHeight
+                    Offset(x, y)
+                }
+
+                val linePath = Path().apply {
+                    points.forEachIndexed { index, point ->
+                        if (index == 0) moveTo(point.x, point.y) else lineTo(point.x, point.y)
+                    }
+                }
+                val fillPath = Path().apply {
+                    addPath(linePath)
+                    lineTo(points.last().x, size.height)
+                    lineTo(points.first().x, size.height)
+                    close()
+                }
+
+                drawPath(fillPath, color = lineColor.copy(alpha = 0.12f))
+                drawPath(linePath, color = lineColor, style = Stroke(width = 2.5.dp.toPx(), cap = StrokeCap.Round))
+
+                points.forEachIndexed { index, point ->
+                    val selected = monthlyExpenses[index].month == selectedMonth
+                    drawCircle(
+                        color = lineColor,
+                        radius = if (selected) 6.dp.toPx() else 3.dp.toPx(),
+                        center = point,
+                        alpha = if (selected) 1f else 0.6f
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
-            Box(
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .height(8.dp)
-                    .background(MaterialTheme.colorScheme.surfaceVariant, RoundedCornerShape(4.dp))
-            ) {
-                val fraction = (expense.totalCents.toFloat() / maxCents.toFloat()).coerceIn(0f, 1f)
-                Box(
-                    modifier = Modifier
-                        .fillMaxWidth(fraction)
-                        .height(8.dp)
-                        .background(EmeraldPrimary, RoundedCornerShape(4.dp))
-                )
+            Spacer(Modifier.height(4.dp))
+            Row(modifier = Modifier.fillMaxWidth()) {
+                monthlyExpenses.forEach { monthExpense ->
+                    Box(modifier = Modifier.weight(1f), contentAlignment = Alignment.Center) {
+                        Text(
+                            shortMonthLabel(monthExpense.month),
+                            style = MaterialTheme.typography.labelSmall,
+                            color = if (monthExpense.month == selectedMonth) {
+                                MaterialTheme.colorScheme.onSurface
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                            fontWeight = if (monthExpense.month == selectedMonth) FontWeight.Bold else FontWeight.Normal,
+                            maxLines = 1,
+                            softWrap = false
+                        )
+                    }
+                }
             }
         }
     }

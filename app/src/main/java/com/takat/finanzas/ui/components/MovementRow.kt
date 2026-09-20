@@ -62,13 +62,15 @@ fun MovementRow(
                         fallbackTextStyle = MaterialTheme.typography.titleLarge
                     )
                     Column(modifier = Modifier.padding(start = 12.dp)) {
+                        val note = tx.note?.takeIf { it.isNotBlank() }
+                        val categoryName = movement.category?.name ?: "Sin categoría"
                         Text(
-                            movement.category?.name ?: "Sin categoría",
+                            note ?: categoryName,
                             style = MaterialTheme.typography.bodyLarge,
                             maxLines = 1,
                             overflow = TextOverflow.Ellipsis
                         )
-                        val subtitle = listOfNotNull(tx.note?.takeIf { it.isNotBlank() }, tx.date.toDisplayDate())
+                        val subtitle = listOfNotNull(note?.let { categoryName }, tx.date.toDisplayDate())
                             .joinToString(" · ")
                         Text(
                             subtitle,
