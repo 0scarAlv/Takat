@@ -3,7 +3,9 @@ package com.takat.finanzas.ui.components
 import android.widget.Toast
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
@@ -35,6 +37,7 @@ import com.takat.finanzas.network.UpdateInstaller
 import com.takat.finanzas.network.UpdateState
 import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.Changelog
 import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.launch
 
@@ -121,9 +124,24 @@ fun UpdateAvailableDialog(info: UpdateInfo, onDismiss: () -> Unit) {
         text = {
             Column(modifier = Modifier.heightIn(max = 420.dp).verticalScroll(rememberScrollState())) {
                 Text("Versión ${info.versionName} lista para descargar.", style = MaterialTheme.typography.bodyMedium)
-                info.releaseNotes?.takeIf { it.isNotBlank() }?.let { notes ->
+                // Rendered from the local Changelog (plain text, kept in sync with each version bump) rather
+                // than the GitHub release body, which is free-form Markdown and shows up raw in a plain Text().
+                val newEntries = Changelog.entriesAfter(BuildConfig.VERSION_CODE)
+                if (newEntries.isNotEmpty()) {
                     Spacer(Modifier.height(12.dp))
-                    Text(notes, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                    Column(verticalArrangement = Arrangement.spacedBy(12.dp)) {
+                        newEntries.reversed().forEach { entry ->
+                            Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
+                                Text("Versión ${entry.versionName}", style = MaterialTheme.typography.titleSmall)
+                                entry.changes.forEach { change ->
+                                    Row {
+                                        Text("•  ", style = MaterialTheme.typography.bodySmall)
+                                        Text(change, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                                    }
+                                }
+                            }
+                        }
+                    }
                 }
                 if (runningBackup) {
                     Spacer(Modifier.height(16.dp))

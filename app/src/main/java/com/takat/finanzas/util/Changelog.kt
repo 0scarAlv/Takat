@@ -169,6 +169,9 @@ object Changelog {
         )),
         ChangelogEntry(38, "2.4.0", listOf(
             "Nuevo: tocá \"Editar\" en el detalle de un movimiento para corregir la cuenta, el monto, la categoría, la fecha o la nota si te equivocaste al cargarlo."
+        )),
+        ChangelogEntry(39, "2.4.1", listOf(
+            "Arreglo: el aviso de actualización disponible mostraba los símbolos de Markdown (##, -, etc.) tal cual en vez de texto formateado."
         ))
     )
 

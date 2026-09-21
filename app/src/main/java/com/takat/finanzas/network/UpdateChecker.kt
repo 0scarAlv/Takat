@@ -10,7 +10,6 @@ import java.net.URL
 
 data class UpdateInfo(
     val versionName: String,
-    val releaseNotes: String?,
     val downloadUrl: String,
     val assetName: String
 )
@@ -45,7 +44,6 @@ object UpdateChecker {
 
             UpdateInfo(
                 versionName = remoteVersion,
-                releaseNotes = release.body,
                 downloadUrl = apkAsset.browserDownloadUrl,
                 assetName = apkAsset.name
             )
