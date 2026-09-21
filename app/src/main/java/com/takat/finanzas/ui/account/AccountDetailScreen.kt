@@ -51,7 +51,8 @@ fun AccountDetailScreen(
     accountId: Long,
     onBack: () -> Unit,
     onEdit: () -> Unit,
-    onAddTransaction: () -> Unit
+    onAddTransaction: () -> Unit,
+    onEditTransaction: (Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: AccountDetailViewModel = viewModel(
@@ -136,6 +137,9 @@ fun AccountDetailScreen(
                     }
                     selectedMovement = null
                 }
+            },
+            onEdit = (movement as? Movement.TransactionMovement)?.let { tx ->
+                { selectedMovement = null; onEditTransaction(tx.transaction.id) }
             }
         )
     }

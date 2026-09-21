@@ -45,7 +45,8 @@ import java.time.LocalDate
 @Composable
 fun DayExpensesScreen(
     date: LocalDate,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onEditTransaction: (Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: DayExpensesViewModel = viewModel(
@@ -111,7 +112,8 @@ fun DayExpensesScreen(
                     repository.deleteTransaction(movement.transaction)
                     selectedMovement = null
                 }
-            }
+            },
+            onEdit = { selectedMovement = null; onEditTransaction(movement.transaction.id) }
         )
     }
 }

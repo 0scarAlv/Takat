@@ -470,6 +470,15 @@ class FinanceRepository(
         return id
     }
 
+    suspend fun transactionById(id: Long): TransactionEntity? = transactionDao.getById(id)
+
+    suspend fun updateTransaction(transaction: TransactionEntity) {
+        val previous = transactionDao.getById(transaction.id)
+        transactionDao.update(transaction)
+        if ((previous != null && isSalaryIncome(previous)) || isSalaryIncome(transaction)) unfreezeDailyBudget()
+        refreshWidget()
+    }
+
     suspend fun deleteTransaction(transaction: TransactionEntity) {
         attachmentDao.getForTransactionOnce(transaction.id).forEach { attachmentStorage.deleteFiles(attachmentDao, it) }
         transactionDao.delete(transaction)

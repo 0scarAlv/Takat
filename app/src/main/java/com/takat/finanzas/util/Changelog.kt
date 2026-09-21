@@ -166,6 +166,9 @@ object Changelog {
         )),
         ChangelogEntry(37, "2.3.3", listOf(
             "Los desplegables de cuenta en movimientos y transferencias ahora muestran el saldo actual junto al nombre."
+        )),
+        ChangelogEntry(38, "2.4.0", listOf(
+            "Nuevo: tocá \"Editar\" en el detalle de un movimiento para corregir la cuenta, el monto, la categoría, la fecha o la nota si te equivocaste al cargarlo."
         ))
     )
 

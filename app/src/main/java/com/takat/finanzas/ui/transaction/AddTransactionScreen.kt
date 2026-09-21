@@ -89,6 +89,7 @@ import java.io.File
 fun AddTransactionScreen(
     preselectedAccountId: Long?,
     preselectedFixedExpenseId: Long? = null,
+    editTransactionId: Long? = null,
     initialShareUris: List<Uri> = emptyList(),
     onShareUrisConsumed: () -> Unit = {},
     onDone: () -> Unit,
@@ -96,7 +97,9 @@ fun AddTransactionScreen(
 ) {
     val repository = rememberRepository()
     val viewModel: AddTransactionViewModel = viewModel(
-        factory = LambdaViewModelFactory { AddTransactionViewModel(repository, preselectedAccountId, preselectedFixedExpenseId) }
+        factory = LambdaViewModelFactory {
+            AddTransactionViewModel(repository, preselectedAccountId, preselectedFixedExpenseId, editTransactionId)
+        }
     )
     val uiState by viewModel.uiState.collectAsState()
     var accountMenuExpanded by remember { mutableStateOf(false) }
@@ -195,7 +198,7 @@ fun AddTransactionScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nuevo movimiento") },
+                title = { Text(if (uiState.isEditing) "Editar movimiento" else "Nuevo movimiento") },
                 navigationIcon = {
                     IconButton(onClick = onCancel) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cancelar")
@@ -226,7 +229,7 @@ fun AddTransactionScreen(
                 ) { Text("Ingreso") }
             }
 
-            if (uiState.pendingFixedExpenses.isNotEmpty()) {
+            if (!uiState.isEditing && uiState.pendingFixedExpenses.isNotEmpty()) {
                 Column {
                     Text("¿Es un gasto fijo?", style = MaterialTheme.typography.labelLarge)
                     FixedExpensePicker(
@@ -349,7 +352,7 @@ fun AddTransactionScreen(
                 singleLine = true
             )
 
-            Column {
+            if (!uiState.isEditing) Column {
                 Text("Comprobante (opcional)", style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier.padding(top = 8.dp),

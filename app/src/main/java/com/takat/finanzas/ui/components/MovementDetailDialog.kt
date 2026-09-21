@@ -74,7 +74,8 @@ private sealed class AttachmentContent {
 fun MovementDetailDialog(
     movement: Movement,
     onDismiss: () -> Unit,
-    onDelete: () -> Unit
+    onDelete: () -> Unit,
+    onEdit: (() -> Unit)? = null
 ) {
     var confirmingDelete by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Pair<AttachmentEntity, AttachmentContent>?>(null) }
@@ -187,8 +188,13 @@ fun MovementDetailDialog(
             }
         },
         confirmButton = {
-            TextButton(onClick = { confirmingDelete = true }) {
-                Text("Eliminar", color = MaterialTheme.colorScheme.error)
+            Row {
+                if (onEdit != null) {
+                    TextButton(onClick = onEdit) { Text("Editar") }
+                }
+                TextButton(onClick = { confirmingDelete = true }) {
+                    Text("Eliminar", color = MaterialTheme.colorScheme.error)
+                }
             }
         },
         dismissButton = {

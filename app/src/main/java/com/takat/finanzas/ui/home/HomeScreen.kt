@@ -101,7 +101,8 @@ fun HomeScreen(
     onOpenDayExpenses: (date: LocalDate) -> Unit,
     onOpenSettings: () -> Unit,
     onOpenFixedExpenses: () -> Unit,
-    onPayFixedExpense: (fixedExpenseId: Long) -> Unit
+    onPayFixedExpense: (fixedExpenseId: Long) -> Unit,
+    onEditTransaction: (Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: HomeViewModel = viewModel(factory = LambdaViewModelFactory { HomeViewModel(repository) })
@@ -223,6 +224,9 @@ fun HomeScreen(
                     }
                     selectedMovement = null
                 }
+            },
+            onEdit = (movement as? Movement.TransactionMovement)?.let { tx ->
+                { selectedMovement = null; onEditTransaction(tx.transaction.id) }
             }
         )
     }

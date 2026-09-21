@@ -34,6 +34,7 @@ private object Routes {
     const val ACCOUNT_DETAIL = "account/{accountId}"
     const val ACCOUNT_EDIT = "account/{accountId}/edit"
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}&fixedExpenseId={fixedExpenseId}"
+    const val TRANSACTION_EDIT = "transaction/{transactionId}/edit"
     const val TRANSFER_NEW = "transfer/new"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
     const val DAY_EXPENSES = "stats/day/{epochDay}"
@@ -47,6 +48,7 @@ private object Routes {
     fun accountEdit(id: Long) = "account/$id/edit"
     fun transactionNew(accountId: Long? = null, fixedExpenseId: Long? = null) =
         "transaction/new?accountId=${accountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
+    fun transactionEdit(id: Long) = "transaction/$id/edit"
     fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
     fun dayExpenses(date: LocalDate) = "stats/day/${date.toEpochDay()}"
     fun fixedExpenseForm(id: Long? = null) = "fixed-expenses/form?id=${id ?: -1L}"
@@ -103,7 +105,8 @@ fun TakatNavGraph(
                 onOpenDayExpenses = { date -> navController.navigate(Routes.dayExpenses(date)) },
                 onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                 onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
-                onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) }
+                onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) },
+                onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
             )
         }
 
@@ -139,7 +142,8 @@ fun TakatNavGraph(
                     accountId = accountId,
                     onBack = { navController.popBackStack() },
                     onEdit = { navController.navigate(Routes.accountEdit(accountId)) },
-                    onAddTransaction = { navController.navigate(Routes.transactionNew(accountId)) }
+                    onAddTransaction = { navController.navigate(Routes.transactionNew(accountId)) },
+                    onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
                 )
             }
         }
@@ -163,6 +167,21 @@ fun TakatNavGraph(
             )
         }
 
+        composable(
+            Routes.TRANSACTION_EDIT,
+            arguments = listOf(navArgument("transactionId") { type = NavType.LongType })
+        ) { backStackEntry ->
+            val transactionId = backStackEntry.arguments?.getLong("transactionId")
+            if (transactionId != null) {
+                AddTransactionScreen(
+                    preselectedAccountId = null,
+                    editTransactionId = transactionId,
+                    onDone = { navController.popBackStack() },
+                    onCancel = { navController.popBackStack() }
+                )
+            }
+        }
+
         composable(Routes.TRANSFER_NEW) {
             AddTransferScreen(
                 onDone = { navController.popBackStack() },
@@ -184,7 +203,8 @@ fun TakatNavGraph(
                 categoryId = rawCategoryId.takeIf { it >= 0 },
                 fromMillis = args?.getLong("from") ?: 0L,
                 toMillis = args?.getLong("to") ?: 0L,
-                onBack = { navController.popBackStack() }
+                onBack = { navController.popBackStack() },
+                onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
             )
         }
 
@@ -196,7 +216,8 @@ fun TakatNavGraph(
             if (epochDay != null) {
                 DayExpensesScreen(
                     date = LocalDate.ofEpochDay(epochDay),
-                    onBack = { navController.popBackStack() }
+                    onBack = { navController.popBackStack() },
+                    onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
                 )
             }
         }

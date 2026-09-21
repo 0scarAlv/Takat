@@ -32,6 +32,7 @@ data class PendingAttachment(
 data class AddTransactionUiState(
     val accounts: List<AccountWithBalance> = emptyList(),
     val categories: List<CategoryEntity> = emptyList(),
+    val isEditing: Boolean = false,
     val accountId: Long? = null,
     val isExpense: Boolean = true,
     val amountText: String = "",
@@ -48,11 +49,18 @@ data class AddTransactionUiState(
 class AddTransactionViewModel(
     private val repository: FinanceRepository,
     preselectedAccountId: Long?,
-    private val preselectedFixedExpenseId: Long? = null
+    private val preselectedFixedExpenseId: Long? = null,
+    private val editTransactionId: Long? = null
 ) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddTransactionUiState(accountId = preselectedAccountId))
+    private val _uiState = MutableStateFlow(
+        AddTransactionUiState(accountId = preselectedAccountId, isEditing = editTransactionId != null)
+    )
     val uiState: StateFlow<AddTransactionUiState> = _uiState.asStateFlow()
+
+    // Carried over unchanged from the transaction being edited — not exposed in the edit UI.
+    private var existingFixedExpenseId: Long? = null
+    private var existingFixedExpensePeriodKey: String? = null
 
     init {
         viewModelScope.launch {
@@ -65,12 +73,30 @@ class AddTransactionViewModel(
         viewModelScope.launch {
             repository.categories.collect { cats -> _uiState.update { it.copy(categories = cats) } }
         }
-        viewModelScope.launch {
-            repository.pendingFixedExpenses().collect { pending ->
-                val stillSelectable = pending.filter { it.isPending }
-                _uiState.update { it.copy(pendingFixedExpenses = stillSelectable) }
-                if (preselectedFixedExpenseId != null && _uiState.value.selectedFixedExpenseId == null) {
-                    stillSelectable.find { it.fixedExpense.id == preselectedFixedExpenseId }?.let { onFixedExpenseSelect(it) }
+        if (editTransactionId != null) {
+            viewModelScope.launch {
+                val existing = repository.transactionById(editTransactionId) ?: return@launch
+                existingFixedExpenseId = existing.fixedExpenseId
+                existingFixedExpensePeriodKey = existing.fixedExpensePeriodKey
+                _uiState.update {
+                    it.copy(
+                        accountId = existing.accountId,
+                        isExpense = existing.amountCents < 0,
+                        amountText = kotlin.math.abs(existing.amountCents).toEditableAmountString(),
+                        categoryId = existing.categoryId,
+                        note = existing.note.orEmpty(),
+                        dateMillis = existing.date
+                    )
+                }
+            }
+        } else {
+            viewModelScope.launch {
+                repository.pendingFixedExpenses().collect { pending ->
+                    val stillSelectable = pending.filter { it.isPending }
+                    _uiState.update { it.copy(pendingFixedExpenses = stillSelectable) }
+                    if (preselectedFixedExpenseId != null && _uiState.value.selectedFixedExpenseId == null) {
+                        stillSelectable.find { it.fixedExpense.id == preselectedFixedExpenseId }?.let { onFixedExpenseSelect(it) }
+                    }
                 }
             }
         }
@@ -144,24 +170,39 @@ class AddTransactionViewModel(
             state.pendingFixedExpenses.find { it.fixedExpense.id == id }?.periodKey
         }
         viewModelScope.launch {
-            val transactionId = repository.addTransaction(
-                TransactionEntity(
-                    accountId = accountId,
-                    categoryId = state.categoryId,
-                    amountCents = if (state.isExpense) -cents else cents,
-                    note = state.note.trim().ifBlank { null },
-                    date = state.dateMillis,
-                    // Tagging the transaction itself (rather than a separately tracked "paid" flag) means
-                    // deleting it later automatically un-counts it — two partial payments (20 + 30) still add up.
-                    fixedExpenseId = state.selectedFixedExpenseId,
-                    fixedExpensePeriodKey = selectedFixedExpensePeriodKey
+            if (editTransactionId != null) {
+                repository.updateTransaction(
+                    TransactionEntity(
+                        id = editTransactionId,
+                        accountId = accountId,
+                        categoryId = state.categoryId,
+                        amountCents = if (state.isExpense) -cents else cents,
+                        note = state.note.trim().ifBlank { null },
+                        date = state.dateMillis,
+                        fixedExpenseId = existingFixedExpenseId,
+                        fixedExpensePeriodKey = existingFixedExpensePeriodKey
+                    )
                 )
-            )
-            state.pendingAttachments.forEach { pending ->
-                if (pending.type == AttachmentType.IMAGE) {
-                    repository.addImageAttachment(transactionId, pending.bytes)
-                } else {
-                    repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
+            } else {
+                val transactionId = repository.addTransaction(
+                    TransactionEntity(
+                        accountId = accountId,
+                        categoryId = state.categoryId,
+                        amountCents = if (state.isExpense) -cents else cents,
+                        note = state.note.trim().ifBlank { null },
+                        date = state.dateMillis,
+                        // Tagging the transaction itself (rather than a separately tracked "paid" flag) means
+                        // deleting it later automatically un-counts it — two partial payments (20 + 30) still add up.
+                        fixedExpenseId = state.selectedFixedExpenseId,
+                        fixedExpensePeriodKey = selectedFixedExpensePeriodKey
+                    )
+                )
+                state.pendingAttachments.forEach { pending ->
+                    if (pending.type == AttachmentType.IMAGE) {
+                        repository.addImageAttachment(transactionId, pending.bytes)
+                    } else {
+                        repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
+                    }
                 }
             }
             _uiState.update { it.copy(saved = true) }

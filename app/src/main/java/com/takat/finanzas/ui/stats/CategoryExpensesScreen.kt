@@ -45,7 +45,8 @@ fun CategoryExpensesScreen(
     categoryId: Long?,
     fromMillis: Long,
     toMillis: Long,
-    onBack: () -> Unit
+    onBack: () -> Unit,
+    onEditTransaction: (Long) -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: CategoryExpensesViewModel = viewModel(
@@ -111,7 +112,8 @@ fun CategoryExpensesScreen(
                     repository.deleteTransaction(movement.transaction)
                     selectedMovement = null
                 }
-            }
+            },
+            onEdit = { selectedMovement = null; onEditTransaction(movement.transaction.id) }
         )
     }
 }
