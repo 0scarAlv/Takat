@@ -56,6 +56,20 @@ fun shortMonthLabel(month: YearMonth): String =
 
 fun LocalDate.toDisplayDate(): String = format(displayFormatter)
 
+private val dayHeaderFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM", spanishLocale)
+private val dayHeaderWithYearFormatter = DateTimeFormatter.ofPattern("EEEE d 'de' MMMM yyyy", spanishLocale)
+
+/** Header for a day group in a movement list: "Hoy", "Ayer", "Lunes 22 de septiembre" (year only if not [today]'s). */
+fun LocalDate.toDayHeader(today: LocalDate = LocalDate.now()): String = when (this) {
+    today -> "Hoy"
+    today.minusDays(1) -> "Ayer"
+    else -> format(if (year == today.year) dayHeaderFormatter else dayHeaderWithYearFormatter)
+        .replaceFirstChar { it.uppercase() }
+}
+
+fun Long.toLocalDate(zone: ZoneId = ZoneId.systemDefault()): LocalDate =
+    Instant.ofEpochMilli(this).atZone(zone).toLocalDate()
+
 /**
  * Earliest QUINCENA/MES payment date on or after [today]; falls back to month-end when [dayOfMonth]
  * doesn't exist in a given month. For QUINCENA, when [lastSalaryDate] shows a salary already logged

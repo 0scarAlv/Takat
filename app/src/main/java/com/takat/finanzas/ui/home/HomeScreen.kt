@@ -88,7 +88,22 @@ import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
 import com.takat.finanzas.ui.theme.financeColors
-import com.takat.finanzas.ui.theme.cardBorder
+import androidx.compose.animation.animateContentSize
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.LocalContentColor
+import androidx.compose.runtime.CompositionLocalProvider
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.graphics.Brush
+import androidx.compose.ui.semantics.clearAndSetSemantics
+import androidx.compose.ui.semantics.heading
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.style.TextOverflow
+import com.takat.finanzas.ui.components.IconBadge
+import com.takat.finanzas.ui.components.SectionHeader
+import com.takat.finanzas.ui.components.TakatCard
+import com.takat.finanzas.util.toDayHeader
+import com.takat.finanzas.util.toLocalDate
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -266,13 +281,17 @@ private fun HomeContent(
     onPayFixedExpense: (fixedExpenseId: Long) -> Unit,
     onToggleAmountsHidden: () -> Unit
 ) {
+    val today = remember { LocalDate.now() }
+    // Movements arrive newest first; groupBy keeps that order for both the days and the rows within each day.
+    val movementsByDay = remember(uiState.movements) { uiState.movements.groupBy { it.date.toLocalDate() } }
+
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
-        contentPadding = PaddingValues(horizontal = 16.dp, vertical = 8.dp),
-        verticalArrangement = Arrangement.spacedBy(10.dp)
+        contentPadding = PaddingValues(start = 16.dp, end = 16.dp, top = 8.dp, bottom = 96.dp),
+        verticalArrangement = Arrangement.spacedBy(4.dp)
     ) {
         item {
-            TotalsCard(
+            BalanceHero(
                 totals = uiState.totals,
                 sarcasticMessagesEnabled = uiState.sarcasticMessagesEnabled,
                 amountsHidden = uiState.amountsHidden,
@@ -283,65 +302,64 @@ private fun HomeContent(
         item {
             FixedExpensesSection(
                 onManageClick = onOpenFixedExpenses,
-                onPayClick = onPayFixedExpense
+                onPayClick = onPayFixedExpense,
+                modifier = Modifier.padding(top = 12.dp)
             )
         }
 
         item {
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(top = 8.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Cuentas", style = MaterialTheme.typography.titleMedium)
+            SectionHeader("Cuentas", modifier = Modifier.padding(top = 12.dp)) {
                 IconButton(onClick = onAddAccount) {
                     Icon(Icons.Default.Add, contentDescription = "Nueva cuenta")
                 }
             }
         }
-        if (uiState.accounts.isNotEmpty()) {
-            items(uiState.accounts, key = { "acc_${it.account.id}" }) { accountWithBalance ->
-                AccountCard(
-                    item = accountWithBalance,
-                    amountsHidden = uiState.amountsHidden,
-                    onClick = { onOpenAccount(accountWithBalance.account.id) }
-                )
-            }
-        } else {
-            item {
-                Text(
-                    "Todavía no tenés cuentas. Tocá + arriba para crear la primera.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
-        }
-
         item {
-            Text(
-                "Transacciones",
-                style = MaterialTheme.typography.titleMedium,
-                modifier = Modifier.padding(top = 16.dp)
-            )
+            if (uiState.accounts.isEmpty()) {
+                EmptyHint("Todavía no tenés cuentas. Tocá + para crear la primera.")
+            } else {
+                AccountsGroup(uiState.accounts, uiState.amountsHidden, onOpenAccount)
+            }
         }
 
-        if (uiState.movements.isEmpty()) {
-            item {
-                Text(
-                    "Sin movimientos todavía.",
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                )
-            }
+        item { SectionHeader("Movimientos", modifier = Modifier.padding(top = 12.dp)) }
+
+        if (movementsByDay.isEmpty()) {
+            item { EmptyHint("Sin movimientos todavía. Tocá + abajo para registrar el primero.") }
         } else {
-            items(uiState.movements, key = { it.key }) { movement ->
-                MovementRow(
-                    movement = movement,
-                    currentAccountId = null,
-                    onClick = { onMovementClick(movement) }
-                )
+            movementsByDay.forEach { (day, movements) ->
+                item(key = "day_$day") {
+                    Text(
+                        day.toDayHeader(today),
+                        style = MaterialTheme.typography.labelLarge,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant,
+                        modifier = Modifier
+                            .padding(start = 4.dp, top = 8.dp, bottom = 2.dp)
+                            .semantics { heading() }
+                    )
+                }
+                items(movements, key = { it.key }) { movement ->
+                    MovementRow(
+                        movement = movement,
+                        currentAccountId = null,
+                        showDate = false,
+                        onClick = { onMovementClick(movement) }
+                    )
+                }
             }
         }
+    }
+}
 
-        item { Spacer(Modifier.height(24.dp)) }
+@Composable
+private fun EmptyHint(text: String) {
+    TakatCard {
+        Text(
+            text,
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.onSurfaceVariant,
+            modifier = Modifier.padding(16.dp)
+        )
     }
 }
 
@@ -394,8 +412,13 @@ private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit
     }
 }
 
+/**
+ * Home's headline: the available balance on a brand gradient, with capital / fixed expenses / debt underneath.
+ * The whole card turns red when the balance is negative, unless amounts are hidden: there any color cue
+ * would leak what the mask is hiding.
+ */
 @Composable
-private fun TotalsCard(
+private fun BalanceHero(
     totals: AccountTotals,
     sarcasticMessagesEnabled: Boolean,
     amountsHidden: Boolean,
@@ -403,84 +426,93 @@ private fun TotalsCard(
     modifier: Modifier = Modifier
 ) {
     val mask = "••••••"
-    Card(
-        modifier = modifier.fillMaxWidth(),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = cardBorder,
-        shape = RoundedCornerShape(24.dp),
-        elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
+    val negative = totals.availableCents < 0 && !amountsHidden
+    val gradient = if (negative) MaterialTheme.financeColors.heroNegative else MaterialTheme.financeColors.heroPositive
+    val muted = Color.White.copy(alpha = 0.82f)
+
+    Box(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.extraLarge)
+            .background(Brush.verticalGradient(gradient))
+            .animateContentSize()
+            .padding(start = 20.dp, end = 20.dp, top = 12.dp, bottom = 20.dp)
     ) {
-        Column(modifier = Modifier.padding(24.dp)) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Text("Disponible", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                // Full 48dp touch target, nudged into the card's padding so the header row stays compact.
-                IconButton(onClick = onToggleAmountsHidden, modifier = Modifier.offset(x = 12.dp)) {
-                    Icon(
-                        if (amountsHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
-                        contentDescription = if (amountsHidden) "Mostrar montos" else "Ocultar montos",
-                        modifier = Modifier.size(20.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
-            }
-            Text(
-                when {
-                    amountsHidden -> mask
-                    totals.availableCents < 0 && sarcasticMessagesEnabled ->
-                        "${totals.availableCents.centsToDisplay()} (Eres irresponsable financieramente)"
-                    else -> totals.availableCents.centsToDisplay()
-                },
-                style = MaterialTheme.typography.displaySmall,
-                fontWeight = FontWeight.Bold,
-                // While masked, a red/green color would still leak whether the balance is negative.
-                color = when {
-                    amountsHidden -> MaterialTheme.colorScheme.onSurface
-                    totals.availableCents < 0 -> MaterialTheme.financeColors.negative
-                    else -> MaterialTheme.financeColors.positive
-                }
-            )
-            Spacer(Modifier.height(20.dp))
-            Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
-                Column {
-                    Text("Capital total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                    Text(
-                        if (amountsHidden) mask else totals.capitalCents.centsToDisplay(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold
-                    )
-                }
-                if (totals.pendingFixedExpensesCents > 0) {
-                    Column(horizontalAlignment = Alignment.CenterHorizontally) {
-                        Text("Gasto fijo este período", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
-                        Text(
-                            if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(),
-                            style = MaterialTheme.typography.titleMedium,
-                            fontWeight = FontWeight.SemiBold,
-                            color = MaterialTheme.financeColors.warning
+        CompositionLocalProvider(LocalContentColor provides Color.White) {
+            Column {
+                Row(modifier = Modifier.fillMaxWidth(), verticalAlignment = Alignment.CenterVertically) {
+                    Text("Disponible", style = MaterialTheme.typography.labelLarge, color = muted, modifier = Modifier.weight(1f))
+                    IconButton(onClick = onToggleAmountsHidden, modifier = Modifier.offset(x = 12.dp)) {
+                        Icon(
+                            if (amountsHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
+                            contentDescription = if (amountsHidden) "Mostrar montos" else "Ocultar montos",
+                            modifier = Modifier.size(20.dp)
                         )
                     }
                 }
-                Column(horizontalAlignment = Alignment.End) {
-                    Text("Deuda total", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+                Text(
+                    if (amountsHidden) mask else totals.availableCents.centsToDisplay(),
+                    style = MaterialTheme.typography.displaySmall,
+                    maxLines = 1
+                )
+                if (negative && sarcasticMessagesEnabled) {
                     Text(
-                        if (amountsHidden) mask else totals.debtCents.centsToDisplay(),
-                        style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (totals.debtCents > 0 && !amountsHidden) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
+                        "Eres irresponsable financieramente",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = muted,
+                        modifier = Modifier.padding(top = 2.dp)
                     )
                 }
+                Spacer(Modifier.height(16.dp))
+                Column(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clip(MaterialTheme.shapes.medium)
+                        .background(Color.White.copy(alpha = 0.12f))
+                        .padding(horizontal = 14.dp, vertical = 4.dp)
+                ) {
+                    HeroLine("Capital total", if (amountsHidden) mask else totals.capitalCents.centsToDisplay(), muted)
+                    if (totals.pendingFixedExpensesCents > 0) {
+                        HeroLine("Gasto fijo este período", if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(), muted)
+                    }
+                    HeroLine("Deuda total", if (amountsHidden) mask else totals.debtCents.centsToDisplay(), muted)
+                    if (totals.financedCents > 0) {
+                        HeroLine(
+                            if (totals.financedIncludedInAvailable) "Crédito (restado)" else "Crédito (no se resta)",
+                            if (amountsHidden) mask else totals.financedCents.centsToDisplay(),
+                            muted
+                        )
+                    }
+                }
             }
-            if (totals.financedCents > 0) {
-                Spacer(Modifier.height(12.dp))
-                Text(
-                    "Deuda de crédito: " + (if (amountsHidden) mask else totals.financedCents.centsToDisplay()) +
-                        if (totals.financedIncludedInAvailable) " (restado del disponible)" else " (no se resta del disponible)",
-                    style = MaterialTheme.typography.bodySmall,
-                    color = MaterialTheme.colorScheme.onSurfaceVariant
+        }
+    }
+}
+
+@Composable
+private fun HeroLine(label: String, value: String, labelColor: Color) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .padding(vertical = 8.dp)
+            .semantics(mergeDescendants = true) {},
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        Text(label, style = MaterialTheme.typography.bodyMedium, color = labelColor, modifier = Modifier.weight(1f))
+        Text(value, style = MaterialTheme.typography.titleSmall)
+    }
+}
+
+/** All accounts in one card, separated by inset dividers, instead of one floating card per account. */
+@Composable
+private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boolean, onOpenAccount: (Long) -> Unit) {
+    TakatCard {
+        accounts.forEachIndexed { index, item ->
+            AccountRow(item, amountsHidden, onClick = { onOpenAccount(item.account.id) })
+            if (index < accounts.lastIndex) {
+                HorizontalDivider(
+                    modifier = Modifier.padding(start = 68.dp),
+                    color = MaterialTheme.colorScheme.outlineVariant
                 )
             }
         }
@@ -488,54 +520,43 @@ private fun TotalsCard(
 }
 
 @Composable
-private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
-    // Card(onClick) instead of Modifier.clickable so the ripple is clipped to the rounded shape.
-    Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
-        border = cardBorder
+private fun AccountRow(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
+    val account = item.account
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .clickable(onClick = onClick)
+            .heightIn(min = 64.dp)
+            .padding(horizontal = 14.dp, vertical = 10.dp),
+        verticalAlignment = Alignment.CenterVertically
     ) {
-        Row(
-            modifier = Modifier
-                .padding(16.dp)
-                .fillMaxWidth(),
-            verticalAlignment = Alignment.CenterVertically,
-            horizontalArrangement = Arrangement.SpaceBetween
+        // The initial is decorative (the name sits right next to it), so it's hidden from TalkBack.
+        IconBadge(
+            containerColor = Color(account.colorArgb),
+            contentColor = Color.White,
+            modifier = Modifier.clearAndSetSemantics {}
         ) {
-            Row(verticalAlignment = Alignment.CenterVertically) {
-                Box(
-                    modifier = Modifier
-                        .size(12.dp)
-                        .background(Color(item.account.colorArgb), CircleShape)
-                )
-                Spacer(Modifier.width(12.dp))
-                Text(item.account.name, style = MaterialTheme.typography.titleMedium)
-                if (!item.account.includeInTotal) {
-                    Spacer(Modifier.width(6.dp))
-                    Icon(
-                        Icons.Default.VisibilityOff,
-                        contentDescription = "No suma al resumen",
-                        modifier = Modifier.size(16.dp),
-                        tint = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            Text(account.name.take(1).uppercase(), style = MaterialTheme.typography.titleSmall)
+        }
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 14.dp)
+        ) {
+            Text(account.name, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            val subtitle = when {
+                item.financedCents > 0 -> "Crédito: " + if (amountsHidden) "••••••" else item.financedCents.centsToDisplay()
+                !account.includeInTotal -> "No suma al resumen"
+                else -> null
             }
-            Column(horizontalAlignment = Alignment.End) {
-                Text(
-                    if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),
-                    fontWeight = FontWeight.SemiBold,
-                    color = if (item.balanceCents < 0 && !amountsHidden) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
-                )
-                if (item.financedCents > 0) {
-                    Text(
-                        "Deuda de crédito: " + if (amountsHidden) "••••••" else item.financedCents.centsToDisplay(),
-                        style = MaterialTheme.typography.bodySmall,
-                        color = MaterialTheme.colorScheme.onSurfaceVariant
-                    )
-                }
+            subtitle?.let {
+                Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
         }
+        Text(
+            if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),
+            style = MaterialTheme.typography.titleSmall,
+            color = if (item.balanceCents < 0 && !amountsHidden) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
+        )
     }
 }

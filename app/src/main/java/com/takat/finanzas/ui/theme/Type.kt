@@ -2,29 +2,48 @@ package com.takat.finanzas.ui.theme
 
 import androidx.compose.material3.Typography
 import androidx.compose.ui.text.TextStyle
+import androidx.compose.ui.text.font.Font
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.sp
+import com.takat.finanzas.R
+
+/** Inter, bundled (OFL): neutral and precise for numbers, with the tabular-digit feature used below. */
+val Inter = FontFamily(
+    Font(R.font.inter_regular, FontWeight.Normal),
+    Font(R.font.inter_medium, FontWeight.Medium),
+    Font(R.font.inter_semibold, FontWeight.SemiBold),
+    Font(R.font.inter_bold, FontWeight.Bold)
+)
 
 private val base = Typography()
 
 // Tabular (fixed-width) digits everywhere, so amounts stacked in lists and cards line up by column
 // instead of shifting with each digit's natural width.
-private fun TextStyle.tabular() = copy(fontFeatureSettings = "tnum")
+private fun TextStyle.inter(weight: FontWeight? = null, tracking: Float? = null) = copy(
+    fontFamily = Inter,
+    fontWeight = weight ?: fontWeight,
+    letterSpacing = tracking?.sp ?: letterSpacing,
+    fontFeatureSettings = "tnum"
+)
 
+// Display/headline sizes carry the big money figures: semibold with slightly negative tracking reads
+// as one compact number instead of a spaced-out row of digits.
 val Typography = Typography(
-    displayLarge = base.displayLarge.tabular(),
-    displayMedium = base.displayMedium.tabular(),
-    displaySmall = base.displaySmall.tabular(),
-    headlineLarge = base.headlineLarge.tabular(),
-    headlineMedium = base.headlineMedium.tabular(),
-    headlineSmall = base.headlineSmall.tabular(),
-    titleLarge = base.titleLarge.tabular(),
-    titleMedium = base.titleMedium.tabular(),
-    titleSmall = base.titleSmall.tabular(),
-    bodyLarge = base.bodyLarge.tabular(),
-    bodyMedium = base.bodyMedium.tabular(),
-    bodySmall = base.bodySmall.tabular(),
-    labelLarge = base.labelLarge.tabular(),
-    labelMedium = base.labelMedium.tabular(),
+    displayLarge = base.displayLarge.inter(FontWeight.SemiBold, -1.5f),
+    displayMedium = base.displayMedium.inter(FontWeight.SemiBold, -1f),
+    displaySmall = base.displaySmall.inter(FontWeight.SemiBold, -0.5f),
+    headlineLarge = base.headlineLarge.inter(FontWeight.SemiBold, -0.5f),
+    headlineMedium = base.headlineMedium.inter(FontWeight.SemiBold, -0.25f),
+    headlineSmall = base.headlineSmall.inter(FontWeight.SemiBold),
+    titleLarge = base.titleLarge.inter(FontWeight.SemiBold),
+    titleMedium = base.titleMedium.inter(FontWeight.SemiBold, 0f),
+    titleSmall = base.titleSmall.inter(FontWeight.SemiBold, 0f),
+    bodyLarge = base.bodyLarge.inter(tracking = 0f),
+    bodyMedium = base.bodyMedium.inter(tracking = 0f),
+    bodySmall = base.bodySmall.inter(tracking = 0f),
+    labelLarge = base.labelLarge.inter(FontWeight.SemiBold),
+    labelMedium = base.labelMedium.inter(FontWeight.Medium),
     // The 11sp default is the smallest text in the app (frequency tags, chart axes); 12sp reads noticeably better.
-    labelSmall = base.labelSmall.copy(fontSize = 12.sp, lineHeight = 16.sp).tabular()
+    labelSmall = base.labelSmall.copy(fontSize = 12.sp, lineHeight = 16.sp).inter(FontWeight.Medium)
 )

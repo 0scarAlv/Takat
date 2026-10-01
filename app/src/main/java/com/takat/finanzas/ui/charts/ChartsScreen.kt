@@ -93,7 +93,7 @@ fun ChartsScreen(modifier: Modifier = Modifier) {
 private fun AmountBar(label: String, amountCents: Long, maxCents: Long, color: Color) {
     Card(
         modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(16.dp),
+        shape = MaterialTheme.shapes.large,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = cardBorder
     ) {

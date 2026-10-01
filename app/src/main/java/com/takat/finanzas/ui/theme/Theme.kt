@@ -99,11 +99,28 @@ private val DarkColors = darkColorScheme(
 data class FinanceColors(
     val positive: Color,
     val negative: Color,
-    val warning: Color
+    val warning: Color,
+    /** Top-to-bottom gradient behind the home balance hero while the available balance is >= 0. */
+    val heroPositive: List<Color>,
+    /** Same hero once the available balance goes negative: the whole card turns red, not just the number. */
+    val heroNegative: List<Color>
 )
 
-private val LightFinanceColors = FinanceColors(positive = PositiveGreen, negative = NegativeRed, warning = AmberAccent)
-private val DarkFinanceColors = FinanceColors(positive = PositiveGreenDark, negative = NegativeRedDark, warning = AmberAccentDark)
+// Hero gradients stay dark enough in both themes for white text (every stop is >= 5.5:1 against white).
+private val LightFinanceColors = FinanceColors(
+    positive = PositiveGreen,
+    negative = NegativeRed,
+    warning = AmberAccent,
+    heroPositive = listOf(EmeraldPrimary, Emerald800),
+    heroNegative = listOf(Red700, Red800)
+)
+private val DarkFinanceColors = FinanceColors(
+    positive = PositiveGreenDark,
+    negative = NegativeRedDark,
+    warning = AmberAccentDark,
+    heroPositive = listOf(Emerald800, Emerald900),
+    heroNegative = listOf(Red800, Red900)
+)
 
 private val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
 
@@ -135,6 +152,7 @@ fun TakatTheme(
         MaterialTheme(
             colorScheme = colorScheme,
             typography = Typography,
+            shapes = TakatShapes,
             content = content
         )
     }

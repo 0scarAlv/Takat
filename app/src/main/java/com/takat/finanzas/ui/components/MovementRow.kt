@@ -6,12 +6,15 @@ import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Text
@@ -22,7 +25,6 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.asImageBitmap
 import androidx.compose.ui.layout.ContentScale
-import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import com.takat.finanzas.data.entity.AttachmentEntity
@@ -32,63 +34,50 @@ import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
 import com.takat.finanzas.ui.theme.financeColors
 
+/**
+ * One movement in a list: a round badge (category icon, or transfer arrows), title + subtitle, and the signed
+ * amount. [showDate] drops the date from the subtitle for lists that already group rows under day headers.
+ */
 @Composable
 fun MovementRow(
     movement: Movement,
     currentAccountId: Long?,
     modifier: Modifier = Modifier,
+    showDate: Boolean = true,
     onClick: () -> Unit = {}
 ) {
     when (movement) {
         is Movement.TransactionMovement -> {
             val tx = movement.transaction
             val isIncome = tx.amountCents >= 0
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick)
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    CategoryGlyph(
-                        movement.category?.emoji,
-                        iconSize = 28.dp,
-                        fallbackTextStyle = MaterialTheme.typography.titleLarge
-                    )
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
-                        val note = tx.note?.takeIf { it.isNotBlank() }
-                        val categoryName = movement.category?.name ?: "Sin categoría"
-                        Text(
-                            note ?: categoryName,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
-                        val subtitle = listOfNotNull(note?.let { categoryName }, tx.date.toDisplayDate())
-                            .joinToString(" · ")
-                        Text(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+            val note = tx.note?.takeIf { it.isNotBlank() }
+            val categoryName = movement.category?.name ?: "Sin categoría"
+            MovementRowLayout(
+                modifier = modifier,
+                onClick = onClick,
+                badge = {
+                    // Income gets a green-tinted badge so it stands out from the (far more common) expenses
+                    // even before reading the amount; expenses stay neutral.
+                    IconBadge(
+                        containerColor = if (isIncome) MaterialTheme.financeColors.positive.copy(alpha = 0.14f)
+                        else MaterialTheme.colorScheme.surfaceContainerHigh,
+                        contentColor = if (isIncome) MaterialTheme.financeColors.positive else MaterialTheme.colorScheme.onSurface
+                    ) {
+                        CategoryGlyph(movement.category?.emoji, iconSize = 22.dp, fallbackTextStyle = MaterialTheme.typography.titleMedium)
                     }
-                }
-                Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                },
+                title = note ?: categoryName,
+                subtitle = listOfNotNull(note?.let { categoryName }, tx.date.toDisplayDate().takeIf { showDate })
+                    .joinToString(" · "),
+                trailing = {
                     movement.attachments.firstOrNull()?.let { AttachmentIndicator(it) }
                     Text(
                         tx.amountCents.centsToDisplay(showSign = true),
-                        fontWeight = FontWeight.SemiBold,
+                        style = MaterialTheme.typography.titleSmall,
                         color = if (isIncome) MaterialTheme.financeColors.positive else MaterialTheme.financeColors.negative
                     )
                 }
-            }
+            )
         }
 
         is Movement.TransferMovement -> {
@@ -99,52 +88,80 @@ fun MovementRow(
                 transfer.toAccountId -> "Transferencia de ${movement.fromAccount?.name ?: "cuenta eliminada"}"
                 else -> "${movement.fromAccount?.name ?: "?"} → ${movement.toAccount?.name ?: "?"}"
             }
-            Row(
-                modifier = modifier
-                    .fillMaxWidth()
-                    .clickable(onClick = onClick)
-                    .padding(vertical = 10.dp),
-                horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
-            ) {
-                Row(
-                    modifier = Modifier.weight(1f, fill = false),
-                    verticalAlignment = Alignment.CenterVertically
-                ) {
-                    Text("⇄", style = MaterialTheme.typography.titleLarge)
-                    Column(modifier = Modifier.padding(start = 12.dp)) {
+            MovementRowLayout(
+                modifier = modifier,
+                onClick = onClick,
+                badge = {
+                    IconBadge(
+                        containerColor = MaterialTheme.colorScheme.secondaryContainer,
+                        contentColor = MaterialTheme.colorScheme.onSecondaryContainer
+                    ) {
+                        Icon(Icons.Filled.SwapHoriz, contentDescription = null, modifier = Modifier.size(22.dp))
+                    }
+                },
+                title = title,
+                subtitle = listOfNotNull(
+                    movement.category?.name,
+                    transfer.note?.takeIf { it.isNotBlank() },
+                    transfer.date.toDisplayDate().takeIf { showDate }
+                ).joinToString(" · ").ifEmpty { "Transferencia" },
+                trailing = {
+                    if (currentAccountId != null) {
+                        val signedCents = if (isOutgoing) -transfer.amountCents else transfer.amountCents
                         Text(
-                            title,
-                            style = MaterialTheme.typography.bodyLarge,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
+                            signedCents.centsToDisplay(showSign = true),
+                            style = MaterialTheme.typography.titleSmall,
+                            color = if (isOutgoing) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                         )
-                        val subtitle = listOfNotNull(
-                            movement.category?.name,
-                            transfer.note?.takeIf { it.isNotBlank() },
-                            transfer.date.toDisplayDate()
-                        ).joinToString(" · ")
-                        Text(
-                            subtitle,
-                            style = MaterialTheme.typography.bodySmall,
-                            color = MaterialTheme.colorScheme.onSurfaceVariant,
-                            maxLines = 1,
-                            overflow = TextOverflow.Ellipsis
-                        )
+                    } else {
+                        Text(transfer.amountCents.centsToDisplay(), style = MaterialTheme.typography.titleSmall)
                     }
                 }
-                if (currentAccountId != null) {
-                    val signedCents = if (isOutgoing) -transfer.amountCents else transfer.amountCents
-                    Text(
-                        signedCents.centsToDisplay(showSign = true),
-                        fontWeight = FontWeight.SemiBold,
-                        color = if (isOutgoing) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
-                    )
-                } else {
-                    Text(transfer.amountCents.centsToDisplay(), fontWeight = FontWeight.SemiBold)
-                }
+            )
+        }
+    }
+}
+
+@Composable
+private fun MovementRowLayout(
+    modifier: Modifier,
+    onClick: () -> Unit,
+    badge: @Composable () -> Unit,
+    title: String,
+    subtitle: String,
+    trailing: @Composable RowScope.() -> Unit
+) {
+    Row(
+        modifier = modifier
+            .fillMaxWidth()
+            .clip(MaterialTheme.shapes.medium)
+            .clickable(onClick = onClick)
+            .heightIn(min = 64.dp)
+            .padding(horizontal = 4.dp, vertical = 8.dp),
+        verticalAlignment = Alignment.CenterVertically
+    ) {
+        badge()
+        Column(
+            modifier = Modifier
+                .weight(1f)
+                .padding(horizontal = 12.dp)
+        ) {
+            Text(title, style = MaterialTheme.typography.bodyLarge, maxLines = 1, overflow = TextOverflow.Ellipsis)
+            if (subtitle.isNotEmpty()) {
+                Text(
+                    subtitle,
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                    maxLines = 1,
+                    overflow = TextOverflow.Ellipsis
+                )
             }
         }
+        Row(
+            verticalAlignment = Alignment.CenterVertically,
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            content = trailing
+        )
     }
 }
 

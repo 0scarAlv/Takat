@@ -9,7 +9,6 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
-import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.Add
@@ -102,7 +101,7 @@ fun FixedExpensesScreen(
                         items(uiState.rows, key = { it.entity.id }) { row ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = MaterialTheme.shapes.large,
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = cardBorder
                             ) {
@@ -169,7 +168,7 @@ fun FixedExpensesScreen(
                         items(uiState.history, key = { "${it.fixedExpense.id}_${it.periodKey}" }) { record ->
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
-                                shape = RoundedCornerShape(16.dp),
+                                shape = MaterialTheme.shapes.large,
                                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
                                 border = cardBorder
                             ) {

@@ -30,6 +30,9 @@ val PositiveGreen = Color(0xFF047857)      // emerald-700, 5.5:1 on white
 val PositiveGreenDark = Color(0xFF34D399)
 val NegativeRed = Color(0xFFDC2626)        // red-600, 4.8:1 on white
 val NegativeRedDark = Color(0xFFF87171)
+val Red700 = Color(0xFFB91C1C)
+val Red800 = Color(0xFF991B1B)
+val Red900 = Color(0xFF7F1D1D)
 
 val AccountSwatches = listOf(
     0xFF10B981.toInt(), // emerald
