@@ -1,0 +1,152 @@
+package com.takat.finanzas.ui.classic
+
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Column
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.fillMaxWidth
+import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.material.icons.filled.Settings
+import androidx.compose.material3.Card
+import androidx.compose.material3.CardDefaults
+import androidx.compose.material3.Icon
+import androidx.compose.material3.IconButton
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.material3.Switch
+import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
+import androidx.compose.runtime.Composable
+import androidx.compose.runtime.collectAsState
+import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableStateOf
+import androidx.compose.runtime.remember
+import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.takat.finanzas.data.entity.FixedExpenseFrequency
+import com.takat.finanzas.ui.home.FixedExpensesSectionViewModel
+import com.takat.finanzas.ui.theme.cardBorder
+import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.util.LambdaViewModelFactory
+import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.util.centsToDisplay
+
+// Classic (pre-3.0) look, kept verbatim from v2.5.2 so it can be picked in Ajustes > Diseño.
+// Only renamed/re-packaged; avoid restyling it, that is what the modern UI is for.
+@Composable
+fun ClassicFixedExpensesSection(
+    onManageClick: () -> Unit,
+    onPayClick: (fixedExpenseId: Long) -> Unit,
+    modifier: Modifier = Modifier
+) {
+    val repository = rememberRepository()
+    val viewModel: FixedExpensesSectionViewModel =
+        viewModel(factory = LambdaViewModelFactory { FixedExpensesSectionViewModel(repository) })
+    val uiState by viewModel.uiState.collectAsState()
+
+    if (uiState.rows.isEmpty()) return
+
+    var expanded by remember { mutableStateOf(false) }
+
+    Card(
+        modifier = modifier.fillMaxWidth(),
+        shape = RoundedCornerShape(16.dp),
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
+    ) {
+        Column(modifier = Modifier.padding(14.dp)) {
+            Row(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .clickable { expanded = !expanded },
+                verticalAlignment = Alignment.CenterVertically
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
+                }
+                IconButton(onClick = onManageClick) {
+                    Icon(Icons.Default.Settings, contentDescription = "Gestionar gastos fijos")
+                }
+                Icon(
+                    imageVector = if (expanded) Icons.Default.ExpandLess else Icons.Default.ExpandMore,
+                    contentDescription = if (expanded) "Ocultar gastos fijos" else "Mostrar gastos fijos",
+                    tint = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+            }
+
+            if (expanded) {
+                Spacer(Modifier.height(8.dp))
+                uiState.rows.forEach { row ->
+                    // Paying is an explicit button rather than a tap anywhere on the row: with the whole row
+                    // clickable, a near miss on the switch opened the payment form instead of toggling it.
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Column(modifier = Modifier.weight(1f)) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Text(
+                                    row.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
+                                Text(
+                                    if (row.frequency == FixedExpenseFrequency.QUINCENAL) "Quincenal" else "Mensual",
+                                    style = MaterialTheme.typography.labelSmall,
+                                    color = MaterialTheme.colorScheme.onSurfaceVariant,
+                                    modifier = Modifier.padding(start = 6.dp)
+                                )
+                            }
+                            Text(
+                                if (row.paidCents > 0 && !row.isFullyPaid) {
+                                    "${row.paidCents.centsToDisplay()} de ${row.amountCents.centsToDisplay()} · faltan ${row.remainingCents.centsToDisplay()}"
+                                } else {
+                                    row.amountCents.centsToDisplay()
+                                },
+                                style = MaterialTheme.typography.bodySmall,
+                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                            )
+                        }
+                        if (row.isFullyPaid) {
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.financeColors.positive,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Pagado", color = MaterialTheme.financeColors.positive, fontWeight = FontWeight.SemiBold)
+                            }
+                        } else {
+                            TextButton(onClick = { onPayClick(row.fixedExpenseId) }) { Text("Pagar") }
+                            Switch(
+                                checked = row.active,
+                                onCheckedChange = { viewModel.onActiveChange(row.fixedExpenseId, row.periodKey, it) },
+                                modifier = Modifier.semantics { contentDescription = "Cuenta en este período: ${row.name}" }
+                            )
+                        }
+                    }
+                }
+            }
+        }
+    }
+}

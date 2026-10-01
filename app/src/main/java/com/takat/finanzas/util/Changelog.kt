@@ -191,6 +191,14 @@ object Changelog {
             "En gastos fijos ahora hay un botón \"Pagar\" aparte del interruptor, para que no se abra el pago por error al tocar la fila.",
             "Con los montos ocultos, el color ya no delata si estás en negativo.",
             "Botones más fáciles de tocar (ocultar montos, colores de cuenta, ver comprobante), las tarjetas tienen un borde sutil y los números quedan alineados en columnas."
+        )),
+        ChangelogEntry(43, "3.0.0", listOf(
+            "Takat 3.0: diseño nuevo. Tipografía nueva, esquinas más suaves y un inicio rediseñado.",
+            "El saldo disponible ahora va en una tarjeta grande que se pone roja si quedás en negativo.",
+            "Tus cuentas aparecen juntas en un solo bloque, y los movimientos se agrupan por día (Hoy, Ayer, ...).",
+            "Gastos fijos muestra de un vistazo cuántos quedan pendientes y cuánto suman, con una barra de progreso en los pagos parciales.",
+            "Ajustes reorganizado: todo en grupos cortos, y el respaldo, el acceso desde PC y la depuración tienen su propia pantalla.",
+            "¿Preferís cómo se veía antes? En Ajustes > Apariencia > Diseño podés volver al diseño clásico cuando quieras."
         ))
     )
 

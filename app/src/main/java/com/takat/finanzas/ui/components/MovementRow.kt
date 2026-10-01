@@ -33,6 +33,9 @@ import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
 import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.data.entity.UiStyle
+import com.takat.finanzas.ui.classic.ClassicMovementRow
+import com.takat.finanzas.ui.theme.LocalUiStyle
 
 /**
  * One movement in a list: a round badge (category icon, or transfer arrows), title + subtitle, and the signed
@@ -46,6 +49,10 @@ fun MovementRow(
     showDate: Boolean = true,
     onClick: () -> Unit = {}
 ) {
+    if (LocalUiStyle.current == UiStyle.CLASSIC) {
+        ClassicMovementRow(movement, currentAccountId, modifier, onClick)
+        return
+    }
     when (movement) {
         is Movement.TransactionMovement -> {
             val tx = movement.transaction

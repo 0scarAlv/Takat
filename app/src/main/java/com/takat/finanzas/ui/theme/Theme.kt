@@ -16,6 +16,8 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalView
 import androidx.compose.ui.unit.dp
 import androidx.core.view.WindowCompat
+import androidx.compose.material3.Shapes
+import com.takat.finanzas.data.entity.UiStyle
 
 // Every token Material 3 components read is set explicitly: anything left out falls back to the
 // baseline purple palette (the selected SegmentedButton/FilterChip and the NavigationBar indicator
@@ -83,7 +85,8 @@ private val DarkColors = darkColorScheme(
     surfaceContainerLowest = Slate950,
     surfaceContainerLow = Slate900,
     surfaceContainer = Slate800,
-    surfaceContainerHigh = Slate800,
+    // One step above the slate-800 card surface, so chips and badges drawn on a card stay visible.
+    surfaceContainerHigh = Slate700,
     surfaceContainerHighest = Slate700,
     inverseSurface = Slate100,
     inverseOnSurface = Slate900,
@@ -124,6 +127,9 @@ private val DarkFinanceColors = FinanceColors(
 
 private val LocalFinanceColors = staticCompositionLocalOf { LightFinanceColors }
 
+/** Which design is active, for the few components that render a classic variant (see ui/classic). */
+val LocalUiStyle = staticCompositionLocalOf { UiStyle.MODERN }
+
 val MaterialTheme.financeColors: FinanceColors
     @Composable @ReadOnlyComposable get() = LocalFinanceColors.current
 
@@ -137,6 +143,7 @@ val cardBorder: BorderStroke
 @Composable
 fun TakatTheme(
     darkTheme: Boolean = isSystemInDarkTheme(),
+    uiStyle: UiStyle = UiStyle.MODERN,
     content: @Composable () -> Unit
 ) {
     val colorScheme = if (darkTheme) DarkColors else LightColors
@@ -148,11 +155,16 @@ fun TakatTheme(
         }
     }
 
-    CompositionLocalProvider(LocalFinanceColors provides if (darkTheme) DarkFinanceColors else LightFinanceColors) {
+    val classic = uiStyle == UiStyle.CLASSIC
+    CompositionLocalProvider(
+        LocalFinanceColors provides if (darkTheme) DarkFinanceColors else LightFinanceColors,
+        LocalUiStyle provides uiStyle
+    ) {
+        // Colors are shared (the contrast fixes apply to both); classic keeps the system font and M3 default shapes.
         MaterialTheme(
             colorScheme = colorScheme,
-            typography = Typography,
-            shapes = TakatShapes,
+            typography = if (classic) ClassicTypography else Typography,
+            shapes = if (classic) Shapes() else TakatShapes,
             content = content
         )
     }

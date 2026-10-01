@@ -104,6 +104,9 @@ import com.takat.finanzas.ui.components.SectionHeader
 import com.takat.finanzas.ui.components.TakatCard
 import com.takat.finanzas.util.toDayHeader
 import com.takat.finanzas.util.toLocalDate
+import com.takat.finanzas.data.entity.UiStyle
+import com.takat.finanzas.ui.classic.ClassicHomeContent
+import com.takat.finanzas.ui.theme.LocalUiStyle
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -213,7 +216,15 @@ fun HomeScreen(
         ) { page ->
             when (page) {
                 0 -> ChartsScreen()
-                1 -> HomeContent(
+                1 -> if (LocalUiStyle.current == UiStyle.CLASSIC) ClassicHomeContent(
+                    uiState = uiState,
+                    onOpenAccount = onOpenAccount,
+                    onAddAccount = onAddAccount,
+                    onMovementClick = { selectedMovement = it },
+                    onOpenFixedExpenses = onOpenFixedExpenses,
+                    onPayFixedExpense = onPayFixedExpense,
+                    onToggleAmountsHidden = viewModel::toggleAmountsHidden
+                ) else HomeContent(
                     uiState = uiState,
                     onOpenAccount = onOpenAccount,
                     onAddAccount = onAddAccount,

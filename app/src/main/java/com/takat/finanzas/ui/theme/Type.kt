@@ -27,6 +27,25 @@ private fun TextStyle.inter(weight: FontWeight? = null, tracking: Float? = null)
     fontFeatureSettings = "tnum"
 )
 
+/** Pre-3.0 typography (system font, tabular digits), used by the classic design. */
+val ClassicTypography = Typography(
+    displayLarge = base.displayLarge.copy(fontFeatureSettings = "tnum"),
+    displayMedium = base.displayMedium.copy(fontFeatureSettings = "tnum"),
+    displaySmall = base.displaySmall.copy(fontFeatureSettings = "tnum"),
+    headlineLarge = base.headlineLarge.copy(fontFeatureSettings = "tnum"),
+    headlineMedium = base.headlineMedium.copy(fontFeatureSettings = "tnum"),
+    headlineSmall = base.headlineSmall.copy(fontFeatureSettings = "tnum"),
+    titleLarge = base.titleLarge.copy(fontFeatureSettings = "tnum"),
+    titleMedium = base.titleMedium.copy(fontFeatureSettings = "tnum"),
+    titleSmall = base.titleSmall.copy(fontFeatureSettings = "tnum"),
+    bodyLarge = base.bodyLarge.copy(fontFeatureSettings = "tnum"),
+    bodyMedium = base.bodyMedium.copy(fontFeatureSettings = "tnum"),
+    bodySmall = base.bodySmall.copy(fontFeatureSettings = "tnum"),
+    labelLarge = base.labelLarge.copy(fontFeatureSettings = "tnum"),
+    labelMedium = base.labelMedium.copy(fontFeatureSettings = "tnum"),
+    labelSmall = base.labelSmall.copy(fontSize = 12.sp, lineHeight = 16.sp, fontFeatureSettings = "tnum")
+)
+
 // Display/headline sizes carry the big money figures: semibold with slightly negative tracking reads
 // as one compact number instead of a spaced-out row of digits.
 val Typography = Typography(

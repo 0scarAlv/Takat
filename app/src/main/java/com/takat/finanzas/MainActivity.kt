@@ -21,6 +21,7 @@ import com.takat.finanzas.ui.navigation.TakatNavGraph
 import com.takat.finanzas.ui.theme.TakatTheme
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.widget.WidgetActions
+import com.takat.finanzas.data.entity.UiStyle
 
 class MainActivity : ComponentActivity() {
     private val pendingWidgetAction = mutableStateOf<String?>(null)
@@ -41,7 +42,7 @@ class MainActivity : ComponentActivity() {
                 ThemeMode.DARK -> true
                 ThemeMode.SYSTEM -> isSystemInDarkTheme()
             }
-            TakatTheme(darkTheme = darkTheme) {
+            TakatTheme(darkTheme = darkTheme, uiStyle = appSettings?.uiStyle ?: UiStyle.MODERN) {
                 TakatNavGraph(
                     pendingWidgetAction = pendingWidgetAction,
                     pendingFixedExpenseId = pendingFixedExpenseId,

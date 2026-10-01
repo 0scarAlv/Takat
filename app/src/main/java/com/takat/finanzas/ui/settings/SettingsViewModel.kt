@@ -9,6 +9,7 @@ import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.data.entity.TrustedDeviceEntity
+import com.takat.finanzas.data.entity.UiStyle
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.network.PairingManager
@@ -26,6 +27,7 @@ data class SettingsUiState(
     val importError: String? = null,
     val importResult: ImportResult? = null,
     val themeMode: ThemeMode = ThemeMode.SYSTEM,
+    val uiStyle: UiStyle = UiStyle.MODERN,
     val backupFolderUri: String? = null,
     val lastBackupEpochMillis: Long? = null,
     val lastBackupError: String? = null,
@@ -48,6 +50,7 @@ class SettingsViewModel(
                 _uiState.update {
                     it.copy(
                         themeMode = settings?.themeMode ?: ThemeMode.SYSTEM,
+                        uiStyle = settings?.uiStyle ?: UiStyle.MODERN,
                         backupFolderUri = settings?.backupFolderUri,
                         lastBackupEpochMillis = settings?.lastBackupEpochMillis,
                         lastBackupError = settings?.lastBackupError,
@@ -80,6 +83,13 @@ class SettingsViewModel(
         viewModelScope.launch {
             val current = repository.appSettings().first() ?: AppSettingsEntity()
             repository.updateAppSettings(current.copy(themeMode = mode))
+        }
+    }
+
+    fun onUiStyleChange(style: UiStyle) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(uiStyle = style))
         }
     }
 

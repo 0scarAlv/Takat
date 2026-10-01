@@ -5,6 +5,9 @@ import androidx.room.PrimaryKey
 
 enum class ThemeMode { LIGHT, DARK, SYSTEM }
 
+/** MODERN is the 3.0 redesign; CLASSIC keeps the pre-3.0 look for anyone who prefers it. */
+enum class UiStyle { MODERN, CLASSIC }
+
 @Entity(tableName = "app_settings")
 data class AppSettingsEntity(
     @PrimaryKey val id: Int = 0,
@@ -25,5 +28,6 @@ data class AppSettingsEntity(
      * Whether principal still owed on "compra a crédito" plans is subtracted from "Disponible". Off by default:
      * that debt is shown apart ("Deuda de crédito") and only each period's cuota affects what's available.
      */
-    val includeFinancedInAvailable: Boolean = false
+    val includeFinancedInAvailable: Boolean = false,
+    val uiStyle: UiStyle = UiStyle.MODERN
 )

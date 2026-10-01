@@ -47,6 +47,9 @@ import androidx.compose.material3.LinearProgressIndicator
 import androidx.compose.ui.draw.clip
 import com.takat.finanzas.ui.components.IconBadge
 import com.takat.finanzas.ui.components.TakatCard
+import com.takat.finanzas.data.entity.UiStyle
+import com.takat.finanzas.ui.classic.ClassicFixedExpensesSection
+import com.takat.finanzas.ui.theme.LocalUiStyle
 
 @Composable
 fun FixedExpensesSection(
@@ -54,6 +57,10 @@ fun FixedExpensesSection(
     onPayClick: (fixedExpenseId: Long) -> Unit,
     modifier: Modifier = Modifier
 ) {
+    if (LocalUiStyle.current == UiStyle.CLASSIC) {
+        ClassicFixedExpensesSection(onManageClick, onPayClick, modifier)
+        return
+    }
     val repository = rememberRepository()
     val viewModel: FixedExpensesSectionViewModel =
         viewModel(factory = LambdaViewModelFactory { FixedExpensesSectionViewModel(repository) })
@@ -89,7 +96,10 @@ fun FixedExpensesSection(
                 ) {
                     Text("Gastos fijos", style = MaterialTheme.typography.titleMedium)
                     Text(
-                        if (pendingRows.isEmpty()) "Todo pagado este período"
+                        if (pendingRows.isEmpty()) {
+                            // Inactive rows aren't paid, just skipped this period: only claim "todo pagado" when that's literally true.
+                            if (uiState.rows.all { it.isFullyPaid }) "Todo pagado este período" else "Nada pendiente este período"
+                        }
                         else "${pendingRows.size} pendiente${if (pendingRows.size == 1) "" else "s"} · ${pendingCents.centsToDisplay()}",
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
