@@ -118,6 +118,47 @@ class FixedExpensePeriodTest {
     }
 
     @Test
+    fun `an end-of-month salary rolls MENSUAL bills over to next month right away`() {
+        val today = LocalDate.of(2026, 9, 30)
+        assertEquals("2026-09", FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.MENSUAL, today))
+        assertEquals(
+            "2026-10",
+            FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.MENSUAL, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `an end-of-month salary starts next month's first-half bill but not its second-half one`() {
+        val today = LocalDate.of(2026, 9, 30)
+        // Due day 6 belongs to Oct-Q1, which the salary funds: pending immediately.
+        assertEquals(
+            true,
+            FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.MENSUAL, 6, quincenaOnly = true, today, lastSalaryDate = today)
+        )
+        // Due day 20 belongs to Oct-Q2: still waits for the next salary or Oct 16, even though today is a Q2 day.
+        assertEquals(
+            false,
+            FixedExpensePeriod.hasPeriodStarted(FixedExpenseFrequency.MENSUAL, 20, quincenaOnly = true, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `a mid-month salary keeps MENSUAL bills in the current month`() {
+        val today = LocalDate.of(2026, 9, 14)
+        assertEquals(
+            "2026-09",
+            FixedExpensePeriod.currentPeriodKey(FixedExpenseFrequency.MENSUAL, today, lastSalaryDate = today)
+        )
+    }
+
+    @Test
+    fun `a stale salary anchor does not move the effective date`() {
+        val today = LocalDate.of(2026, 10, 3)
+        assertEquals(today, FixedExpensePeriod.effectiveDate(today, lastSalaryDate = LocalDate.of(2026, 9, 30)))
+        assertEquals(LocalDate.of(2026, 10, 1), FixedExpensePeriod.effectiveDate(LocalDate.of(2026, 9, 30), LocalDate.of(2026, 9, 30)))
+    }
+
+    @Test
     fun `salary anchor boundary is end of month for a pre-15 salary and day 15 of next month otherwise`() {
         assertEquals(LocalDate.of(2026, 8, 31), FixedExpensePeriod.salaryAnchorBoundary(LocalDate.of(2026, 8, 14)))
         assertEquals(LocalDate.of(2026, 9, 15), FixedExpensePeriod.salaryAnchorBoundary(LocalDate.of(2026, 8, 29)))

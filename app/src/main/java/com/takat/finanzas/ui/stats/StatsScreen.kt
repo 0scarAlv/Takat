@@ -63,7 +63,6 @@ import com.takat.finanzas.ui.components.MonthSelector
 import com.takat.finanzas.ui.theme.CategoricalOtherGray
 import com.takat.finanzas.ui.theme.CategoricalPaletteDark
 import com.takat.finanzas.ui.theme.CategoricalPaletteLight
-import com.takat.finanzas.ui.theme.EmeraldPrimary
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
@@ -74,6 +73,7 @@ import java.time.LocalDate
 import java.time.YearMonth
 import kotlin.math.atan2
 import kotlin.math.hypot
+import com.takat.finanzas.ui.theme.cardBorder
 
 @Composable
 fun StatsScreen(
@@ -198,7 +198,8 @@ private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Row(
             modifier = Modifier
@@ -219,7 +220,7 @@ private fun CategoryDonutChart(expenses: List<CategoryExpense>, totalCents: Long
                     modifier = Modifier
                         .size(120.dp)
                         .blur(28.dp)
-                        .background(EmeraldPrimary.copy(alpha = 0.16f), CircleShape)
+                        .background(MaterialTheme.colorScheme.primary.copy(alpha = 0.16f), CircleShape)
                 )
                 Canvas(
                     modifier = Modifier
@@ -369,12 +370,13 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: 
     val peakIndex = remember(shownDays) { shownDays.indices.maxBy { shownDays[it].totalCents } }
     var selectedIndex by remember(shownDays) { mutableStateOf(peakIndex) }
     val selected = shownDays.getOrNull(selectedIndex)
-    val barColor = EmeraldPrimary
+    val barColor = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Row(
@@ -514,12 +516,13 @@ private fun MonthlyExpenseLineChart(
     onMonthClick: (YearMonth) -> Unit
 ) {
     val maxCents = monthlyExpenses.maxOf { it.totalCents }.coerceAtLeast(1)
-    val lineColor = EmeraldPrimary
+    val lineColor = MaterialTheme.colorScheme.primary
 
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
             Canvas(

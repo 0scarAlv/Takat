@@ -36,10 +36,10 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import com.takat.finanzas.data.entity.BudgetBasis
 import com.takat.finanzas.data.entity.BudgetPeriodType
-import com.takat.finanzas.ui.theme.NegativeRed
-import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
+import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.theme.cardBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -55,7 +55,8 @@ fun DailyBudgetSection(
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -87,7 +88,7 @@ fun DailyBudgetSection(
                             state.dailyBudgetCents.centsToDisplay(showSign = true),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = if (state.dailyBudgetCents < 0) NegativeRed else PositiveGreen
+                            color = if (state.dailyBudgetCents < 0) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                         )
                     }
                     Column {
@@ -100,7 +101,7 @@ fun DailyBudgetSection(
                             state.frozenBudgetCents.centsToDisplay(showSign = true),
                             style = MaterialTheme.typography.titleLarge,
                             fontWeight = FontWeight.Bold,
-                            color = if (state.frozenBudgetCents < 0) NegativeRed else PositiveGreen
+                            color = if (state.frozenBudgetCents < 0) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                         )
                     }
                     state.nextPaymentDate?.let { date ->
@@ -144,7 +145,7 @@ fun DailyBudgetSection(
                             },
                             style = MaterialTheme.typography.bodyLarge,
                             fontWeight = FontWeight.SemiBold,
-                            color = if (state.remainingTodayCents < 0) NegativeRed else PositiveGreen
+                            color = if (state.remainingTodayCents < 0) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                         )
                     }
                 }

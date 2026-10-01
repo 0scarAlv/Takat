@@ -16,6 +16,7 @@ import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
+import androidx.compose.foundation.layout.offset
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
@@ -81,14 +82,13 @@ import com.takat.finanzas.ui.components.UpdateAvailableDialog
 import com.takat.finanzas.ui.components.WhatsNewDialog
 import com.takat.finanzas.util.Changelog
 import com.takat.finanzas.ui.stats.StatsScreen
-import com.takat.finanzas.ui.theme.AmberAccent
-import com.takat.finanzas.ui.theme.NegativeRed
-import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.launch
 import java.time.LocalDate
+import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.theme.cardBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -406,6 +406,7 @@ private fun TotalsCard(
     Card(
         modifier = modifier.fillMaxWidth(),
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder,
         shape = RoundedCornerShape(24.dp),
         elevation = CardDefaults.cardElevation(defaultElevation = 2.dp)
     ) {
@@ -416,16 +417,16 @@ private fun TotalsCard(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Disponible", color = MaterialTheme.colorScheme.onSurfaceVariant)
-                IconButton(onClick = onToggleAmountsHidden, modifier = Modifier.size(28.dp)) {
+                // Full 48dp touch target, nudged into the card's padding so the header row stays compact.
+                IconButton(onClick = onToggleAmountsHidden, modifier = Modifier.offset(x = 12.dp)) {
                     Icon(
                         if (amountsHidden) Icons.Default.VisibilityOff else Icons.Default.Visibility,
                         contentDescription = if (amountsHidden) "Mostrar montos" else "Ocultar montos",
-                        modifier = Modifier.size(18.dp),
+                        modifier = Modifier.size(20.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                 }
             }
-            Spacer(Modifier.height(8.dp))
             Text(
                 when {
                     amountsHidden -> mask
@@ -435,7 +436,12 @@ private fun TotalsCard(
                 },
                 style = MaterialTheme.typography.displaySmall,
                 fontWeight = FontWeight.Bold,
-                color = if (totals.availableCents < 0) NegativeRed else PositiveGreen
+                // While masked, a red/green color would still leak whether the balance is negative.
+                color = when {
+                    amountsHidden -> MaterialTheme.colorScheme.onSurface
+                    totals.availableCents < 0 -> MaterialTheme.financeColors.negative
+                    else -> MaterialTheme.financeColors.positive
+                }
             )
             Spacer(Modifier.height(20.dp))
             Row(modifier = Modifier.fillMaxWidth(), horizontalArrangement = Arrangement.SpaceBetween) {
@@ -454,7 +460,7 @@ private fun TotalsCard(
                             if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(),
                             style = MaterialTheme.typography.titleMedium,
                             fontWeight = FontWeight.SemiBold,
-                            color = AmberAccent
+                            color = MaterialTheme.financeColors.warning
                         )
                     }
                 }
@@ -464,9 +470,18 @@ private fun TotalsCard(
                         if (amountsHidden) mask else totals.debtCents.centsToDisplay(),
                         style = MaterialTheme.typography.titleMedium,
                         fontWeight = FontWeight.SemiBold,
-                        color = if (totals.debtCents > 0) NegativeRed else MaterialTheme.colorScheme.onSurface
+                        color = if (totals.debtCents > 0 && !amountsHidden) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
                     )
                 }
+            }
+            if (totals.financedCents > 0) {
+                Spacer(Modifier.height(12.dp))
+                Text(
+                    "Deuda de crédito: " + (if (amountsHidden) mask else totals.financedCents.centsToDisplay()) +
+                        if (totals.financedIncludedInAvailable) " (restado del disponible)" else " (no se resta del disponible)",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
             }
         }
     }
@@ -474,12 +489,13 @@ private fun TotalsCard(
 
 @Composable
 private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
+    // Card(onClick) instead of Modifier.clickable so the ripple is clipped to the rounded shape.
     Card(
-        modifier = Modifier
-            .fillMaxWidth()
-            .clickable(onClick = onClick),
+        onClick = onClick,
+        modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(18.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Row(
             modifier = Modifier
@@ -506,11 +522,20 @@ private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClic
                     )
                 }
             }
-            Text(
-                if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),
-                fontWeight = FontWeight.SemiBold,
-                color = if (item.balanceCents < 0) NegativeRed else MaterialTheme.colorScheme.onSurface
-            )
+            Column(horizontalAlignment = Alignment.End) {
+                Text(
+                    if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),
+                    fontWeight = FontWeight.SemiBold,
+                    color = if (item.balanceCents < 0 && !amountsHidden) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
+                )
+                if (item.financedCents > 0) {
+                    Text(
+                        "Deuda de crédito: " + if (amountsHidden) "••••••" else item.financedCents.centsToDisplay(),
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+            }
         }
     }
 }

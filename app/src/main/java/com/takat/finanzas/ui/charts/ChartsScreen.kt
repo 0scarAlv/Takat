@@ -28,11 +28,11 @@ import androidx.compose.ui.text.font.FontWeight
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.ui.components.MonthSelector
-import com.takat.finanzas.ui.theme.NegativeRed
-import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.theme.cardBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -62,7 +62,7 @@ fun ChartsScreen(modifier: Modifier = Modifier) {
                     uiState.balanceCents.centsToDisplay(showSign = true),
                     style = MaterialTheme.typography.displaySmall,
                     fontWeight = FontWeight.Bold,
-                    color = if (uiState.balanceCents < 0) NegativeRed else PositiveGreen
+                    color = if (uiState.balanceCents < 0) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                 )
             }
         }
@@ -70,8 +70,8 @@ fun ChartsScreen(modifier: Modifier = Modifier) {
         item {
             val maxCents = maxOf(uiState.incomeCents, uiState.expenseCents).coerceAtLeast(1)
             Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-                AmountBar("Ingresos", uiState.incomeCents, maxCents, PositiveGreen)
-                AmountBar("Gastos", uiState.expenseCents, maxCents, NegativeRed)
+                AmountBar("Ingresos", uiState.incomeCents, maxCents, MaterialTheme.financeColors.positive)
+                AmountBar("Gastos", uiState.expenseCents, maxCents, MaterialTheme.financeColors.negative)
             }
         }
 
@@ -94,7 +94,8 @@ private fun AmountBar(label: String, amountCents: Long, maxCents: Long, color: C
     Card(
         modifier = Modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(

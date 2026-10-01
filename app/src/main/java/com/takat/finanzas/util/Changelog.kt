@@ -172,6 +172,25 @@ object Changelog {
         )),
         ChangelogEntry(39, "2.4.1", listOf(
             "Arreglo: el aviso de actualización disponible mostraba los símbolos de Markdown (##, -, etc.) tal cual en vez de texto formateado."
+        )),
+        ChangelogEntry(40, "2.5.0", listOf(
+            "Nuevo: gastos fijos de tipo \"Crédito\". Cargá una compra con su monto, número de cuotas y tasa de interés: lo que debés se muestra aparte como \"Deuda de crédito\" y a tus gastos y a tu disponible solo les afecta la cuota de cada período.",
+            "Los tipos de gasto fijo ahora son Normal, Cuotas (para deudas sencillas en partes iguales) y Crédito.",
+            "Nuevo ajuste: \"Restar compras a crédito del disponible\", por si preferís que se descuente todo lo que falta pagar.",
+            "La cuota se calcula sola con la tasa, y podés cambiarla por la que te cobra el banco.",
+            "Restaurar una copia de seguridad ahora te deja elegir: agregar solo lo que falta (sin duplicar), reemplazar todo en limpio o agregar todo aunque se duplique. Si la restauración falla, tus datos quedan intactos.",
+            "Las copias de seguridad ahora guardan qué pagos corresponden a cada gasto fijo, así al restaurar no se pierde cuánto llevás pagado de una deuda."
+        )),
+        ChangelogEntry(41, "2.5.1", listOf(
+            "Al registrar el sueldo de fin de mes, los gastos fijos mensuales ya pasan al mes siguiente en ese momento (igual que los quincenales), sin esperar al día 1.",
+            "Cada gasto mensual respeta su quincena: uno que pagás en la primera (ej. día 6) aparece en cuanto cobrás; uno de la segunda (ej. día 20) espera al siguiente sueldo o al día 16."
+        )),
+        ChangelogEntry(42, "2.5.2", listOf(
+            "Colores más legibles: los montos en verde, rojo y ámbar ahora se leen bien en modo claro, y en modo oscuro usan su versión clara.",
+            "Se acabaron los toques de lila en los botones de opción, chips y barra de navegación: todo usa la paleta de Takat.",
+            "En gastos fijos ahora hay un botón \"Pagar\" aparte del interruptor, para que no se abra el pago por error al tocar la fila.",
+            "Con los montos ocultos, el color ya no delata si estás en negativo.",
+            "Botones más fáciles de tocar (ocultar montos, colores de cuenta, ver comprobante), las tarjetas tienen un borde sutil y los números quedan alineados en columnas."
         ))
     )
 

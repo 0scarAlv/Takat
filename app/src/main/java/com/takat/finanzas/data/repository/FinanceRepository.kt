@@ -3,10 +3,12 @@ package com.takat.finanzas.data.repository
 import android.content.ContentResolver
 import android.content.Context
 import android.net.Uri
+import androidx.room.withTransaction
 import com.takat.finanzas.data.AppDatabase
 import com.takat.finanzas.data.attachment.AttachmentStorage
 import com.takat.finanzas.data.csv.BackupCsv
 import com.takat.finanzas.data.csv.BackupZip
+import com.takat.finanzas.data.csv.ImportMode
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AppSettingsEntity
@@ -47,7 +49,7 @@ import java.time.YearMonth
 import java.time.ZoneId
 
 class FinanceRepository(
-    db: AppDatabase,
+    private val db: AppDatabase,
     private val attachmentStorage: AttachmentStorage,
     private val context: Context
 ) {
@@ -95,23 +97,53 @@ class FinanceRepository(
         appSettingsDao.upsert(settings.copy(id = 0))
 
     fun accountsWithBalance(includeArchived: Boolean = false): Flow<List<AccountWithBalance>> =
-        combine(accountDao.getAll(), transactionDao.getAll(), transferDao.getAll()) { accounts, transactions, transfers ->
+        combine(accountDao.getAll(), transactionDao.getAll(), transferDao.getAll(), fixedExpenseDao.getAll()) { accounts, transactions, transfers, rules ->
+            val financedByAccount = financedByAccount(rules, transactions)
             accounts
                 .filter { includeArchived || !it.isArchived }
-                .map { account -> AccountWithBalance(account, balanceFor(account.id, account.initialBalanceCents, transactions, transfers)) }
+                .map { account ->
+                    AccountWithBalance(
+                        account,
+                        balanceFor(account.id, account.initialBalanceCents, transactions, transfers),
+                        financedByAccount[account.id] ?: 0
+                    )
+                }
         }
 
+    /**
+     * Principal still owed per credit account from "compra a crédito" plans. Derived rather than stored as a
+     * purchase transaction so it never counts as spending (reports, "gastado hoy"), and deleting the plan
+     * removes the debt with it. Disabled plans still count: pausing reminders doesn't cancel what's owed.
+     */
+    private fun financedByAccount(rules: List<FixedExpenseEntity>, transactions: List<TransactionEntity>): Map<Long, Long> {
+        val creditRules = rules.filter { it.isCreditPurchase }
+        if (creditRules.isEmpty()) return emptyMap()
+        val totalPaidByRule = transactions
+            .filter { it.fixedExpenseId != null }
+            .groupBy { it.fixedExpenseId!! }
+            .mapValues { (_, txs) -> txs.sumOf { -it.amountCents } }
+        return creditRules
+            .groupBy { it.creditAccountId!! }
+            .mapValues { (_, plans) -> plans.sumOf { it.financedRemainingCents(totalPaidByRule[it.id] ?: 0) } }
+    }
+
     fun accountTotals(): Flow<AccountTotals> =
-        combine(accountsWithBalance(), pendingFixedExpenses()) { list, pending ->
+        combine(accountsWithBalance(), pendingFixedExpenses(), appSettingsDao.get()) { list, pending, settings ->
             val included = list.filter { it.account.includeInTotal }
             val capital = included.filter { !it.account.isDebt }.sumOf { it.balanceCents }
             val debtRaw = included.filter { it.account.isDebt }.sumOf { it.balanceCents }
+            // Financed principal is shown apart ("Deuda de crédito"): by default only each period's cuota — already in
+            // pendingCents or paid — reduces what's available, unless the user opts into subtracting all of it.
+            val financed = included.sumOf { it.financedCents }
+            val includeFinanced = settings?.includeFinancedInAvailable ?: false
             val pendingCents = pending.filter { it.isPending && it.countsTowardTotal }.sumOf { it.remainingCents }
             AccountTotals(
-                availableCents = capital + debtRaw - pendingCents,
+                availableCents = capital + debtRaw - pendingCents - (if (includeFinanced) financed else 0),
                 capitalCents = capital,
                 debtCents = -debtRaw,
-                pendingFixedExpensesCents = pendingCents
+                pendingFixedExpensesCents = pendingCents,
+                financedCents = financed,
+                financedIncludedInAvailable = includeFinanced
             )
         }
 
@@ -570,53 +602,187 @@ class FinanceRepository(
         BackupZip.write(output, csv, files)
     }
 
-    suspend fun commitImport(parsed: ParsedBackup, attachmentFiles: Map<String, ByteArray> = emptyMap()): ImportResult {
-        val accountIdByName = accountDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
-        val categoryIdByName = categoryDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
+    /**
+     * Restores [parsed] according to [mode] (see [ImportMode]). Runs in a single Room transaction, so a
+     * restore that fails halfway — including a REPLACE_ALL that already wiped everything — rolls back to
+     * exactly what was there before instead of leaving the app half-empty.
+     *
+     * Names are matched trimmed and case-insensitively, and the backup's own duplicates collapse into one
+     * (a backup taken after a previous double import won't recreate "Comida" twice).
+     */
+    suspend fun commitImport(
+        parsed: ParsedBackup,
+        attachmentFiles: Map<String, ByteArray> = emptyMap(),
+        mode: ImportMode = ImportMode.ONLY_MISSING
+    ): ImportResult {
+        // Snapshot read up front, outside the transaction (Flow queries aren't meant to run inside one).
+        val replace = mode == ImportMode.REPLACE_ALL
+        val existing = ExistingData(
+            accounts = if (replace) emptyList() else accountDao.getAll().first(),
+            categories = categoryDao.getAll().first(),
+            fixedExpenses = if (replace) emptyList() else fixedExpenseDao.getAll().first(),
+            transactions = if (mode == ImportMode.ONLY_MISSING) transactionDao.getAll().first() else emptyList(),
+            transfers = if (mode == ImportMode.ONLY_MISSING) transferDao.getAll().first() else emptyList()
+        )
+        val replacedAttachments = if (replace) attachmentDao.getAll().first() else emptyList()
+        val result = db.withTransaction {
+            if (replace) {
+                val wipe = db.wipeDao()
+                wipe.deleteAttachments()
+                wipe.deleteTransactions()
+                wipe.deleteTransfers()
+                wipe.deleteFixedExpensePeriodStates()
+                wipe.deleteFixedExpenses()
+                wipe.deleteAccounts()
+                wipe.deleteCategories()
+            }
+            importRows(parsed, attachmentFiles, existing, replace)
+        }
+        // Old receipt files only go once the new data is safely committed.
+        replacedAttachments.forEach { attachmentStorage.deleteFiles(attachmentDao, it) }
+        unfreezeDailyBudget()
+        refreshWidget()
+        return result
+    }
+
+    private suspend fun importRows(
+        parsed: ParsedBackup,
+        attachmentFiles: Map<String, ByteArray>,
+        existing: ExistingData,
+        replace: Boolean
+    ): ImportResult {
+        fun key(name: String) = name.trim().lowercase()
+
+        val accountIdByName = existing.accounts.associateTo(mutableMapOf()) { key(it.name) to it.id }
+        val categoryIdByName =
+            if (replace) mutableMapOf() else existing.categories.associateTo(mutableMapOf()) { key(it.name) to it.id }
+        // The backup format doesn't carry these flags, so a REPLACE_ALL keeps them from the categories it replaced.
+        val previousCategoryByName = existing.categories.associateBy { key(it.name) }
 
         var accountsAdded = 0
         var categoriesAdded = 0
         var skipped = 0
+        var duplicatesSkipped = 0
 
         parsed.accounts.forEach { row ->
-            if (!accountIdByName.containsKey(row.name)) {
-                val id = accountDao.insert(
-                    AccountEntity(
-                        name = row.name,
-                        initialBalanceCents = row.initialBalanceCents,
-                        colorArgb = row.colorArgb,
-                        isDebt = row.isDebt,
-                        includeInTotal = row.includeInTotal
-                    )
+            if (accountIdByName.containsKey(key(row.name))) return@forEach
+            val id = accountDao.insert(
+                AccountEntity(
+                    name = row.name.trim(),
+                    initialBalanceCents = row.initialBalanceCents,
+                    colorArgb = row.colorArgb,
+                    isDebt = row.isDebt,
+                    includeInTotal = row.includeInTotal
                 )
-                accountIdByName[row.name] = id
-                accountsAdded++
-            }
+            )
+            accountIdByName[key(row.name)] = id
+            accountsAdded++
         }
 
         parsed.categories.forEach { row ->
-            if (!categoryIdByName.containsKey(row.name)) {
-                val id = categoryDao.insert(CategoryEntity(name = row.name, emoji = row.emoji, kind = row.kind))
-                categoryIdByName[row.name] = id
-                categoriesAdded++
+            if (categoryIdByName.containsKey(key(row.name))) return@forEach
+            val previous = previousCategoryByName[key(row.name)]
+            val id = categoryDao.insert(
+                CategoryEntity(
+                    name = row.name.trim(),
+                    emoji = row.emoji,
+                    kind = row.kind,
+                    isDefault = previous?.isDefault ?: false,
+                    isSalary = previous?.isSalary ?: false
+                )
+            )
+            categoryIdByName[key(row.name)] = id
+            categoriesAdded++
+        }
+
+        // Gastos fijos go before transactions so payments can be re-linked to them.
+        val fixedExpenseIdByName = existing.fixedExpenses.associateTo(mutableMapOf()) { key(it.name) to it.id }
+        var fixedExpensesAdded = 0
+        parsed.fixedExpenses.forEach { row ->
+            if (fixedExpenseIdByName.containsKey(key(row.name))) return@forEach
+            val accountId = accountIdByName[key(row.accountName)]
+            if (accountId == null) {
+                skipped++
+                return@forEach
             }
+            val id = fixedExpenseDao.insert(
+                FixedExpenseEntity(
+                    name = row.name.trim(),
+                    amountCents = row.amountCents,
+                    accountId = accountId,
+                    categoryId = row.categoryName?.let { categoryIdByName[key(it)] },
+                    frequency = row.frequency,
+                    dayOfMonth = row.dayOfMonth,
+                    quincenaOnly = row.quincenaOnly,
+                    notifyEnabled = row.notifyEnabled,
+                    enabled = row.enabled,
+                    totalDebtCents = row.totalDebtCents,
+                    installmentsCount = row.installmentsCount,
+                    creditAccountId = row.creditAccountName?.let { accountIdByName[key(it)] },
+                    financedPrincipalCents = row.financedPrincipalCents,
+                    interestRateBps = row.interestRateBps
+                )
+            )
+            fixedExpenseIdByName[key(row.name)] = id
+            fixedExpensesAdded++
+        }
+
+        parsed.fixedExpensePeriodStates.forEach { row ->
+            val fixedExpenseId = fixedExpenseIdByName[key(row.fixedExpenseName)]
+            if (fixedExpenseId == null) {
+                skipped++
+                return@forEach
+            }
+            if (fixedExpensePeriodStateDao.find(fixedExpenseId, row.periodKey) == null) {
+                fixedExpensePeriodStateDao.insert(
+                    FixedExpensePeriodStateEntity(
+                        fixedExpenseId = fixedExpenseId,
+                        periodKey = row.periodKey,
+                        active = row.active
+                    )
+                )
+            }
+        }
+
+        // Existing movements as a multiset, so a backup holding two identical real movements (two coffees
+        // of the same price on the same minute) still restores both when the app has neither.
+        val existingTransactionKeys = mutableMapOf<List<Any?>, Int>()
+        existing.transactions.forEach {
+            existingTransactionKeys.merge(listOf(it.accountId, it.date, it.amountCents, it.categoryId, it.note), 1, Int::plus)
+        }
+        val existingTransferKeys = mutableMapOf<List<Any?>, Int>()
+        existing.transfers.forEach {
+            existingTransferKeys.merge(listOf(it.fromAccountId, it.toAccountId, it.date, it.amountCents, it.note), 1, Int::plus)
+        }
+        fun MutableMap<List<Any?>, Int>.consume(key: List<Any?>): Boolean {
+            val count = this[key] ?: return false
+            if (count <= 1) remove(key) else this[key] = count - 1
+            return true
         }
 
         var transactionsAdded = 0
         var attachmentsAdded = 0
         parsed.transactions.forEach { row ->
-            val accountId = accountIdByName[row.accountName]
+            val accountId = accountIdByName[key(row.accountName)]
             if (accountId == null) {
                 skipped++
                 return@forEach
             }
+            val categoryId = row.categoryName?.let { categoryIdByName[key(it)] }
+            if (existingTransactionKeys.consume(listOf(accountId, row.date, row.amountCents, categoryId, row.note))) {
+                duplicatesSkipped++
+                return@forEach
+            }
+            val fixedExpenseId = row.fixedExpenseName?.let { fixedExpenseIdByName[key(it)] }
             val transactionId = transactionDao.insert(
                 TransactionEntity(
                     accountId = accountId,
-                    categoryId = row.categoryName?.let { categoryIdByName[it] },
+                    categoryId = categoryId,
                     amountCents = row.amountCents,
                     note = row.note,
-                    date = row.date
+                    date = row.date,
+                    fixedExpenseId = fixedExpenseId,
+                    fixedExpensePeriodKey = row.fixedExpensePeriodKey.takeIf { fixedExpenseId != null }
                 )
             )
             transactionsAdded++
@@ -635,17 +801,21 @@ class FinanceRepository(
 
         var transfersAdded = 0
         parsed.transfers.forEach { row ->
-            val fromId = accountIdByName[row.fromAccountName]
-            val toId = accountIdByName[row.toAccountName]
+            val fromId = accountIdByName[key(row.fromAccountName)]
+            val toId = accountIdByName[key(row.toAccountName)]
             if (fromId == null || toId == null) {
                 skipped++
+                return@forEach
+            }
+            if (existingTransferKeys.consume(listOf(fromId, toId, row.date, row.amountCents, row.note))) {
+                duplicatesSkipped++
                 return@forEach
             }
             transferDao.insert(
                 TransferEntity(
                     fromAccountId = fromId,
                     toAccountId = toId,
-                    categoryId = row.categoryName?.let { categoryIdByName[it] },
+                    categoryId = row.categoryName?.let { categoryIdByName[key(it)] },
                     amountCents = row.amountCents,
                     note = row.note,
                     date = row.date
@@ -654,57 +824,20 @@ class FinanceRepository(
             transfersAdded++
         }
 
-        val fixedExpenseIdByName = fixedExpenseDao.getAll().first().associateTo(mutableMapOf()) { it.name to it.id }
-        var fixedExpensesAdded = 0
-        parsed.fixedExpenses.forEach { row ->
-            if (fixedExpenseIdByName.containsKey(row.name)) return@forEach
-            val accountId = accountIdByName[row.accountName]
-            if (accountId == null) {
-                skipped++
-                return@forEach
-            }
-            val id = fixedExpenseDao.insert(
-                FixedExpenseEntity(
-                    name = row.name,
-                    amountCents = row.amountCents,
-                    accountId = accountId,
-                    categoryId = row.categoryName?.let { categoryIdByName[it] },
-                    frequency = row.frequency,
-                    dayOfMonth = row.dayOfMonth,
-                    quincenaOnly = row.quincenaOnly,
-                    notifyEnabled = row.notifyEnabled,
-                    enabled = row.enabled,
-                    totalDebtCents = row.totalDebtCents,
-                    installmentsCount = row.installmentsCount
-                )
-            )
-            fixedExpenseIdByName[row.name] = id
-            fixedExpensesAdded++
-        }
-
-        parsed.fixedExpensePeriodStates.forEach { row ->
-            val fixedExpenseId = fixedExpenseIdByName[row.fixedExpenseName]
-            if (fixedExpenseId == null) {
-                skipped++
-                return@forEach
-            }
-            if (fixedExpensePeriodStateDao.find(fixedExpenseId, row.periodKey) == null) {
-                fixedExpensePeriodStateDao.insert(
-                    FixedExpensePeriodStateEntity(
-                        fixedExpenseId = fixedExpenseId,
-                        periodKey = row.periodKey,
-                        active = row.active
-                    )
-                )
-            }
-        }
-
-        refreshWidget()
         return ImportResult(
             accountsAdded, categoriesAdded, transactionsAdded, transfersAdded, skipped, attachmentsAdded,
-            fixedExpensesAdded
+            fixedExpensesAdded, duplicatesSkipped
         )
     }
+
+    /** What's already in the app when a restore starts; empty lists stand for "ignore" (see [commitImport]). */
+    private class ExistingData(
+        val accounts: List<AccountEntity>,
+        val categories: List<CategoryEntity>,
+        val fixedExpenses: List<FixedExpenseEntity>,
+        val transactions: List<TransactionEntity>,
+        val transfers: List<TransferEntity>
+    )
 
     private fun extensionFor(type: AttachmentType): String = when (type) {
         AttachmentType.IMAGE -> "jpg"

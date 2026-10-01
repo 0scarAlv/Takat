@@ -295,13 +295,13 @@ private fun AttachmentThumb(attachment: AttachmentEntity, onClick: () -> Unit) {
             return
         }
     }
-    Icon(
-        if (attachment.type == AttachmentType.IMAGE) Icons.Filled.PhotoCamera else Icons.Filled.Description,
-        contentDescription = "Ver comprobante",
-        modifier = Modifier
-            .size(32.dp)
-            .clickable(onClick = onClick)
-    )
+    IconButton(onClick = onClick, modifier = Modifier.size(48.dp)) {
+        Icon(
+            if (attachment.type == AttachmentType.IMAGE) Icons.Filled.PhotoCamera else Icons.Filled.Description,
+            contentDescription = "Ver comprobante",
+            modifier = Modifier.size(32.dp)
+        )
+    }
 }
 
 @Composable

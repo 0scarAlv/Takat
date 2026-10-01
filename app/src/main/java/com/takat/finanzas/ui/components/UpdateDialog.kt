@@ -35,11 +35,11 @@ import com.takat.finanzas.backup.runBackupNow
 import com.takat.finanzas.network.UpdateInfo
 import com.takat.finanzas.network.UpdateInstaller
 import com.takat.finanzas.network.UpdateState
-import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.Changelog
 import com.takat.finanzas.util.DebugLog
 import kotlinx.coroutines.launch
+import com.takat.finanzas.ui.theme.financeColors
 
 /**
  * Checks GitHub once per app open (after [WhatsNewGate] has settled, so the two dialogs never
@@ -155,7 +155,7 @@ fun UpdateAvailableDialog(info: UpdateInfo, onDismiss: () -> Unit) {
                 }
                 backupWarning?.let {
                     Spacer(Modifier.height(8.dp))
-                    Text(it, style = MaterialTheme.typography.bodySmall, color = AmberAccent)
+                    Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.financeColors.warning)
                 }
                 error?.let {
                     Spacer(Modifier.height(8.dp))

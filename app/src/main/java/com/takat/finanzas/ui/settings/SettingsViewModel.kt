@@ -4,6 +4,7 @@ import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.csv.BackupCsv
 import com.takat.finanzas.data.csv.BackupZip
+import com.takat.finanzas.data.csv.ImportMode
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AppSettingsEntity
 import com.takat.finanzas.data.entity.ThemeMode
@@ -29,6 +30,7 @@ data class SettingsUiState(
     val lastBackupEpochMillis: Long? = null,
     val lastBackupError: String? = null,
     val sarcasticMessagesEnabled: Boolean = true,
+    val includeFinancedInAvailable: Boolean = false,
     val pairedDevices: List<TrustedDeviceEntity> = emptyList(),
     val pcAccessNickname: String? = null
 )
@@ -50,6 +52,7 @@ class SettingsViewModel(
                         lastBackupEpochMillis = settings?.lastBackupEpochMillis,
                         lastBackupError = settings?.lastBackupError,
                         sarcasticMessagesEnabled = settings?.sarcasticMessagesEnabled ?: true,
+                        includeFinancedInAvailable = settings?.includeFinancedInAvailable ?: false,
                         pcAccessNickname = settings?.pcAccessNickname
                     )
                 }
@@ -101,6 +104,13 @@ class SettingsViewModel(
         }
     }
 
+    fun onIncludeFinancedInAvailableChange(enabled: Boolean) {
+        viewModelScope.launch {
+            val current = repository.appSettings().first() ?: AppSettingsEntity()
+            repository.updateAppSettings(current.copy(includeFinancedInAvailable = enabled))
+        }
+    }
+
     suspend fun exportBackup(output: OutputStream) = repository.exportBackup(output)
 
     fun parseForPreview(fileBytes: ByteArray) {
@@ -114,12 +124,19 @@ class SettingsViewModel(
         _uiState.update { it.copy(pendingImport = parsed, pendingAttachmentFiles = attachmentFiles, importError = null) }
     }
 
-    fun confirmImport() {
+    fun confirmImport(mode: ImportMode) {
         val parsed = _uiState.value.pendingImport ?: return
         val attachmentFiles = _uiState.value.pendingAttachmentFiles
+        _uiState.update { it.copy(pendingImport = null, pendingAttachmentFiles = emptyMap()) }
         viewModelScope.launch {
-            val result = repository.commitImport(parsed, attachmentFiles)
-            _uiState.update { it.copy(pendingImport = null, pendingAttachmentFiles = emptyMap(), importResult = result) }
+            val result = try {
+                repository.commitImport(parsed, attachmentFiles, mode)
+            } catch (e: Exception) {
+                // commitImport runs in a transaction, so nothing was changed.
+                _uiState.update { it.copy(importError = "No se restauró nada, tus datos quedaron como estaban.\n\n${e.message ?: e}") }
+                return@launch
+            }
+            _uiState.update { it.copy(importResult = result) }
         }
     }
 

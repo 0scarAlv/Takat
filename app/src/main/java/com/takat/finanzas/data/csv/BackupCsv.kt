@@ -27,11 +27,15 @@ object BackupCsv {
         "type", "name", "emoji", "kind", "initial_balance", "is_debt", "include_in_total",
         "color", "date", "account", "to_account", "category", "amount", "note", "attachments",
         "frequency", "day_of_month", "quincena_only", "notify_enabled", "enabled", "total_debt",
-        "installments_count", "period_key", "active"
+        "installments_count", "period_key", "active", "credit_account", "financed_principal",
+        "interest_rate_bps"
     )
 
+    /** Backups written before "compra a crédito" plans existed don't have their three trailing columns. */
+    private val LEGACY_HEADER_V3 = HEADER.dropLast(3)
+
     /** Backups written before gastos fijos were included in the backup format don't have the trailing columns. */
-    private val LEGACY_HEADER_V2 = HEADER.dropLast(9)
+    private val LEGACY_HEADER_V2 = LEGACY_HEADER_V3.dropLast(9)
 
     /** Backups written before receipt attachments existed don't have that column either. */
     private val LEGACY_HEADER_V1 = LEGACY_HEADER_V2.dropLast(1)
@@ -66,6 +70,10 @@ object BackupCsv {
         transactions.forEach { t ->
             lines += buildRow(
                 type = "transaction",
+                // A payment toward a gasto fijo keeps its link (rule name + period) so restoring a backup
+                // doesn't reset debt/credit plans to "nothing paid yet".
+                name = t.fixedExpenseId?.let { fixedExpenseById[it]?.name }.orEmpty(),
+                periodKey = t.fixedExpensePeriodKey.orEmpty(),
                 date = t.date.toCsvDate(),
                 account = accountById[t.accountId]?.name.orEmpty(),
                 category = categoryById[t.categoryId]?.name.orEmpty(),
@@ -98,7 +106,10 @@ object BackupCsv {
                 notifyEnabled = fe.notifyEnabled.toString(),
                 enabled = fe.enabled.toString(),
                 totalDebt = fe.totalDebtCents?.toCsvAmount().orEmpty(),
-                installmentsCount = fe.installmentsCount?.toString().orEmpty()
+                installmentsCount = fe.installmentsCount?.toString().orEmpty(),
+                creditAccount = fe.creditAccountId?.let { accountById[it]?.name }.orEmpty(),
+                financedPrincipal = fe.financedPrincipalCents?.toCsvAmount().orEmpty(),
+                interestRateBps = fe.interestRateBps?.toString().orEmpty()
             )
         }
         fixedExpensePeriodStates.forEach { ps ->
@@ -119,6 +130,7 @@ object BackupCsv {
         val headerFields = parseCsvLine(lines[0])
         val header = when (headerFields) {
             HEADER -> HEADER
+            LEGACY_HEADER_V3 -> LEGACY_HEADER_V3
             LEGACY_HEADER_V2 -> LEGACY_HEADER_V2
             LEGACY_HEADER_V1 -> LEGACY_HEADER_V1
             else -> throw IllegalArgumentException("Formato de respaldo no reconocido")
@@ -157,7 +169,9 @@ object BackupCsv {
                     categoryName = row["category"]?.takeIf { it.isNotBlank() },
                     amountCents = row["amount"].orEmpty().csvAmountToCents() ?: continue,
                     note = row["note"]?.takeIf { it.isNotBlank() },
-                    attachmentEntries = row["attachments"].orEmpty().split("|").filter { it.isNotBlank() }
+                    attachmentEntries = row["attachments"].orEmpty().split("|").filter { it.isNotBlank() },
+                    fixedExpenseName = row["name"]?.takeIf { it.isNotBlank() },
+                    fixedExpensePeriodKey = row["period_key"]?.takeIf { it.isNotBlank() }
                 )
 
                 "transfer" -> transfers += TransferRow(
@@ -181,7 +195,10 @@ object BackupCsv {
                     notifyEnabled = row["notify_enabled"]?.toBooleanStrictOrNull() ?: false,
                     enabled = row["enabled"]?.toBooleanStrictOrNull() ?: true,
                     totalDebtCents = row["total_debt"]?.takeIf { it.isNotBlank() }?.csvAmountToCents(),
-                    installmentsCount = row["installments_count"]?.takeIf { it.isNotBlank() }?.toIntOrNull()
+                    installmentsCount = row["installments_count"]?.takeIf { it.isNotBlank() }?.toIntOrNull(),
+                    creditAccountName = row["credit_account"]?.takeIf { it.isNotBlank() },
+                    financedPrincipalCents = row["financed_principal"]?.takeIf { it.isNotBlank() }?.csvAmountToCents(),
+                    interestRateBps = row["interest_rate_bps"]?.takeIf { it.isNotBlank() }?.toIntOrNull()
                 )
 
                 "fixed_expense_period" -> fixedExpensePeriodStates += FixedExpensePeriodStateRow(
@@ -219,11 +236,15 @@ object BackupCsv {
         totalDebt: String = "",
         installmentsCount: String = "",
         periodKey: String = "",
-        active: String = ""
+        active: String = "",
+        creditAccount: String = "",
+        financedPrincipal: String = "",
+        interestRateBps: String = ""
     ): String = listOf(
         type, name, emoji, kind, initialBalance, isDebt, includeInTotal,
         color, date, account, toAccount, category, amount, note, attachments,
         frequency, dayOfMonth, quincenaOnly, notifyEnabled, enabled, totalDebt,
-        installmentsCount, periodKey, active
+        installmentsCount, periodKey, active, creditAccount, financedPrincipal,
+        interestRateBps
     ).joinToString(",") { encodeCsvField(it) }
 }

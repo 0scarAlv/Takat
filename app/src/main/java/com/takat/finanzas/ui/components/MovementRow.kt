@@ -28,10 +28,9 @@ import androidx.compose.ui.unit.dp
 import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.model.Movement
-import com.takat.finanzas.ui.theme.NegativeRed
-import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
+import com.takat.finanzas.ui.theme.financeColors
 
 @Composable
 fun MovementRow(
@@ -86,7 +85,7 @@ fun MovementRow(
                     Text(
                         tx.amountCents.centsToDisplay(showSign = true),
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isIncome) PositiveGreen else NegativeRed
+                        color = if (isIncome) MaterialTheme.financeColors.positive else MaterialTheme.financeColors.negative
                     )
                 }
             }
@@ -139,7 +138,7 @@ fun MovementRow(
                     Text(
                         signedCents.centsToDisplay(showSign = true),
                         fontWeight = FontWeight.SemiBold,
-                        color = if (isOutgoing) NegativeRed else PositiveGreen
+                        color = if (isOutgoing) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
                     )
                 } else {
                     Text(transfer.amountCents.centsToDisplay(), fontWeight = FontWeight.SemiBold)

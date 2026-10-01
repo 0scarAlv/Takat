@@ -42,12 +42,12 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.ui.components.AccountColorDot
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
-import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.parseAmountToCents
 import kotlinx.coroutines.launch
+import com.takat.finanzas.ui.theme.financeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -211,7 +211,7 @@ fun AddTransferScreen(
                     Text(
                         overBalanceWarning,
                         style = MaterialTheme.typography.bodySmall,
-                        color = AmberAccent,
+                        color = MaterialTheme.financeColors.warning,
                         modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                     )
                 }

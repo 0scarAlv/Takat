@@ -20,5 +20,10 @@ data class AppSettingsEntity(
     /** Nickname used to build the mDNS service/hostname for the PC-access panel (e.g. "oscar" -> takat-oscar.local). */
     val pcAccessNickname: String? = null,
     /** Hides Disponible/Capital total/Gasto fijo/Deuda total behind "••••" on the home screen. */
-    val amountsHidden: Boolean = false
+    val amountsHidden: Boolean = false,
+    /**
+     * Whether principal still owed on "compra a crédito" plans is subtracted from "Disponible". Off by default:
+     * that debt is shown apart ("Deuda de crédito") and only each period's cuota affects what's available.
+     */
+    val includeFinancedInAvailable: Boolean = false
 )

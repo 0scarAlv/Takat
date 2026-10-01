@@ -1,15 +1,17 @@
 package com.takat.finanzas.ui.home
 
 import androidx.compose.foundation.clickable
-import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.Settings
@@ -20,6 +22,7 @@ import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.Switch
 import androidx.compose.material3.Text
+import androidx.compose.material3.TextButton
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
@@ -28,14 +31,18 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.text.style.TextOverflow
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.data.entity.FixedExpenseFrequency
-import com.takat.finanzas.ui.theme.PositiveGreen
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.theme.cardBorder
 
 @Composable
 fun FixedExpensesSection(
@@ -55,7 +62,8 @@ fun FixedExpensesSection(
     Card(
         modifier = modifier.fillMaxWidth(),
         shape = RoundedCornerShape(16.dp),
-        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+        colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+        border = cardBorder
     ) {
         Column(modifier = Modifier.padding(14.dp)) {
             Row(
@@ -80,17 +88,23 @@ fun FixedExpensesSection(
             if (expanded) {
                 Spacer(Modifier.height(8.dp))
                 uiState.rows.forEach { row ->
+                    // Paying is an explicit button rather than a tap anywhere on the row: with the whole row
+                    // clickable, a near miss on the switch opened the payment form instead of toggling it.
                     Row(
                         modifier = Modifier
                             .fillMaxWidth()
-                            .padding(vertical = 6.dp)
-                            .let { base -> if (!row.isFullyPaid) base.clickable { onPayClick(row.fixedExpenseId) } else base },
-                        horizontalArrangement = Arrangement.SpaceBetween,
+                            .padding(vertical = 4.dp),
                         verticalAlignment = Alignment.CenterVertically
                     ) {
-                        Column {
+                        Column(modifier = Modifier.weight(1f)) {
                             Row(verticalAlignment = Alignment.CenterVertically) {
-                                Text(row.name, style = MaterialTheme.typography.bodyLarge)
+                                Text(
+                                    row.name,
+                                    style = MaterialTheme.typography.bodyLarge,
+                                    maxLines = 1,
+                                    overflow = TextOverflow.Ellipsis,
+                                    modifier = Modifier.weight(1f, fill = false)
+                                )
                                 Text(
                                     if (row.frequency == FixedExpenseFrequency.QUINCENAL) "Quincenal" else "Mensual",
                                     style = MaterialTheme.typography.labelSmall,
@@ -109,11 +123,22 @@ fun FixedExpensesSection(
                             )
                         }
                         if (row.isFullyPaid) {
-                            Text("Pagado ✓", color = PositiveGreen, fontWeight = FontWeight.SemiBold)
+                            Row(verticalAlignment = Alignment.CenterVertically) {
+                                Icon(
+                                    Icons.Default.CheckCircle,
+                                    contentDescription = null,
+                                    tint = MaterialTheme.financeColors.positive,
+                                    modifier = Modifier.size(18.dp)
+                                )
+                                Spacer(Modifier.width(4.dp))
+                                Text("Pagado", color = MaterialTheme.financeColors.positive, fontWeight = FontWeight.SemiBold)
+                            }
                         } else {
+                            TextButton(onClick = { onPayClick(row.fixedExpenseId) }) { Text("Pagar") }
                             Switch(
                                 checked = row.active,
-                                onCheckedChange = { viewModel.onActiveChange(row.fixedExpenseId, row.periodKey, it) }
+                                onCheckedChange = { viewModel.onActiveChange(row.fixedExpenseId, row.periodKey, it) },
+                                modifier = Modifier.semantics { contentDescription = "Cuenta en este período: ${row.name}" }
                             )
                         }
                     }

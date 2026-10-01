@@ -75,7 +75,6 @@ import com.takat.finanzas.ui.components.AccountColorDot
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.components.FixedExpensePicker
-import com.takat.finanzas.ui.theme.AmberAccent
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
@@ -83,6 +82,7 @@ import com.takat.finanzas.util.parseAmountToCents
 import com.takat.finanzas.util.toDisplayDate
 import kotlinx.coroutines.launch
 import java.io.File
+import com.takat.finanzas.ui.theme.financeColors
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -304,7 +304,7 @@ fun AddTransactionScreen(
                     Text(
                         overBalanceWarning,
                         style = MaterialTheme.typography.bodySmall,
-                        color = AmberAccent,
+                        color = MaterialTheme.financeColors.warning,
                         modifier = Modifier.padding(top = 4.dp, start = 4.dp)
                     )
                 }

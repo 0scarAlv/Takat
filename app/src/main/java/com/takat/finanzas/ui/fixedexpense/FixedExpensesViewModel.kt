@@ -16,8 +16,13 @@ data class FixedExpenseListRow(
     val entity: FixedExpenseEntity,
     val accountName: String,
     /** Sum of every payment ever made toward this rule, across all periods — only relevant when it's a debt. */
-    val totalPaidCents: Long
+    val totalPaidCents: Long,
+    /** Name of [FixedExpenseEntity.creditAccountId]'s account, for "compra a crédito" plans. */
+    val creditAccountName: String? = null
 ) {
+    /** Principal still owed on the credit account (null when this isn't a credit purchase). */
+    val financedRemainingCents: Long? get() = if (entity.isCreditPurchase) entity.financedRemainingCents(totalPaidCents) else null
+
     val frequencyLabel: String
         get() = when (entity.frequency) {
             FixedExpenseFrequency.MENSUAL -> "Mensual · día ${entity.dayOfMonth}"
@@ -40,7 +45,14 @@ class FixedExpensesViewModel(private val repository: FinanceRepository) : ViewMo
             val accountNameById = accounts.associate { it.account.id to it.account.name }
             val totalPaidByRule = history.groupBy { it.fixedExpense.id }.mapValues { (_, records) -> records.sumOf { it.paidCents } }
             FixedExpensesUiState(
-                rows = rules.map { FixedExpenseListRow(it, accountNameById[it.accountId] ?: "?", totalPaidByRule[it.id] ?: 0) },
+                rows = rules.map {
+                    FixedExpenseListRow(
+                        it,
+                        accountNameById[it.accountId] ?: "?",
+                        totalPaidByRule[it.id] ?: 0,
+                        it.creditAccountId?.let { id -> accountNameById[id] ?: "?" }
+                    )
+                },
                 history = history
             )
         }.stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), FixedExpensesUiState())

@@ -47,6 +47,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.data.entity.FixedExpenseFrequency
 import com.takat.finanzas.ui.components.AddCategoryDialog
@@ -54,6 +55,7 @@ import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
+import com.takat.finanzas.util.parseAmountToCents
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -67,14 +69,12 @@ fun FixedExpenseFormScreen(
         factory = LambdaViewModelFactory { FixedExpenseFormViewModel(repository, fixedExpenseId) }
     )
     val uiState by viewModel.uiState.collectAsState()
-    var accountMenuExpanded by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
     val context = LocalContext.current
     val notificationPermissionLauncher = rememberLauncherForActivityResult(ActivityResultContracts.RequestPermission()) {}
 
     LaunchedEffect(uiState.saved) { if (uiState.saved) onDone() }
 
-    val selectedAccount = uiState.accounts.find { it.id == uiState.accountId }
     val filteredCategories = uiState.categories.filter { it.kind == CategoryKind.EXPENSE || it.kind == CategoryKind.BOTH }
 
     Scaffold(
@@ -106,12 +106,100 @@ fun FixedExpenseFormScreen(
                 singleLine = true
             )
 
-            Row(modifier = Modifier.fillMaxWidth()) {
-                Text("Es un pago de deuda", modifier = Modifier.weight(1f))
-                Switch(checked = uiState.isDebt, onCheckedChange = viewModel::onIsDebtChange)
+            Column {
+                Text("Tipo", style = MaterialTheme.typography.labelMedium)
+                SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
+                    val kinds = listOf(
+                        FixedExpenseKind.NORMAL to "Normal",
+                        FixedExpenseKind.DEUDA to "Cuotas",
+                        FixedExpenseKind.CREDITO to "Crédito"
+                    )
+                    kinds.forEachIndexed { index, (kind, label) ->
+                        SegmentedButton(
+                            selected = uiState.kind == kind,
+                            onClick = { viewModel.onKindChange(kind) },
+                            shape = SegmentedButtonDefaults.itemShape(index, kinds.size)
+                        ) { Text(label) }
+                    }
+                }
             }
 
-            if (uiState.isDebt) {
+            if (uiState.kind == FixedExpenseKind.CREDITO) {
+                Text(
+                    "El monto de la compra se suma a la deuda de la cuenta de crédito, pero no a tus gastos: " +
+                        "cada cuota se registra como gasto del mes en su categoría cuando la pagás.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
+                AccountDropdown(
+                    label = "Cuenta de la deuda",
+                    supportingText = "La tarjeta o cuenta de crédito donde queda registrado todo lo que debés de esta compra.",
+                    accounts = uiState.accounts.sortedByDescending { it.isDebt },
+                    selectedId = uiState.creditAccountId,
+                    onSelect = viewModel::onCreditAccountChange
+                )
+                OutlinedTextField(
+                    value = uiState.principalText,
+                    onValueChange = viewModel::onPrincipalChange,
+                    label = { Text("Monto de la compra") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.installmentsText,
+                    onValueChange = viewModel::onInstallmentsChange,
+                    label = { Text("Número de cuotas") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.interestRateText,
+                    onValueChange = viewModel::onInterestRateChange,
+                    label = { Text("Tasa de interés anual % (vacío = 0)") },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                OutlinedTextField(
+                    value = uiState.cuotaText,
+                    onValueChange = viewModel::onCuotaChange,
+                    label = { Text("Cuota por período") },
+                    supportingText = {
+                        Text(
+                            uiState.suggestedCuotaCents?.let { "Sugerida: ${it.centsToDisplay()}. Si tu banco cobra otra (seguro, IVA, comisiones), poné la del estado de cuenta." }
+                                ?: "Se calcula sola con el monto, las cuotas y la tasa."
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth(),
+                    singleLine = true
+                )
+                val principal = uiState.principalText.parseAmountToCents()
+                uiState.creditTotalToPayCents?.let { total ->
+                    val interest = principal?.let { (total - it).coerceAtLeast(0) }
+                    Text(
+                        "Total a pagar: ${total.centsToDisplay()}" +
+                            (interest?.let { " · Intereses: ${it.centsToDisplay()}" } ?: ""),
+                        style = MaterialTheme.typography.bodyMedium
+                    )
+                }
+                AccountDropdown(
+                    label = "Cuenta de pago",
+                    supportingText = "De esta cuenta sale el dinero de cada cuota. Si la cuota te llega en el estado " +
+                        "de cuenta de la tarjeta, dejá la misma tarjeta; si la pagás directo (efectivo, débito), elegí esa cuenta.",
+                    accounts = uiState.accounts,
+                    selectedId = uiState.accountId,
+                    onSelect = viewModel::onAccountChange
+                )
+            } else if (uiState.isDebt) {
+                Text(
+                    "Para algo sencillo: una deuda o préstamo que pagás en partes iguales, sin tasa de interés ni " +
+                        "tarjeta. Solo lleva la cuenta de cuánto te falta pagar.",
+                    style = MaterialTheme.typography.bodySmall,
+                    color = MaterialTheme.colorScheme.onSurfaceVariant
+                )
                 OutlinedTextField(
                     value = uiState.totalDebtText,
                     onValueChange = viewModel::onTotalDebtChange,
@@ -147,34 +235,13 @@ fun FixedExpenseFormScreen(
                 )
             }
 
-            ExposedDropdownMenuBox(
-                expanded = accountMenuExpanded,
-                onExpandedChange = { accountMenuExpanded = it }
-            ) {
-                OutlinedTextField(
-                    value = selectedAccount?.name ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Cuenta") },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountMenuExpanded) },
-                    modifier = Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                        .fillMaxWidth()
+            if (uiState.kind != FixedExpenseKind.CREDITO) {
+                AccountDropdown(
+                    label = "Cuenta",
+                    accounts = uiState.accounts,
+                    selectedId = uiState.accountId,
+                    onSelect = viewModel::onAccountChange
                 )
-                ExposedDropdownMenu(
-                    expanded = accountMenuExpanded,
-                    onDismissRequest = { accountMenuExpanded = false }
-                ) {
-                    uiState.accounts.forEach { account ->
-                        DropdownMenuItem(
-                            text = { Text(account.name) },
-                            onClick = {
-                                viewModel.onAccountChange(account.id)
-                                accountMenuExpanded = false
-                            }
-                        )
-                    }
-                }
             }
 
             Column {
@@ -278,5 +345,41 @@ fun FixedExpenseFormScreen(
                 showAddCategory = false
             }
         )
+    }
+}
+
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+private fun AccountDropdown(
+    label: String,
+    accounts: List<AccountEntity>,
+    supportingText: String? = null,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit
+) {
+    var expanded by remember { mutableStateOf(false) }
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+        OutlinedTextField(
+            value = accounts.find { it.id == selectedId }?.name ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text(label) },
+            supportingText = supportingText?.let { { Text(it) } },
+            trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+            modifier = Modifier
+                .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                .fillMaxWidth()
+        )
+        ExposedDropdownMenu(expanded = expanded, onDismissRequest = { expanded = false }) {
+            accounts.forEach { account ->
+                DropdownMenuItem(
+                    text = { Text(account.name) },
+                    onClick = {
+                        onSelect(account.id)
+                        expanded = false
+                    }
+                )
+            }
+        }
     }
 }

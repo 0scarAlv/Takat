@@ -2,7 +2,6 @@ package com.takat.finanzas.ui.account
 
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
-import androidx.compose.foundation.clickable
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -15,6 +14,8 @@ import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.selectable
+import androidx.compose.foundation.selection.selectableGroup
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.text.KeyboardOptions
 import androidx.compose.foundation.verticalScroll
@@ -47,9 +48,13 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
 import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.semantics.contentDescription
+import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
+import com.takat.finanzas.ui.theme.AccountSwatchNames
 import com.takat.finanzas.ui.theme.AccountSwatches
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
@@ -157,20 +162,35 @@ fun AddEditAccountScreen(
             Column {
                 Text("Color", style = MaterialTheme.typography.labelLarge)
                 Spacer(Modifier.height(8.dp))
-                Row(horizontalArrangement = Arrangement.spacedBy(12.dp)) {
-                    AccountSwatches.forEach { swatch ->
+                // Each swatch gets an equal share of the row (no overflow on narrow phones) and a 48dp-tall
+                // touch area around its 36dp circle; announced to TalkBack as a named, selectable option.
+                Row(modifier = Modifier.fillMaxWidth().selectableGroup()) {
+                    AccountSwatches.forEachIndexed { index, swatch ->
+                        val selected = swatch == uiState.colorArgb
                         Box(
+                            contentAlignment = Alignment.Center,
                             modifier = Modifier
-                                .size(36.dp)
-                                .clip(CircleShape)
-                                .background(Color(swatch))
-                                .border(
-                                    width = if (swatch == uiState.colorArgb) 3.dp else 0.dp,
-                                    color = MaterialTheme.colorScheme.onSurface,
-                                    shape = CircleShape
+                                .weight(1f)
+                                .height(48.dp)
+                                .selectable(
+                                    selected = selected,
+                                    role = Role.RadioButton,
+                                    onClick = { viewModel.onColorChange(swatch) }
                                 )
-                                .clickable { viewModel.onColorChange(swatch) }
-                        )
+                                .semantics { contentDescription = AccountSwatchNames.getOrElse(index) { "Color" } }
+                        ) {
+                            Box(
+                                modifier = Modifier
+                                    .size(36.dp)
+                                    .clip(CircleShape)
+                                    .background(Color(swatch))
+                                    .border(
+                                        width = if (selected) 3.dp else 0.dp,
+                                        color = MaterialTheme.colorScheme.onSurface,
+                                        shape = CircleShape
+                                    )
+                            )
+                        }
                     }
                 }
             }

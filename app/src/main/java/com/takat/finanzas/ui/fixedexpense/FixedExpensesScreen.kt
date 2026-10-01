@@ -47,6 +47,7 @@ import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
+import com.takat.finanzas.ui.theme.cardBorder
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -102,7 +103,8 @@ fun FixedExpensesScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = cardBorder
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -117,6 +119,16 @@ fun FixedExpensesScreen(
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant
                                         )
+                                        row.financedRemainingCents?.let { financed ->
+                                            val rate = row.entity.interestRateBps?.let { bps -> " · tasa ${if (bps % 100 == 0) bps / 100 else bps / 100.0}%" }.orEmpty()
+                                            Text(
+                                                "A crédito en ${row.creditAccountName}: compra de " +
+                                                    "${row.entity.financedPrincipalCents?.centsToDisplay()} · " +
+                                                    "capital pendiente ${financed.centsToDisplay()}$rate",
+                                                style = MaterialTheme.typography.bodySmall,
+                                                color = MaterialTheme.colorScheme.onSurfaceVariant
+                                            )
+                                        }
                                         row.entity.totalDebtCents?.let { total ->
                                             Text(
                                                 if (row.isDebtSettled) {
@@ -158,7 +170,8 @@ fun FixedExpensesScreen(
                             Card(
                                 modifier = Modifier.fillMaxWidth(),
                                 shape = RoundedCornerShape(16.dp),
-                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface)
+                                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
+                                border = cardBorder
                             ) {
                                 Row(
                                     modifier = Modifier
@@ -190,7 +203,16 @@ fun FixedExpensesScreen(
         AlertDialog(
             onDismissRequest = { pendingDelete = null },
             title = { Text("¿Eliminar \"${entity.name}\"?") },
-            text = { Text("Se elimina el gasto fijo y su historial de períodos (no borra las transacciones ya pagadas).") },
+            text = {
+                Text(
+                    if (entity.isCreditPurchase) {
+                        "Se elimina la compra a crédito: el capital que falta pagar deja de contar como deuda en la " +
+                            "cuenta de crédito. Las cuotas ya pagadas no se borran."
+                    } else {
+                        "Se elimina el gasto fijo y su historial de períodos (no borra las transacciones ya pagadas)."
+                    }
+                )
+            },
             confirmButton = {
                 TextButton(onClick = {
                     viewModel.delete(entity)

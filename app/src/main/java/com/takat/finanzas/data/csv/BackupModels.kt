@@ -24,7 +24,10 @@ data class TransactionRow(
     val amountCents: Long,
     val note: String?,
     /** Filenames (inside the backup zip's adjuntos/ folder) of receipts attached to this transaction. */
-    val attachmentEntries: List<String> = emptyList()
+    val attachmentEntries: List<String> = emptyList(),
+    /** Gasto fijo this transaction pays (by name), if any. Always null in backups older than 2.5.0. */
+    val fixedExpenseName: String? = null,
+    val fixedExpensePeriodKey: String? = null
 )
 
 data class TransferRow(
@@ -47,7 +50,10 @@ data class FixedExpenseRow(
     val notifyEnabled: Boolean,
     val enabled: Boolean,
     val totalDebtCents: Long?,
-    val installmentsCount: Int?
+    val installmentsCount: Int?,
+    val creditAccountName: String? = null,
+    val financedPrincipalCents: Long? = null,
+    val interestRateBps: Int? = null
 )
 
 /** References its [FixedExpenseRow] by name, the same way [TransactionRow] references accounts/categories. */
@@ -56,6 +62,18 @@ data class FixedExpensePeriodStateRow(
     val periodKey: String,
     val active: Boolean
 )
+
+/** How a restore treats data that's already in the app. */
+enum class ImportMode {
+    /** Only adds what isn't there yet (matched by name, or by account/date/amount/category/note for movements). */
+    ONLY_MISSING,
+
+    /** Deletes everything first and restores the backup as-is. */
+    REPLACE_ALL,
+
+    /** Adds every movement again even if it already exists (accounts/categories are still reused by name). */
+    DUPLICATE
+}
 
 data class ParsedBackup(
     val accounts: List<AccountRow>,

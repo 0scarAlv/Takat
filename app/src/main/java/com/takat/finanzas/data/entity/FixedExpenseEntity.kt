@@ -51,5 +51,33 @@ data class FixedExpenseEntity(
      */
     val totalDebtCents: Long? = null,
     /** Installments the debt was originally planned over. Informational only (used to prefill the edit form); not enforced. */
-    val installmentsCount: Int? = null
-)
+    val installmentsCount: Int? = null,
+    /**
+     * Non-null (together with [financedPrincipalCents]) marks this rule as a "compra a crédito": the purchase
+     * principal is owed on this account (typically a credit card) and shows up in its balance, but it's never
+     * a transaction — it's derived, and released proportionally as cuotas are paid. See [financedRemainingCents].
+     * [totalDebtCents] holds the total to repay (cuota × installments, interest included) and [amountCents]
+     * the cuota, so the regular debt-plan machinery handles pending/settled state unchanged.
+     */
+    val creditAccountId: Long? = null,
+    /** Price of what was bought on credit, without interest. */
+    val financedPrincipalCents: Long? = null,
+    /** Annual interest rate in basis points (2500 = 25%). Informational: the cuota is stored as entered, never re-amortized. */
+    val interestRateBps: Int? = null
+) {
+    val isCreditPurchase: Boolean get() = creditAccountId != null && financedPrincipalCents != null
+
+    /**
+     * Principal still owed on [creditAccountId] after [totalPaidCents] of cuotas, released in proportion to
+     * the total to repay (so the interest share of each cuota never reduces the principal). Zero for rules
+     * that aren't credit purchases.
+     */
+    fun financedRemainingCents(totalPaidCents: Long): Long {
+        val principal = financedPrincipalCents ?: return 0
+        if (creditAccountId == null) return 0
+        val totalToPay = totalDebtCents?.takeIf { it > 0 } ?: return principal
+        val paid = totalPaidCents.coerceIn(0, totalToPay)
+        val released = (principal.toBigInteger() * paid.toBigInteger() / totalToPay.toBigInteger()).toLong()
+        return (principal - released).coerceAtLeast(0)
+    }
+}

@@ -15,23 +15,8 @@ object FixedExpensePeriod {
     }
 
     /**
-     * The quincena a salary logged on [salaryDate] pays for: day <= 15 funds this month's second half
-     * (Q2), day > 15 funds next month's first half (Q1) — the half that was about to start, not the
-     * one that's ending. Used to let a salary income jump the current quincena forward as soon as it's
-     * logged, instead of waiting for the calendar to reach day 16/1.
-     */
-    private fun salaryTargetPeriodKey(salaryDate: LocalDate): String =
-        if (salaryDate.dayOfMonth <= 15) {
-            "%04d-%02d-Q2".format(salaryDate.year, salaryDate.monthValue)
-        } else {
-            val next = YearMonth.from(salaryDate).plusMonths(1)
-            "%04d-%02d-Q1".format(next.year, next.monthValue)
-        }
-
-    /**
      * The last day of the quincena a salary logged on [salaryDate] pays for — i.e. when the *next*
-     * salary is expected. Mirrors [salaryTargetPeriodKey] but as a date instead of a period key, for
-     * [com.takat.finanzas.util.nextPaymentDate].
+     * salary is expected. Used by [com.takat.finanzas.util.nextPaymentDate].
      */
     fun salaryAnchorBoundary(salaryDate: LocalDate): LocalDate =
         if (salaryDate.dayOfMonth <= 15) {
@@ -41,25 +26,32 @@ object FixedExpensePeriod {
         }
 
     /**
-     * MENSUAL -> "yyyy-MM". QUINCENAL -> "yyyy-MM-Q1" (days 1-15) or "yyyy-MM-Q2" (16-end of month).
-     *
-     * When [lastSalaryDate] already targets a later quincena than [today]'s calendar position (a salary
-     * was logged before the calendar caught up to day 16/1), that later quincena wins — period keys sort
-     * lexicographically in chronological order, so the later of the two is always the greater string.
+     * The date fixed-expense periods are resolved against: [today], or the first day of the quincena
+     * [lastSalaryDate] pays for when that quincena hasn't started on the calendar yet (a salary was logged
+     * before the calendar caught up to day 16/1). Salary logged on Sep 30 funds Oct-Q1, so periods resolve
+     * as if it were already Oct 1 — monthly bills roll over to October right away, same as quincenal ones.
+     * A stale anchor (its quincena already started) never moves the date backwards.
+     */
+    fun effectiveDate(today: LocalDate = LocalDate.now(), lastSalaryDate: LocalDate? = null): LocalDate {
+        val salaryHalfStart = lastSalaryDate?.let {
+            if (it.dayOfMonth <= 15) it.withDayOfMonth(16) else YearMonth.from(it).plusMonths(1).atDay(1)
+        }
+        return if (salaryHalfStart != null && salaryHalfStart > today) salaryHalfStart else today
+    }
+
+    /**
+     * MENSUAL -> "yyyy-MM". QUINCENAL -> "yyyy-MM-Q1" (days 1-15) or "yyyy-MM-Q2" (16-end of month),
+     * both resolved against [effectiveDate], so a salary logged ahead of the calendar moves either one forward.
      */
     fun currentPeriodKey(
         frequency: FixedExpenseFrequency,
         today: LocalDate = LocalDate.now(),
         lastSalaryDate: LocalDate? = null
     ): String {
-        val yearMonth = "%04d-%02d".format(today.year, today.monthValue)
+        val date = effectiveDate(today, lastSalaryDate)
         return when (frequency) {
-            FixedExpenseFrequency.MENSUAL -> yearMonth
-            FixedExpenseFrequency.QUINCENAL -> {
-                val calendarKey = quincenaKey(today)
-                val anchorKey = lastSalaryDate?.let { salaryTargetPeriodKey(it) }
-                if (anchorKey != null && anchorKey > calendarKey) anchorKey else calendarKey
-            }
+            FixedExpenseFrequency.MENSUAL -> "%04d-%02d".format(date.year, date.monthValue)
+            FixedExpenseFrequency.QUINCENAL -> quincenaKey(date)
         }
     }
 
@@ -92,13 +84,13 @@ object FixedExpensePeriod {
     }
 
     /**
-     * Whether [today] has reached the point where a fixed expense becomes relevant to the current
-     * quincena. QUINCENAL periods are always started (they're already split into Q1/Q2 by
-     * [currentPeriodKey]). MENSUAL rules with [quincenaOnly] disabled are always started too (some
-     * users think in whole months, not quincenas). Otherwise, MENSUAL rules due in the first half
-     * start on day 1; rules due in the second half only start on day 16, so a bill due on day 20
-     * doesn't count as pending during a quincena the user can't act on yet — unless [lastSalaryDate]
-     * shows a salary already logged for that half, in which case it starts right away.
+     * Whether the current period of a fixed expense has become relevant yet, evaluated at [effectiveDate].
+     * QUINCENAL periods are always started (they're already split into Q1/Q2 by [currentPeriodKey]).
+     * MENSUAL rules with [quincenaOnly] disabled are always started too (some users think in whole months,
+     * not quincenas). Otherwise, MENSUAL rules due in the first half start on day 1; rules due in the second
+     * half only start on day 16, so a bill due on day 20 doesn't count as pending during a quincena the user
+     * can't act on yet. A salary logged ahead of the calendar counts as having reached its quincena: one on
+     * day 14 starts a day-20 bill, while one on day 30 starts next month's day-6 bill but not its day-20 one.
      */
     fun hasPeriodStarted(
         frequency: FixedExpenseFrequency,
@@ -111,15 +103,10 @@ object FixedExpensePeriod {
             frequency == FixedExpenseFrequency.QUINCENAL -> true
             !quincenaOnly -> true
             else -> {
-                val clamped = dayOfMonth.coerceIn(1, YearMonth.from(today).lengthOfMonth())
+                val date = effectiveDate(today, lastSalaryDate)
+                val clamped = dayOfMonth.coerceIn(1, YearMonth.from(date).lengthOfMonth())
                 val startDay = if (clamped <= 15) 1 else 16
-                if (today.dayOfMonth >= startDay) {
-                    true
-                } else {
-                    val thisHalfKey = quincenaKey(YearMonth.from(today).atDay(startDay))
-                    val anchorKey = lastSalaryDate?.let { salaryTargetPeriodKey(it) }
-                    anchorKey != null && anchorKey >= thisHalfKey
-                }
+                date.dayOfMonth >= startDay
             }
         }
 }

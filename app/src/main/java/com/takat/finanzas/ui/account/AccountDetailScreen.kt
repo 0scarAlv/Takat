@@ -39,11 +39,11 @@ import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.key
 import com.takat.finanzas.ui.components.MovementDetailDialog
 import com.takat.finanzas.ui.components.MovementRow
-import com.takat.finanzas.ui.theme.NegativeRed
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import kotlinx.coroutines.launch
+import com.takat.finanzas.ui.theme.financeColors
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -96,8 +96,16 @@ fun AccountDetailScreen(
                     (accountWithBalance?.balanceCents ?: 0).centsToDisplay(),
                     style = MaterialTheme.typography.headlineMedium,
                     fontWeight = FontWeight.Bold,
-                    color = if ((accountWithBalance?.balanceCents ?: 0) < 0) NegativeRed else MaterialTheme.colorScheme.onSurface
+                    color = if ((accountWithBalance?.balanceCents ?: 0) < 0) MaterialTheme.financeColors.negative else MaterialTheme.colorScheme.onSurface
                 )
+                val financed = accountWithBalance?.financedCents ?: 0
+                if (financed > 0) {
+                    Text(
+                        "Aparte: ${financed.centsToDisplay()} de deuda de crédito (compras que pagás en cuotas)",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
             }
 
             if (uiState.movements.isEmpty()) {

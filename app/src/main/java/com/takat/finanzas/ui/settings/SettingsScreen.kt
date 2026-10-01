@@ -12,6 +12,11 @@ import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.documentfile.provider.DocumentFile
 import androidx.compose.foundation.clickable
+import com.takat.finanzas.data.csv.ImportMode
+import androidx.compose.ui.semantics.Role
+import androidx.compose.ui.graphics.Color
+import androidx.compose.material3.RadioButton
+import androidx.compose.foundation.selection.selectable
 import androidx.compose.foundation.interaction.MutableInteractionSource
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
@@ -178,6 +183,26 @@ fun SettingsScreen(
                 Switch(
                     checked = uiState.sarcasticMessagesEnabled,
                     onCheckedChange = viewModel::onSarcasticMessagesChange
+                )
+            }
+
+            Spacer(Modifier.height(32.dp))
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Column(modifier = Modifier.weight(1f)) {
+                    Text("Restar compras a crédito del disponible", style = MaterialTheme.typography.titleMedium)
+                    Text(
+                        "Apagado: lo que debés en cuotas se muestra aparte y solo la cuota de cada período baja tu " +
+                            "disponible. Encendido: se resta todo lo que falta pagar.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
+                Switch(
+                    checked = uiState.includeFinancedInAvailable,
+                    onCheckedChange = viewModel::onIncludeFinancedInAvailableChange
                 )
             }
 
@@ -478,22 +503,60 @@ fun SettingsScreen(
     }
 
     uiState.pendingImport?.let { parsed ->
+        var mode by remember { mutableStateOf(ImportMode.ONLY_MISSING) }
         AlertDialog(
             onDismissRequest = viewModel::dismissPreview,
-            title = { Text("¿Importar estos datos?") },
+            title = { Text("Restaurar copia de seguridad") },
             text = {
                 val attachmentCount = parsed.transactions.sumOf { it.attachmentEntries.size }
-                Text(
-                    "Se van a agregar ${parsed.accounts.size} cuentas, ${parsed.categories.size} categorías, " +
-                        "${parsed.transactions.size} movimientos y ${parsed.transfers.size} transferencias" +
-                        (if (attachmentCount > 0) " (con $attachmentCount comprobantes adjuntos)" else "") + ".\n\n" +
-                        "Las cuentas y categorías que ya existan con el mismo nombre se reutilizan, pero los " +
-                        "movimientos siempre se agregan como nuevos — si ya importaste este archivo antes, se " +
-                        "van a duplicar."
-                )
+                Column(
+                    modifier = Modifier.verticalScroll(rememberScrollState()),
+                    verticalArrangement = Arrangement.spacedBy(8.dp)
+                ) {
+                    Text(
+                        "El archivo tiene ${parsed.accounts.size} cuentas, ${parsed.categories.size} categorías, " +
+                            "${parsed.transactions.size} movimientos, ${parsed.transfers.size} transferencias y " +
+                            "${parsed.fixedExpenses.size} gastos fijos" +
+                            (if (attachmentCount > 0) " (con $attachmentCount comprobantes)" else "") + "."
+                    )
+                    Text("¿Qué hago con lo que ya tenés en la app?", style = MaterialTheme.typography.labelLarge)
+                    ImportModeOption(
+                        selected = mode == ImportMode.ONLY_MISSING,
+                        title = "Solo agregar lo que falta (recomendado)",
+                        description = "Cuentas, categorías y gastos fijos se reutilizan por nombre, y los movimientos " +
+                            "idénticos (misma cuenta, fecha, monto, categoría y nota) no se vuelven a agregar.",
+                        onClick = { mode = ImportMode.ONLY_MISSING }
+                    )
+                    ImportModeOption(
+                        selected = mode == ImportMode.REPLACE_ALL,
+                        title = "Reemplazar todo (en limpio)",
+                        description = "Borra todas tus cuentas, categorías, movimientos, transferencias y gastos fijos, " +
+                            "y deja solo lo que trae la copia. Si algo falla a mitad de camino, no se borra nada.",
+                        onClick = { mode = ImportMode.REPLACE_ALL }
+                    )
+                    ImportModeOption(
+                        selected = mode == ImportMode.DUPLICATE,
+                        title = "Agregar todo aunque se duplique",
+                        description = "Cuentas y categorías se reutilizan por nombre, pero todos los movimientos se " +
+                            "agregan como nuevos aunque ya existan.",
+                        onClick = { mode = ImportMode.DUPLICATE }
+                    )
+                    if (mode == ImportMode.REPLACE_ALL) {
+                        Text(
+                            "Ojo: lo que no esté en este archivo se pierde. Si no estás seguro, exportá una copia antes.",
+                            color = MaterialTheme.colorScheme.error,
+                            style = MaterialTheme.typography.bodySmall
+                        )
+                    }
+                }
             },
             confirmButton = {
-                TextButton(onClick = viewModel::confirmImport) { Text("Importar") }
+                TextButton(onClick = { viewModel.confirmImport(mode) }) {
+                    Text(
+                        if (mode == ImportMode.REPLACE_ALL) "Borrar y restaurar" else "Restaurar",
+                        color = if (mode == ImportMode.REPLACE_ALL) MaterialTheme.colorScheme.error else Color.Unspecified
+                    )
+                }
             },
             dismissButton = {
                 TextButton(onClick = viewModel::dismissPreview) { Text("Cancelar") }
@@ -510,6 +573,7 @@ fun SettingsScreen(
                     "Se agregaron ${result.accountsAdded} cuentas, ${result.categoriesAdded} categorías, " +
                         "${result.transactionsAdded} movimientos, ${result.transfersAdded} transferencias, " +
                         "${result.fixedExpensesAdded} pagos programados y ${result.attachmentsAdded} comprobantes." +
+                        (if (result.duplicatesSkipped > 0) "\n\n${result.duplicatesSkipped} movimientos ya estaban y no se duplicaron." else "") +
                         if (result.skipped > 0) {
                             "\n\n${result.skipped} filas se saltearon por referenciar una cuenta que no se pudo resolver."
                         } else {
@@ -519,5 +583,21 @@ fun SettingsScreen(
             },
             confirmButton = { TextButton(onClick = viewModel::dismissResult) { Text("Cerrar") } }
         )
+    }
+}
+
+@Composable
+private fun ImportModeOption(selected: Boolean, title: String, description: String, onClick: () -> Unit) {
+    Row(
+        modifier = Modifier
+            .fillMaxWidth()
+            .selectable(selected = selected, onClick = onClick, role = Role.RadioButton),
+        verticalAlignment = Alignment.Top
+    ) {
+        RadioButton(selected = selected, onClick = null, modifier = Modifier.padding(top = 2.dp, end = 8.dp))
+        Column {
+            Text(title, style = MaterialTheme.typography.bodyMedium)
+            Text(description, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
+        }
     }
 }
