@@ -199,6 +199,11 @@ object Changelog {
             "Gastos fijos muestra de un vistazo cuántos quedan pendientes y cuánto suman, con una barra de progreso en los pagos parciales.",
             "Ajustes reorganizado: todo en grupos cortos, y el respaldo, el acceso desde PC y la depuración tienen su propia pantalla.",
             "¿Preferís cómo se veía antes? En Ajustes > Apariencia > Diseño podés volver al diseño clásico cuando quieras."
+        )),
+        ChangelogEntry(44, "3.0.1", listOf(
+            "Los textos de los botones ya no se parten en dos líneas ni se cortan en pantallas angostas o con letra grande: se achican para caber.",
+            "Los botones Foto, Galería y Archivo al adjuntar comprobantes ahora entran bien los tres en una fila.",
+            "En Estadísticas, Gasto por día se ordenó mejor: el selector Mes / Semana va arriba, y la fecha y el monto debajo sin partirse; los números de los días ya no se cortan."
         ))
     )
 

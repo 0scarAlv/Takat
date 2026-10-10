@@ -19,6 +19,7 @@ import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
+import androidx.compose.foundation.layout.wrapContentWidth
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.material.icons.Icons
@@ -73,6 +74,7 @@ import java.time.YearMonth
 import kotlin.math.atan2
 import kotlin.math.hypot
 import com.takat.finanzas.ui.theme.cardBorder
+import com.takat.finanzas.ui.components.FitLabel
 
 @Composable
 fun StatsScreen(
@@ -378,39 +380,48 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: 
         border = cardBorder
     ) {
         Column(modifier = Modifier.padding(16.dp)) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+                SegmentedButton(
+                    selected = range == DayChartRange.MONTH,
+                    onClick = { range = DayChartRange.MONTH },
+                    shape = SegmentedButtonDefaults.itemShape(0, 2),
+                    icon = {}
+                ) { FitLabel("Mes") }
+                SegmentedButton(
+                    selected = range == DayChartRange.WEEK,
+                    onClick = { range = DayChartRange.WEEK; weekIndex = defaultWeekIndex },
+                    shape = SegmentedButtonDefaults.itemShape(1, 2),
+                    icon = {}
+                ) { FitLabel("Semana") }
+            }
+
+            Spacer(Modifier.height(12.dp))
+
+            // Label + date on the left, amount on the right, so neither has to wrap.
             Row(
                 modifier = Modifier.fillMaxWidth(),
                 horizontalArrangement = Arrangement.SpaceBetween,
-                verticalAlignment = Alignment.CenterVertically
+                verticalAlignment = Alignment.Bottom
             ) {
-                Column {
+                Column(modifier = Modifier.weight(1f).padding(end = 8.dp)) {
                     Text(
                         if (selectedIndex == peakIndex) "Día con más gasto" else "Ese día gastaste",
                         style = MaterialTheme.typography.labelLarge,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
                     Text(
-                        if (selected != null && selected.totalCents > 0) {
-                            "${selected.date.toDisplayDate()} · ${selected.totalCents.centsToDisplay()}"
-                        } else {
-                            "Sin gastos ese día"
-                        },
+                        selected?.date?.toDisplayDate() ?: "",
                         style = MaterialTheme.typography.titleMedium,
-                        fontWeight = FontWeight.Bold
+                        fontWeight = FontWeight.Bold,
+                        maxLines = 1
                     )
                 }
-                SingleChoiceSegmentedButtonRow {
-                    SegmentedButton(
-                        selected = range == DayChartRange.MONTH,
-                        onClick = { range = DayChartRange.MONTH },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2)
-                    ) { Text("Mes") }
-                    SegmentedButton(
-                        selected = range == DayChartRange.WEEK,
-                        onClick = { range = DayChartRange.WEEK; weekIndex = defaultWeekIndex },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2)
-                    ) { Text("Semana") }
-                }
+                Text(
+                    if (selected != null && selected.totalCents > 0) selected.totalCents.centsToDisplay() else "Sin gastos",
+                    style = MaterialTheme.typography.titleLarge,
+                    fontWeight = FontWeight.Bold,
+                    maxLines = 1
+                )
             }
 
             if (range == DayChartRange.WEEK && weeks.isNotEmpty()) {
@@ -490,6 +501,8 @@ private fun DailyExpenseBarChart(dailyExpenses: List<DailyExpense>, onDayClick: 
                                 style = MaterialTheme.typography.labelSmall,
                                 color = MaterialTheme.colorScheme.onSurfaceVariant,
                                 maxLines = 1,
+                                // Bar slots are narrower than a 2-digit day; let the label overflow instead of clipping.
+                                modifier = Modifier.wrapContentWidth(unbounded = true),
                                 softWrap = false
                             )
                         }

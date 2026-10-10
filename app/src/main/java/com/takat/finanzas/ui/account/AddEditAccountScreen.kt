@@ -58,6 +58,7 @@ import com.takat.finanzas.ui.theme.AccountSwatchNames
 import com.takat.finanzas.ui.theme.AccountSwatches
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
+import com.takat.finanzas.ui.components.FitLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -125,13 +126,15 @@ fun AddEditAccountScreen(
                     SegmentedButton(
                         selected = !uiState.isDebt,
                         onClick = { viewModel.onIsDebtChange(false) },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2)
-                    ) { Text("Tengo") }
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        icon = {}
+                    ) { FitLabel("Tengo") }
                     SegmentedButton(
                         selected = uiState.isDebt,
                         onClick = { viewModel.onIsDebtChange(true) },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2)
-                    ) { Text("Debo") }
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        icon = {}
+                    ) { FitLabel("Debo") }
                 }
             }
 

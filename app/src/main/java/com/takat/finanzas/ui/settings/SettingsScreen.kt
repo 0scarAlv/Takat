@@ -113,6 +113,7 @@ import kotlinx.coroutines.launch
 import java.text.DateFormat
 import java.time.LocalDate
 import java.util.Date
+import com.takat.finanzas.ui.components.FitLabel
 
 /**
  * Settings are a short main list of grouped one-line rows; the three heavy areas (backup, PC access,
@@ -786,8 +787,9 @@ private fun ChoiceRow(
                 SegmentedButton(
                     selected = index == selectedIndex,
                     onClick = { onSelect(index) },
-                    shape = SegmentedButtonDefaults.itemShape(index, options.size)
-                ) { Text(label) }
+                    shape = SegmentedButtonDefaults.itemShape(index, options.size),
+                    icon = {}
+                ) { FitLabel(label) }
             }
         }
     }

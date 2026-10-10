@@ -18,6 +18,11 @@ import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.imePadding
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.PaddingValues
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
+import androidx.compose.material3.ButtonDefaults
 import androidx.compose.foundation.relocation.BringIntoViewRequester
 import androidx.compose.foundation.relocation.bringIntoViewRequester
 import androidx.compose.foundation.rememberScrollState
@@ -83,6 +88,7 @@ import com.takat.finanzas.util.toDisplayDate
 import kotlinx.coroutines.launch
 import java.io.File
 import com.takat.finanzas.ui.theme.financeColors
+import com.takat.finanzas.ui.components.FitLabel
 
 @OptIn(ExperimentalMaterial3Api::class, ExperimentalLayoutApi::class)
 @Composable
@@ -220,13 +226,15 @@ fun AddTransactionScreen(
                 SegmentedButton(
                     selected = uiState.isExpense,
                     onClick = { viewModel.onTypeChange(true) },
-                    shape = SegmentedButtonDefaults.itemShape(0, 2)
-                ) { Text("Gasto") }
+                    shape = SegmentedButtonDefaults.itemShape(0, 2),
+                    icon = {}
+                ) { FitLabel("Gasto") }
                 SegmentedButton(
                     selected = !uiState.isExpense,
                     onClick = { viewModel.onTypeChange(false) },
-                    shape = SegmentedButtonDefaults.itemShape(1, 2)
-                ) { Text("Ingreso") }
+                    shape = SegmentedButtonDefaults.itemShape(1, 2),
+                    icon = {}
+                ) { FitLabel("Ingreso") }
             }
 
             if (!uiState.isEditing && uiState.pendingFixedExpenses.isNotEmpty()) {
@@ -353,30 +361,36 @@ fun AddTransactionScreen(
             )
 
             if (!uiState.isEditing) Column {
+                val attachButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
                 Text("Comprobante (opcional)", style = MaterialTheme.typography.labelLarge)
                 Row(
                     modifier = Modifier.padding(top = 8.dp),
                     horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    OutlinedButton(onClick = onTakePhotoClick, modifier = Modifier.weight(1f)) {
-                        Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Foto")
+                    OutlinedButton(onClick = onTakePhotoClick, modifier = Modifier.weight(1f), contentPadding = attachButtonPadding) {
+                        Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(6.dp))
+                        FitLabel("Foto")
                     }
                     OutlinedButton(
                         onClick = {
                             galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
                         },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = attachButtonPadding
                     ) {
-                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Galería")
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(6.dp))
+                        FitLabel("Galería")
                     }
                     OutlinedButton(
                         onClick = { fileLauncher.launch(arrayOf("application/pdf", "application/json")) },
-                        modifier = Modifier.weight(1f)
+                        modifier = Modifier.weight(1f),
+                        contentPadding = attachButtonPadding
                     ) {
-                        Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.padding(end = 4.dp))
-                        Text("Archivo")
+                        Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(6.dp))
+                        FitLabel("Archivo")
                     }
                 }
                 if (uiState.pendingAttachments.isNotEmpty()) {

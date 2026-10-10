@@ -39,6 +39,7 @@ import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.toDisplayDate
 import com.takat.finanzas.ui.theme.financeColors
 import com.takat.finanzas.ui.theme.cardBorder
+import com.takat.finanzas.ui.components.FitLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -173,13 +174,15 @@ fun DailyBudgetSection(
                         SegmentedButton(
                             selected = state.periodType == BudgetPeriodType.QUINCENA,
                             onClick = { onPeriodTypeChange(BudgetPeriodType.QUINCENA) },
-                            shape = SegmentedButtonDefaults.itemShape(0, 2)
-                        ) { Text("Quincena") }
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            icon = {}
+                        ) { FitLabel("Quincena") }
                         SegmentedButton(
                             selected = state.periodType == BudgetPeriodType.MES,
                             onClick = { onPeriodTypeChange(BudgetPeriodType.MES) },
-                            shape = SegmentedButtonDefaults.itemShape(1, 2)
-                        ) { Text("Mes") }
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            icon = {}
+                        ) { FitLabel("Mes") }
                     }
 
                     if (state.periodType == BudgetPeriodType.MES) {
@@ -206,13 +209,15 @@ fun DailyBudgetSection(
                         SegmentedButton(
                             selected = state.basis == BudgetBasis.DISPONIBLE,
                             onClick = { onBasisChange(BudgetBasis.DISPONIBLE) },
-                            shape = SegmentedButtonDefaults.itemShape(0, 2)
-                        ) { Text("Disponible") }
+                            shape = SegmentedButtonDefaults.itemShape(0, 2),
+                            icon = {}
+                        ) { FitLabel("Disponible") }
                         SegmentedButton(
                             selected = state.basis == BudgetBasis.CAPITAL,
                             onClick = { onBasisChange(BudgetBasis.CAPITAL) },
-                            shape = SegmentedButtonDefaults.itemShape(1, 2)
-                        ) { Text("Capital total") }
+                            shape = SegmentedButtonDefaults.itemShape(1, 2),
+                            icon = {}
+                        ) { FitLabel("Capital total") }
                     }
                 }
             }

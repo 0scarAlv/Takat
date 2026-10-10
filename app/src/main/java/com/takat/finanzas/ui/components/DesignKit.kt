@@ -24,6 +24,10 @@ import androidx.compose.ui.semantics.semantics
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import androidx.compose.material3.LocalContentColor
+import androidx.compose.material3.LocalTextStyle
+import androidx.compose.foundation.text.TextAutoSize
+import androidx.compose.ui.unit.TextUnit
+import androidx.compose.ui.unit.sp
 import com.takat.finanzas.ui.theme.cardBorder
 
 /**
@@ -52,6 +56,22 @@ fun SectionHeader(
         )
         action?.invoke()
     }
+}
+
+/**
+ * Single-line label for buttons and segmented buttons. On narrow screens or with a large system font it
+ * shrinks the text to fit instead of wrapping to a second line or getting clipped.
+ */
+@Composable
+fun FitLabel(text: String, modifier: Modifier = Modifier) {
+    val maxSize = LocalTextStyle.current.fontSize.takeIf { it != TextUnit.Unspecified } ?: 14.sp
+    Text(
+        text,
+        modifier = modifier,
+        maxLines = 1,
+        softWrap = false,
+        autoSize = TextAutoSize.StepBased(minFontSize = 9.sp, maxFontSize = maxSize, stepSize = 0.5.sp)
+    )
 }
 
 /** The app's standard card: flat surface, large rounded shape and a hairline border instead of a shadow. */

@@ -56,6 +56,7 @@ import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.util.centsToDisplay
 import com.takat.finanzas.util.parseAmountToCents
+import com.takat.finanzas.ui.components.FitLabel
 
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
@@ -118,8 +119,9 @@ fun FixedExpenseFormScreen(
                         SegmentedButton(
                             selected = uiState.kind == kind,
                             onClick = { viewModel.onKindChange(kind) },
-                            shape = SegmentedButtonDefaults.itemShape(index, kinds.size)
-                        ) { Text(label) }
+                            shape = SegmentedButtonDefaults.itemShape(index, kinds.size),
+                            icon = {}
+                        ) { FitLabel(label) }
                     }
                 }
             }
@@ -261,13 +263,15 @@ fun FixedExpenseFormScreen(
                     SegmentedButton(
                         selected = uiState.frequency == FixedExpenseFrequency.MENSUAL,
                         onClick = { viewModel.onFrequencyChange(FixedExpenseFrequency.MENSUAL) },
-                        shape = SegmentedButtonDefaults.itemShape(0, 2)
-                    ) { Text("Mensual") }
+                        shape = SegmentedButtonDefaults.itemShape(0, 2),
+                        icon = {}
+                    ) { FitLabel("Mensual") }
                     SegmentedButton(
                         selected = uiState.frequency == FixedExpenseFrequency.QUINCENAL,
                         onClick = { viewModel.onFrequencyChange(FixedExpenseFrequency.QUINCENAL) },
-                        shape = SegmentedButtonDefaults.itemShape(1, 2)
-                    ) { Text("Quincenal") }
+                        shape = SegmentedButtonDefaults.itemShape(1, 2),
+                        icon = {}
+                    ) { FitLabel("Quincenal") }
                 }
             }
 
