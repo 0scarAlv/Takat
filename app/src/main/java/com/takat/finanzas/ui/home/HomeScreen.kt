@@ -22,6 +22,7 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.lazy.items
+import androidx.activity.compose.BackHandler
 import androidx.compose.foundation.pager.HorizontalPager
 import androidx.compose.foundation.pager.rememberPagerState
 import androidx.compose.foundation.shape.CircleShape
@@ -133,6 +134,10 @@ fun HomeScreen(
     var showChangelog by remember { mutableStateOf(false) }
     var showUpdateDialog by remember { mutableStateOf(false) }
     val pagerState = rememberPagerState(initialPage = 1, pageCount = { 3 })
+    // System back from Presupuesto or Estadísticas returns to Inicio instead of leaving the app.
+    BackHandler(enabled = pagerState.currentPage != 1) {
+        scope.launch { pagerState.animateScrollToPage(1) }
+    }
 
     Scaffold(
         topBar = {

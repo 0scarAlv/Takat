@@ -20,8 +20,12 @@ import com.takat.finanzas.data.entity.FixedExpenseEntity
 import com.takat.finanzas.data.entity.FixedExpensePeriodStateEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
+import com.takat.finanzas.data.model.AccountSnapshot
 import com.takat.finanzas.data.model.AccountTotals
 import com.takat.finanzas.data.model.AccountWithBalance
+import com.takat.finanzas.data.model.BalancePoint
+import com.takat.finanzas.data.model.BalanceSnapshot
+import com.takat.finanzas.data.model.CategoryTotal
 import com.takat.finanzas.data.model.CategoryExpense
 import com.takat.finanzas.data.model.DailyExpense
 import com.takat.finanzas.data.model.FixedExpensePaymentRecord
@@ -29,6 +33,7 @@ import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ImportResult
 import com.takat.finanzas.data.model.IncomeExpenseSummary
 import com.takat.finanzas.data.model.MonthExpense
+import com.takat.finanzas.data.model.MonthFlow
 import com.takat.finanzas.data.model.Movement
 import com.takat.finanzas.data.model.PendingFixedExpense
 import com.takat.finanzas.data.model.ReminderStage
@@ -423,6 +428,138 @@ class FinanceRepository(
         val transferIn = transfers.filter { it.toAccountId == accountId }.sumOf { it.amountCents }
         val transferOut = transfers.filter { it.fromAccountId == accountId }.sumOf { it.amountCents }
         return initialBalanceCents + txSum + transferIn - transferOut
+    }
+
+    /**
+     * Replays the whole history up to and including one movement ("saldo a la fecha"), identified by
+     * [isTransfer] + [id]. Movements are ordered by date; ties on the exact same timestamp fall back to
+     * transactions before transfers, then insertion order. Returns null if the movement no longer exists.
+     */
+    suspend fun balanceSnapshotAt(isTransfer: Boolean, id: Long, zone: ZoneId = ZoneId.systemDefault()): BalanceSnapshot? {
+        val accounts = accountDao.getAll().first()
+        val categories = categoryDao.getAll().first()
+        val transactions = transactionDao.getAll().first()
+        val transfers = transferDao.getAll().first()
+        val accountById = accounts.associateBy { it.id }
+        val categoryById = categories.associateBy { it.id }
+
+        val movement: Movement
+        val cutoff: MovementOrder
+        val touchedIds: List<Long>
+        if (isTransfer) {
+            val transfer = transfers.find { it.id == id } ?: return null
+            movement = Movement.TransferMovement(
+                transfer, accountById[transfer.fromAccountId], accountById[transfer.toAccountId], categoryById[transfer.categoryId]
+            )
+            cutoff = MovementOrder(transfer.date, 1, transfer.id)
+            touchedIds = listOf(transfer.fromAccountId, transfer.toAccountId)
+        } else {
+            val tx = transactions.find { it.id == id } ?: return null
+            movement = Movement.TransactionMovement(tx, categoryById[tx.categoryId], accountById[tx.accountId])
+            cutoff = MovementOrder(tx.date, 0, tx.id)
+            touchedIds = listOf(tx.accountId)
+        }
+
+        val txUpTo = transactions.filter { MovementOrder(it.date, 0, it.id) <= cutoff }
+        val transfersUpTo = transfers.filter { MovementOrder(it.date, 1, it.id) <= cutoff }
+
+        // An account's initial balance counts from when it was created, or from its first movement if that was
+        // backdated to before its creation. Accounts that didn't exist yet at the cutoff don't count at all.
+        val firstMovementDate = mutableMapOf<Long, Long>()
+        fun noteMovement(accountId: Long, date: Long) {
+            firstMovementDate[accountId] = minOf(date, firstMovementDate[accountId] ?: Long.MAX_VALUE)
+        }
+        txUpTo.forEach { noteMovement(it.accountId, it.date) }
+        transfersUpTo.forEach { noteMovement(it.fromAccountId, it.date); noteMovement(it.toAccountId, it.date) }
+        val openedAt = accounts.associate { it.id to minOf(it.createdAt, firstMovementDate[it.id] ?: Long.MAX_VALUE) }
+        val existing = accounts.filter { openedAt.getValue(it.id) <= cutoff.date }
+        val included = existing.filter { it.includeInTotal }
+        val includedIds = included.map { it.id }.toSet()
+
+        // Replay everything in order, keeping each day's last value for the charts.
+        val events = (
+            existing.map { MovementOrder(openedAt.getValue(it.id), -1, it.id) to ReplayEvent.Open(it) } +
+                txUpTo.map { MovementOrder(it.date, 0, it.id) to ReplayEvent.Tx(it) } +
+                transfersUpTo.map { MovementOrder(it.date, 1, it.id) to ReplayEvent.Move(it) }
+            ).sortedBy { it.first }
+        val balances = mutableMapOf<Long, Long>()
+        val capitalByDay = sortedMapOf<LocalDate, Long>()
+        val accountByDay = touchedIds.associateWith { sortedMapOf<LocalDate, Long>() }
+        events.forEach { (order, event) ->
+            when (event) {
+                is ReplayEvent.Open -> balances[event.account.id] = event.account.initialBalanceCents
+                is ReplayEvent.Tx -> balances.merge(event.tx.accountId, event.tx.amountCents, Long::plus)
+                is ReplayEvent.Move -> {
+                    balances.merge(event.transfer.fromAccountId, -event.transfer.amountCents, Long::plus)
+                    balances.merge(event.transfer.toAccountId, event.transfer.amountCents, Long::plus)
+                }
+            }
+            val day = Instant.ofEpochMilli(order.date).atZone(zone).toLocalDate()
+            capitalByDay[day] = included.filter { !it.isDebt }.sumOf { balances[it.id] ?: 0 }
+            accountByDay.forEach { (accountId, series) -> balances[accountId]?.let { series[day] = it } }
+        }
+
+        fun accountSnapshot(account: AccountEntity): AccountSnapshot {
+            val after = balances[account.id] ?: account.initialBalanceCents
+            val effect = when (movement) {
+                is Movement.TransactionMovement -> movement.transaction.amountCents
+                is Movement.TransferMovement ->
+                    if (account.id == movement.transfer.toAccountId) movement.transfer.amountCents else -movement.transfer.amountCents
+            }
+            val ownTx = txUpTo.filter { it.accountId == account.id }
+            return AccountSnapshot(
+                account = account,
+                balanceBeforeCents = after - effect,
+                balanceAfterCents = after,
+                incomeCents = ownTx.filter { it.amountCents > 0 }.sumOf { it.amountCents },
+                expenseCents = ownTx.filter { it.amountCents < 0 }.sumOf { -it.amountCents },
+                transferInCents = transfersUpTo.filter { it.toAccountId == account.id }.sumOf { it.amountCents },
+                transferOutCents = transfersUpTo.filter { it.fromAccountId == account.id }.sumOf { it.amountCents },
+                series = accountByDay[account.id].orEmpty().map { (day, cents) -> BalancePoint(day, cents) }
+            )
+        }
+
+        val includedTx = txUpTo.filter { it.accountId in includedIds }
+        val transfersCounted = transfersUpTo.filter { it.fromAccountId in includedIds || it.toAccountId in includedIds }
+        val cutoffMonth = YearMonth.from(Instant.ofEpochMilli(cutoff.date).atZone(zone))
+        val txByMonth = includedTx.groupBy { YearMonth.from(Instant.ofEpochMilli(it.date).atZone(zone)) }
+
+        return BalanceSnapshot(
+            movement = movement,
+            accounts = touchedIds.mapNotNull { accountById[it] }.map(::accountSnapshot),
+            capitalCents = included.filter { !it.isDebt }.sumOf { balances[it.id] ?: 0 },
+            debtCents = -included.filter { it.isDebt }.sumOf { balances[it.id] ?: 0 },
+            incomeCents = includedTx.filter { it.amountCents > 0 }.sumOf { it.amountCents },
+            expenseCents = includedTx.filter { it.amountCents < 0 }.sumOf { -it.amountCents },
+            transferCount = transfersCounted.size,
+            transferCents = transfersCounted.sumOf { it.amountCents },
+            capitalSeries = capitalByDay.map { (day, cents) -> BalancePoint(day, cents) },
+            expensesByCategory = includedTx
+                .filter { it.amountCents < 0 }
+                .groupBy { it.categoryId }
+                .map { (categoryId, txs) -> CategoryTotal(categoryById[categoryId], txs.sumOf { -it.amountCents }) }
+                .sortedByDescending { it.cents },
+            monthlyFlows = (SNAPSHOT_MONTHS - 1 downTo 0).map { back ->
+                val month = cutoffMonth.minusMonths(back.toLong())
+                val monthTx = txByMonth[month].orEmpty()
+                MonthFlow(
+                    month,
+                    incomeCents = monthTx.filter { it.amountCents > 0 }.sumOf { it.amountCents },
+                    expenseCents = monthTx.filter { it.amountCents < 0 }.sumOf { -it.amountCents }
+                )
+            }
+        )
+    }
+
+    private sealed class ReplayEvent {
+        data class Open(val account: AccountEntity) : ReplayEvent()
+        data class Tx(val tx: TransactionEntity) : ReplayEvent()
+        data class Move(val transfer: TransferEntity) : ReplayEvent()
+    }
+
+    private data class MovementOrder(val date: Long, val kind: Int, val id: Long) : Comparable<MovementOrder> {
+        override fun compareTo(other: MovementOrder): Int =
+            compareValuesBy(this, other, MovementOrder::date, MovementOrder::kind, MovementOrder::id)
     }
 
     fun movementsForAccount(accountId: Long): Flow<List<Movement>> =
@@ -851,3 +988,6 @@ class FinanceRepository(
         else -> AttachmentType.IMAGE
     }
 }
+
+/** How many months the "saldo a la fecha" income-vs-spending chart covers, ending at the movement's month. */
+private const val SNAPSHOT_MONTHS = 6

@@ -204,6 +204,13 @@ object Changelog {
             "Los textos de los botones ya no se parten en dos líneas ni se cortan en pantallas angostas o con letra grande: se achican para caber.",
             "Los botones Foto, Galería y Archivo al adjuntar comprobantes ahora entran bien los tres en una fila.",
             "En Estadísticas, Gasto por día se ordenó mejor: el selector Mes / Semana va arriba, y la fecha y el monto debajo sin partirse; los números de los días ya no se cortan."
+        )),
+        ChangelogEntry(45, "3.1.0", listOf(
+            "Nuevo: Saldo a la fecha. Abrí cualquier movimiento y tocá \"Saldo a la fecha\" para ver cómo estaban tus cuentas justo después de ese movimiento, en su propia página.",
+            "Muestra el saldo antes y después, una gráfica de cómo fue cambiando el saldo hasta ese día, ingresos y gastos acumulados, ingresos contra gastos por mes y en qué categorías se fue el dinero.",
+            "Podés verlo por cuenta o de todas las cuentas juntas; las transferencias entre cuentas se muestran aparte porque no son ingreso ni gasto.",
+            "El botón atrás del teléfono en Presupuesto o Estadísticas ahora te lleva a Inicio en vez de cerrar la app.",
+            "Arreglo: tocar la flecha de atrás dos veces rápido ya no deja la pantalla en blanco."
         ))
     )
 

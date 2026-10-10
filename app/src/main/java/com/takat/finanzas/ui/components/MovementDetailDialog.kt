@@ -16,17 +16,21 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.OpenInNew
+import androidx.compose.material.icons.filled.AccountBalance
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
 import androidx.compose.material.icons.filled.Download
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material3.AlertDialog
 import androidx.compose.material3.Button
+import androidx.compose.material3.ButtonDefaults
+import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
@@ -39,6 +43,7 @@ import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.runtime.staticCompositionLocalOf
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.draw.clip
@@ -70,6 +75,12 @@ private sealed class AttachmentContent {
     data class PdfContent(val bytes: ByteArray) : AttachmentContent()
 }
 
+/**
+ * Opens the "saldo a la fecha" page for a movement. Provided by the nav graph so the detail dialog can link
+ * there from every screen that shows it, without threading a callback through each of them.
+ */
+val LocalOpenBalanceSnapshot = staticCompositionLocalOf<((Movement) -> Unit)?> { null }
+
 @Composable
 fun MovementDetailDialog(
     movement: Movement,
@@ -80,6 +91,7 @@ fun MovementDetailDialog(
     var confirmingDelete by remember { mutableStateOf(false) }
     var viewer by remember { mutableStateOf<Pair<AttachmentEntity, AttachmentContent>?>(null) }
     var exportBytes by remember { mutableStateOf<ByteArray?>(null) }
+    val openBalanceSnapshot = LocalOpenBalanceSnapshot.current
     val repository = rememberRepository()
     val context = LocalContext.current
     val scope = rememberCoroutineScope()
@@ -183,6 +195,16 @@ fun MovementDetailDialog(
                         DetailRow("Motivo", movement.category?.name ?: "Sin motivo")
                         DetailRow("Fecha", transfer.date.toDisplayDate())
                         DetailRow("Nota", transfer.note?.takeIf { it.isNotBlank() } ?: "—")
+                    }
+                }
+                if (openBalanceSnapshot != null) {
+                    OutlinedButton(
+                        onClick = { onDismiss(); openBalanceSnapshot(movement) },
+                        modifier = Modifier.fillMaxWidth().padding(top = 4.dp)
+                    ) {
+                        Icon(Icons.Filled.AccountBalance, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
+                        Spacer(Modifier.width(8.dp))
+                        FitLabel("Saldo a la fecha")
                     }
                 }
             }
