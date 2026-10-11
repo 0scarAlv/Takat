@@ -28,6 +28,7 @@ import com.takat.finanzas.data.model.BalanceSnapshot
 import com.takat.finanzas.data.model.CategoryTotal
 import com.takat.finanzas.data.model.CategoryExpense
 import com.takat.finanzas.data.model.DailyExpense
+import com.takat.finanzas.data.model.DailyFlow
 import com.takat.finanzas.data.model.FixedExpensePaymentRecord
 import com.takat.finanzas.data.model.FixedExpensePeriod
 import com.takat.finanzas.data.model.ImportResult
@@ -396,23 +397,34 @@ class FinanceRepository(
      * Only salary income shifts; regular income and all expenses stay on their literal calendar date.
      */
     fun incomeExpenseSummary(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Flow<IncomeExpenseSummary> =
+        incomeExpenseByDay(month, zone).map { days ->
+            IncomeExpenseSummary(days.sumOf { it.incomeCents }, days.sumOf { it.expenseCents })
+        }
+
+    /**
+     * Day-by-day version of [incomeExpenseSummary] (one entry per calendar day of [month]), so the days
+     * add up to the summary's totals. A late salary carried over from the previous month lands on day 1.
+     */
+    fun incomeExpenseByDay(month: YearMonth, zone: ZoneId = ZoneId.systemDefault()): Flow<List<DailyFlow>> =
         combine(transactionDao.getAll(), categoryDao.getAll()) { transactions, categories ->
             val salaryCategoryIds = categories.filter { it.isSalary }.map { it.id }.toSet()
-            fun isLateSalary(t: TransactionEntity): Boolean {
-                if (t.amountCents <= 0 || t.categoryId !in salaryCategoryIds) return false
-                return Instant.ofEpochMilli(t.date).atZone(zone).toLocalDate().dayOfMonth > 15
-            }
+            fun localDate(t: TransactionEntity) = Instant.ofEpochMilli(t.date).atZone(zone).toLocalDate()
+            fun isLateSalary(t: TransactionEntity): Boolean =
+                t.amountCents > 0 && t.categoryId in salaryCategoryIds && localDate(t).dayOfMonth > 15
 
             val (start, end) = monthRange(month, zone)
             val (prevStart, _) = monthRange(month.minusMonths(1), zone)
-            val thisMonth = transactions.filter { it.date >= start && it.date < end }
-            val reattributedFromPrevMonth = transactions.filter { it.date >= prevStart && it.date < start && isLateSalary(it) }
-
-            IncomeExpenseSummary(
-                incomeCents = thisMonth.filter { it.amountCents > 0 && !isLateSalary(it) }.sumOf { it.amountCents } +
-                    reattributedFromPrevMonth.sumOf { it.amountCents },
-                expenseCents = thisMonth.filter { it.amountCents < 0 }.sumOf { -it.amountCents }
-            )
+            val income = LongArray(month.lengthOfMonth())
+            val expense = LongArray(month.lengthOfMonth())
+            transactions.forEach { t ->
+                when {
+                    t.date >= prevStart && t.date < start && isLateSalary(t) -> income[0] += t.amountCents
+                    t.date < start || t.date >= end -> Unit
+                    t.amountCents < 0 -> expense[localDate(t).dayOfMonth - 1] += -t.amountCents
+                    !isLateSalary(t) -> income[localDate(t).dayOfMonth - 1] += t.amountCents
+                }
+            }
+            income.indices.map { i -> DailyFlow(month.atDay(i + 1), income[i], expense[i]) }
         }
 
     fun accountWithBalance(accountId: Long): Flow<AccountWithBalance?> =

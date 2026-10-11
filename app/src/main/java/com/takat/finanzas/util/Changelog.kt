@@ -211,6 +211,13 @@ object Changelog {
             "Podés verlo por cuenta o de todas las cuentas juntas; las transferencias entre cuentas se muestran aparte porque no son ingreso ni gasto.",
             "El botón atrás del teléfono en Presupuesto o Estadísticas ahora te lleva a Inicio en vez de cerrar la app.",
             "Arreglo: tocar la flecha de atrás dos veces rápido ya no deja la pantalla en blanco."
+        )),
+        ChangelogEntry(46, "3.2.0", listOf(
+            "Presupuesto diario rediseñado: si lo tenés activo va primero en Presupuesto y te dice en grande cuánto podés gastar todavía hoy, con una barra de lo que ya gastaste.",
+            "Debajo ves cuándo es tu próximo pago, el valor diario con tu saldo de ahora y si vas mejor o peor que al empezar el día. La configuración se abre con el ícono de ajustes.",
+            "Presupuesto renovado: el balance del mes va en una tarjeta grande que te dice qué porcentaje de lo que ingresaste te quedó.",
+            "Las barras de ingresos y gastos ahora son una gráfica de líneas con lo acumulado día a día. Tocala para ver cuánto llevabas ingresado y gastado hasta cualquier día.",
+            "Nuevos datos del mes: gasto promedio por día, proyección de cuánto vas a gastar si seguís a ese ritmo, días sin gastos y cómo vas contra el mes anterior."
         ))
     )
 

@@ -2,7 +2,7 @@
 
 App de finanzas personales para Android: cuentas, movimientos, gastos fijos y presupuesto diario, con estadísticas y acceso opcional desde la PC. Todo queda en el teléfono, sin nube ni cuenta de por medio.
 
-![Versión](https://img.shields.io/badge/versión-3.1.0-amber) ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84) ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF)
+![Versión](https://img.shields.io/badge/versión-3.2.0-amber) ![Android](https://img.shields.io/badge/Android-8.0%2B-3DDC84) ![Kotlin](https://img.shields.io/badge/Kotlin-Jetpack%20Compose-7F52FF)
 
 ---
 
