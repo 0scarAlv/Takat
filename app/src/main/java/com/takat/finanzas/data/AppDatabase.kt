@@ -18,6 +18,7 @@ import com.takat.finanzas.data.dao.FixedExpensePeriodStateDao
 import com.takat.finanzas.data.dao.TransactionDao
 import com.takat.finanzas.data.dao.TransferDao
 import com.takat.finanzas.data.dao.TrustedDeviceDao
+import com.takat.finanzas.data.dao.TutorialProgressDao
 import com.takat.finanzas.data.dao.WipeDao
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AppSettingsEntity
@@ -30,6 +31,7 @@ import com.takat.finanzas.data.entity.FixedExpensePeriodStateEntity
 import com.takat.finanzas.data.entity.TransactionEntity
 import com.takat.finanzas.data.entity.TransferEntity
 import com.takat.finanzas.data.entity.TrustedDeviceEntity
+import com.takat.finanzas.data.entity.TutorialProgressEntity
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.launch
@@ -45,9 +47,10 @@ import kotlinx.coroutines.launch
         FixedExpenseEntity::class,
         FixedExpensePeriodStateEntity::class,
         AppSettingsEntity::class,
-        TrustedDeviceEntity::class
+        TrustedDeviceEntity::class,
+        TutorialProgressEntity::class
     ],
-    version = 24,
+    version = 25,
     exportSchema = false
 )
 @TypeConverters(Converters::class)
@@ -62,6 +65,7 @@ abstract class AppDatabase : RoomDatabase() {
     abstract fun fixedExpensePeriodStateDao(): FixedExpensePeriodStateDao
     abstract fun appSettingsDao(): AppSettingsDao
     abstract fun trustedDeviceDao(): TrustedDeviceDao
+    abstract fun tutorialProgressDao(): TutorialProgressDao
     abstract fun wipeDao(): WipeDao
 
     companion object {
@@ -80,7 +84,7 @@ abstract class AppDatabase : RoomDatabase() {
                 context.applicationContext,
                 AppDatabase::class.java,
                 "takat.db"
-            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24)
+            ).addMigrations(MIGRATION_1_2, MIGRATION_2_3, MIGRATION_3_4, MIGRATION_4_5, MIGRATION_5_6, MIGRATION_6_7, MIGRATION_7_8, MIGRATION_8_9, MIGRATION_9_10, MIGRATION_10_11, MIGRATION_11_12, MIGRATION_12_13, MIGRATION_13_14, MIGRATION_14_15, MIGRATION_15_16, MIGRATION_16_17, MIGRATION_17_18, MIGRATION_18_19, MIGRATION_19_20, MIGRATION_20_21, MIGRATION_21_22, MIGRATION_22_23, MIGRATION_23_24, MIGRATION_24_25)
                 .addCallback(object : Callback() {
                     override fun onCreate(db: SupportSQLiteDatabase) {
                         super.onCreate(db)
@@ -428,6 +432,23 @@ abstract class AppDatabase : RoomDatabase() {
             override fun migrate(db: SupportSQLiteDatabase) {
                 // Ajustes > Diseño: modern (3.0) vs classic look. Existing installs start on the new design.
                 db.execSQL("ALTER TABLE `app_settings` ADD COLUMN `uiStyle` TEXT NOT NULL DEFAULT 'MODERN'")
+            }
+        }
+
+        private val MIGRATION_24_25 = object : Migration(24, 25) {
+            override fun migrate(db: SupportSQLiteDatabase) {
+                db.execSQL(
+                    """
+                    CREATE TABLE IF NOT EXISTS `tutorial_progress` (
+                        `tutorialId` TEXT NOT NULL PRIMARY KEY,
+                        `completedAt` INTEGER,
+                        `skipped` INTEGER NOT NULL
+                    )
+                    """.trimIndent()
+                )
+                // Anyone upgrading already knows the app: mark the welcome guide as seen so it only
+                // auto-starts on fresh installs. It stays available from Ajustes > Guías.
+                db.execSQL("INSERT INTO `tutorial_progress` (`tutorialId`, `completedAt`, `skipped`) VALUES ('welcome', NULL, 1)")
             }
         }
 

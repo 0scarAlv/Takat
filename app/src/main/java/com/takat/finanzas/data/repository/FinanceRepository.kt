@@ -12,6 +12,7 @@ import com.takat.finanzas.data.csv.ImportMode
 import com.takat.finanzas.data.csv.ParsedBackup
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.entity.AppSettingsEntity
+import com.takat.finanzas.data.entity.TutorialProgressEntity
 import com.takat.finanzas.data.entity.AttachmentEntity
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.BudgetSettingsEntity
@@ -71,6 +72,7 @@ class FinanceRepository(
     private val fixedExpenseDao = db.fixedExpenseDao()
     private val fixedExpensePeriodStateDao = db.fixedExpensePeriodStateDao()
     private val appSettingsDao = db.appSettingsDao()
+    private val tutorialProgressDao = db.tutorialProgressDao()
 
     val categories: Flow<List<CategoryEntity>> = categoryDao.getAll()
 
@@ -101,6 +103,14 @@ class FinanceRepository(
 
     suspend fun updateAppSettings(settings: AppSettingsEntity) =
         appSettingsDao.upsert(settings.copy(id = 0))
+
+    fun tutorialProgress(): Flow<List<TutorialProgressEntity>> = tutorialProgressDao.getAll()
+
+    suspend fun markTutorialCompleted(tutorialId: String) =
+        tutorialProgressDao.upsert(TutorialProgressEntity(tutorialId, completedAt = System.currentTimeMillis()))
+
+    suspend fun markTutorialSkipped(tutorialId: String) =
+        tutorialProgressDao.insertIfMissing(TutorialProgressEntity(tutorialId, skipped = true))
 
     fun accountsWithBalance(includeArchived: Boolean = false): Flow<List<AccountWithBalance>> =
         combine(accountDao.getAll(), transactionDao.getAll(), transferDao.getAll(), fixedExpenseDao.getAll()) { accounts, transactions, transfers, rules ->

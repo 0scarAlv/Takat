@@ -12,6 +12,7 @@ import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
+import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.data.entity.ThemeMode
 import com.takat.finanzas.notifications.NotificationHelper
 import com.takat.finanzas.share.ShareIntentUtil
@@ -19,6 +20,9 @@ import com.takat.finanzas.ui.components.UpdateCheckGate
 import com.takat.finanzas.ui.components.WhatsNewGate
 import com.takat.finanzas.ui.navigation.TakatNavGraph
 import com.takat.finanzas.ui.theme.TakatTheme
+import com.takat.finanzas.ui.tutorial.TutorialController
+import com.takat.finanzas.ui.tutorial.TutorialGate
+import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
 import com.takat.finanzas.widget.WidgetActions
 import com.takat.finanzas.data.entity.UiStyle
@@ -37,6 +41,7 @@ class MainActivity : ComponentActivity() {
         setContent {
             val repository = rememberRepository()
             val appSettings by repository.appSettings().collectAsState(initial = null)
+            val tutorialController: TutorialController = viewModel(factory = LambdaViewModelFactory { TutorialController(repository) })
             val darkTheme = when (appSettings?.themeMode ?: ThemeMode.SYSTEM) {
                 ThemeMode.LIGHT -> false
                 ThemeMode.DARK -> true
@@ -46,11 +51,18 @@ class MainActivity : ComponentActivity() {
                 TakatNavGraph(
                     pendingWidgetAction = pendingWidgetAction,
                     pendingFixedExpenseId = pendingFixedExpenseId,
-                    pendingShareUris = pendingShareUris
+                    pendingShareUris = pendingShareUris,
+                    tutorialController = tutorialController
                 )
+                // Startup chain, one at a time so nothing stacks: Novedades, then the welcome guide on a
+                // fresh install, then the update check.
                 var whatsNewSettled by remember { mutableStateOf(false) }
+                var tutorialSettled by remember { mutableStateOf(false) }
                 WhatsNewGate(repository, onSettled = { whatsNewSettled = true })
                 if (whatsNewSettled) {
+                    TutorialGate(tutorialController, repository, onSettled = { tutorialSettled = true })
+                }
+                if (tutorialSettled) {
                     UpdateCheckGate()
                 }
             }

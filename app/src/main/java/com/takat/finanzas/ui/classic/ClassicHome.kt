@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.classic
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -114,7 +116,8 @@ fun ClassicHomeContent(
                 totals = uiState.totals,
                 sarcasticMessagesEnabled = uiState.sarcasticMessagesEnabled,
                 amountsHidden = uiState.amountsHidden,
-                onToggleAmountsHidden = onToggleAmountsHidden
+                onToggleAmountsHidden = onToggleAmountsHidden,
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_HERO)
             )
         }
 
@@ -132,7 +135,7 @@ fun ClassicHomeContent(
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Text("Cuentas", style = MaterialTheme.typography.titleMedium)
-                IconButton(onClick = onAddAccount) {
+                IconButton(onClick = onAddAccount, modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_ADD_ACCOUNT)) {
                     Icon(Icons.Default.Add, contentDescription = "Nueva cuenta")
                 }
             }

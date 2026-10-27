@@ -218,6 +218,11 @@ object Changelog {
             "Presupuesto renovado: el balance del mes va en una tarjeta grande que te dice qué porcentaje de lo que ingresaste te quedó.",
             "Las barras de ingresos y gastos ahora son una gráfica de líneas con lo acumulado día a día. Tocala para ver cuánto llevabas ingresado y gastado hasta cualquier día.",
             "Nuevos datos del mes: gasto promedio por día, proyección de cuánto vas a gastar si seguís a ese ritmo, días sin gastos y cómo vas contra el mes anterior."
+        )),
+        ChangelogEntry(47, "3.3.0", listOf(
+            "Nuevo: guías interactivas. Resaltan la parte de la pantalla de la que hablan y te acompañan mientras lo hacés de verdad.",
+            "Si instalás Takat por primera vez, arranca con una bienvenida y te ayuda a crear tu primera cuenta paso a paso.",
+            "Podés repetir las guías cuando quieras desde Ajustes › Ayuda › Guías."
         ))
     )
 

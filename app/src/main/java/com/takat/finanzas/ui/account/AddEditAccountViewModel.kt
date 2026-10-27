@@ -5,6 +5,7 @@ import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.entity.AccountEntity
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.ui.theme.AccountSwatches
+import com.takat.finanzas.ui.tutorial.TutorialEvents
 import com.takat.finanzas.util.parseAmountToCents
 import com.takat.finanzas.util.toEditableAmountString
 import kotlinx.coroutines.flow.MutableStateFlow
@@ -99,6 +100,8 @@ class AddEditAccountViewModel(
                         includeInTotal = state.includeInTotal
                     )
                 )
+                // Before flagging saved: the guide must advance before the screen pops back to Home.
+                TutorialEvents.emit(TutorialEvents.ACCOUNT_CREATED)
             }
             _uiState.update { it.copy(saved = true) }
         }

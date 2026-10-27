@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.account
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.foundation.background
 import androidx.compose.foundation.border
 import androidx.compose.foundation.layout.Arrangement
@@ -110,11 +112,11 @@ fun AddEditAccountScreen(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
                 label = { Text("Nombre de la cuenta") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_NAME),
                 singleLine = true
             )
 
-            Column {
+            Column(modifier = Modifier.tutorialAnchor(TutorialAnchors.ACCOUNT_DEBT)) {
                 Text("¿Es una deuda?", style = MaterialTheme.typography.labelLarge)
                 Text(
                     "Si elegís \"Debo\", el monto se resta de tu patrimonio total.",
@@ -139,7 +141,7 @@ fun AddEditAccountScreen(
             }
 
             Row(
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_INCLUDE),
                 verticalAlignment = Alignment.CenterVertically
             ) {
                 Column(modifier = Modifier.weight(1f)) {
@@ -158,7 +160,7 @@ fun AddEditAccountScreen(
                 onValueChange = viewModel::onAmountChange,
                 label = { Text(if (uiState.isEditing) "Saldo inicial" else "Con cuánto arranca") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_AMOUNT),
                 singleLine = true
             )
 
@@ -202,7 +204,7 @@ fun AddEditAccountScreen(
                 Text(uiState.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
 
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_SAVE)) {
                 Text("Guardar")
             }
         }

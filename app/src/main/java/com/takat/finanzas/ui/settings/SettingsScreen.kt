@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.settings
 
+import com.takat.finanzas.ui.tutorial.LocalTutorialController
+import com.takat.finanzas.ui.tutorial.TutorialCatalog
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -29,6 +31,7 @@ import androidx.compose.material.icons.automirrored.filled.KeyboardArrowRight
 import androidx.compose.material.icons.filled.Backup
 import androidx.compose.material.icons.filled.BugReport
 import androidx.compose.material.icons.filled.Category
+import androidx.compose.material.icons.filled.CheckCircle
 import androidx.compose.material.icons.filled.Computer
 import androidx.compose.material.icons.filled.ContentCopy
 import androidx.compose.material.icons.filled.CreditCard
@@ -43,6 +46,7 @@ import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material.icons.filled.Palette
 import androidx.compose.material.icons.filled.QrCodeScanner
 import androidx.compose.material.icons.filled.Save
+import androidx.compose.material.icons.filled.School
 import androidx.compose.material.icons.filled.Share
 import androidx.compose.material.icons.filled.SystemUpdate
 import androidx.compose.material.icons.filled.Wifi
@@ -123,6 +127,7 @@ private enum class SettingsPage(val title: String) {
     MAIN("Ajustes"),
     BACKUP("Respaldo y restauración"),
     PC_ACCESS("Acceso desde PC"),
+    GUIDES("Guías"),
     DEBUG("Depuración")
 }
 
@@ -351,6 +356,8 @@ fun SettingsScreen(
                             "no el nombre .local."
                     )
                 }
+
+                SettingsPage.GUIDES -> GuidesPage()
 
                 SettingsPage.DEBUG -> {
                     var debugLoggingEnabled by remember { mutableStateOf(DebugLog.isEnabled) }
@@ -588,6 +595,15 @@ private fun MainPage(
         )
     }
 
+    SettingsGroup("Ayuda") {
+        SettingsRow(
+            icon = Icons.Filled.School,
+            title = "Guías",
+            summary = "Tutoriales paso a paso sobre la app",
+            onClick = { onOpenPage(SettingsPage.GUIDES) }
+        )
+    }
+
     var checkingUpdate by remember { mutableStateOf(false) }
     var manualUpdateInfo by remember { mutableStateOf<UpdateInfo?>(null) }
     SettingsGroup("Acerca de") {
@@ -654,6 +670,36 @@ private fun MainPage(
             color = MaterialTheme.colorScheme.onSurfaceVariant
         )
     }
+}
+
+/** Every guide in [TutorialCatalog]; tapping one goes back to Home and runs it there. */
+@Composable
+private fun GuidesPage() {
+    val controller = LocalTutorialController.current ?: return
+    val progress by controller.progress.collectAsState()
+    SettingsGroup(null) {
+        TutorialCatalog.guides.forEachIndexed { index, guide ->
+            if (index > 0) RowDivider()
+            val done = progress[guide.id]?.completedAt != null
+            SettingsRow(
+                icon = guide.icon,
+                title = guide.title,
+                summary = "${guide.summary} · ${guide.steps.size} pasos",
+                onClick = { controller.start(guide) },
+                trailing = {
+                    if (done) {
+                        Icon(Icons.Filled.CheckCircle, contentDescription = "Completada", tint = MaterialTheme.colorScheme.primary)
+                    } else {
+                        Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    }
+                }
+            )
+        }
+    }
+    Footnote(
+        "Las guías te acompañan sobre la app de verdad: lo que creás durante una guía (como una cuenta) queda " +
+            "guardado. Podés saltarlas cuando quieras y repetirlas desde acá."
+    )
 }
 
 /** A titled block of rows sharing one card. [title] null renders the card alone (sub-page lead group). */

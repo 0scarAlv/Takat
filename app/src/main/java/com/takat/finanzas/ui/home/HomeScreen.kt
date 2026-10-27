@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.home
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.animation.AnimatedVisibility
 import androidx.compose.animation.expandVertically
 import androidx.compose.animation.fadeIn
@@ -175,7 +177,7 @@ fun HomeScreen(
                     IconButton(onClick = { showChangelog = true }) {
                         Icon(Icons.Default.Info, contentDescription = "Novedades")
                     }
-                    IconButton(onClick = onOpenSettings) {
+                    IconButton(onClick = onOpenSettings, modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_SETTINGS)) {
                         Icon(Icons.Default.Settings, contentDescription = "Ajustes")
                     }
                 },
@@ -185,7 +187,7 @@ fun HomeScreen(
             )
         },
         bottomBar = {
-            NavigationBar {
+            NavigationBar(modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_NAV)) {
                 NavigationBarItem(
                     selected = pagerState.currentPage == 0,
                     onClick = { scope.launch { pagerState.animateScrollToPage(0) } },
@@ -211,7 +213,8 @@ fun HomeScreen(
                 expanded = fabExpanded,
                 onExpandedChange = { fabExpanded = it },
                 onAddTransaction = { fabExpanded = false; onAddTransaction() },
-                onAddTransfer = { fabExpanded = false; onAddTransfer() }
+                onAddTransfer = { fabExpanded = false; onAddTransfer() },
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_FAB)
             )
         }
     ) { innerPadding ->
@@ -311,7 +314,8 @@ private fun HomeContent(
                 totals = uiState.totals,
                 sarcasticMessagesEnabled = uiState.sarcasticMessagesEnabled,
                 amountsHidden = uiState.amountsHidden,
-                onToggleAmountsHidden = onToggleAmountsHidden
+                onToggleAmountsHidden = onToggleAmountsHidden,
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_HERO)
             )
         }
 
@@ -325,7 +329,7 @@ private fun HomeContent(
 
         item {
             SectionHeader("Cuentas", modifier = Modifier.padding(top = 12.dp)) {
-                IconButton(onClick = onAddAccount) {
+                IconButton(onClick = onAddAccount, modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_ADD_ACCOUNT)) {
                     Icon(Icons.Default.Add, contentDescription = "Nueva cuenta")
                 }
             }
@@ -385,7 +389,8 @@ private fun AddActionFab(
     expanded: Boolean,
     onExpandedChange: (Boolean) -> Unit,
     onAddTransaction: () -> Unit,
-    onAddTransfer: () -> Unit
+    onAddTransfer: () -> Unit,
+    modifier: Modifier = Modifier
 ) {
     Column(horizontalAlignment = Alignment.End) {
         AnimatedVisibility(
@@ -399,7 +404,7 @@ private fun AddActionFab(
                 Spacer(Modifier.height(4.dp))
             }
         }
-        FloatingActionButton(onClick = { onExpandedChange(!expanded) }) {
+        FloatingActionButton(onClick = { onExpandedChange(!expanded) }, modifier = modifier) {
             Icon(
                 imageVector = if (expanded) Icons.Default.Close else Icons.Default.Add,
                 contentDescription = if (expanded) "Cerrar" else "Agregar"
@@ -522,7 +527,7 @@ private fun HeroLine(label: String, value: String, labelColor: Color) {
 /** All accounts in one card, separated by inset dividers, instead of one floating card per account. */
 @Composable
 private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boolean, onOpenAccount: (Long) -> Unit) {
-    TakatCard {
+    TakatCard(modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_ACCOUNTS)) {
         accounts.forEachIndexed { index, item ->
             AccountRow(item, amountsHidden, onClick = { onOpenAccount(item.account.id) })
             if (index < accounts.lastIndex) {

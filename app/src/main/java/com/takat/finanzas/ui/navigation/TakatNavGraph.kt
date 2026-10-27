@@ -2,6 +2,7 @@ package com.takat.finanzas.ui.navigation
 
 import android.net.Uri
 import androidx.compose.runtime.Composable
+import androidx.compose.foundation.layout.Box
 import androidx.compose.runtime.CompositionLocalProvider
 import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.MutableState
@@ -31,10 +32,13 @@ import com.takat.finanzas.ui.stats.CategoryExpensesScreen
 import com.takat.finanzas.ui.stats.DayExpensesScreen
 import com.takat.finanzas.ui.transaction.AddTransactionScreen
 import com.takat.finanzas.ui.transfer.AddTransferScreen
+import com.takat.finanzas.ui.tutorial.LocalTutorialController
+import com.takat.finanzas.ui.tutorial.TutorialController
+import com.takat.finanzas.ui.tutorial.TutorialOverlay
 import com.takat.finanzas.widget.WidgetActions
 import java.time.LocalDate
 
-private object Routes {
+internal object Routes {
     const val HOME = "home"
     const val ACCOUNT_NEW = "account/new"
     const val ACCOUNT_DETAIL = "account/{accountId}"
@@ -69,7 +73,8 @@ private object Routes {
 fun TakatNavGraph(
     pendingWidgetAction: MutableState<String?> = remember { mutableStateOf(null) },
     pendingFixedExpenseId: MutableState<Long?> = remember { mutableStateOf(null) },
-    pendingShareUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) }
+    pendingShareUris: MutableState<List<Uri>> = remember { mutableStateOf(emptyList()) },
+    tutorialController: TutorialController
 ) {
     val navController = rememberNavController()
     val widgetAction by pendingWidgetAction
@@ -103,193 +108,206 @@ fun TakatNavGraph(
         }
     }
 
+    LaunchedEffect(navController, tutorialController) {
+        navController.currentBackStackEntryFlow.collect { tutorialController.onRouteChanged(it.destination.route) }
+    }
+    LaunchedEffect(navController, tutorialController) {
+        tutorialController.homeRequests.collect { navController.popBackStack(Routes.HOME, inclusive = false) }
+    }
+
     val openBalanceSnapshot: (Movement) -> Unit = remember(navController) {
         { movement -> navController.navigate(Routes.balanceSnapshot(movement)) }
     }
-    CompositionLocalProvider(LocalOpenBalanceSnapshot provides openBalanceSnapshot) {
-        NavHost(navController = navController, startDestination = Routes.HOME) {
-            composable(
-                Routes.BALANCE_SNAPSHOT,
-                arguments = listOf(
-                    navArgument("kind") { type = NavType.StringType },
-                    navArgument("id") { type = NavType.LongType }
-                )
-            ) { backStackEntry ->
-                BalanceSnapshotScreen(
-                    isTransfer = backStackEntry.arguments?.getString("kind") == "x",
-                    movementId = backStackEntry.arguments?.getLong("id") ?: -1L,
-                    onBack = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
-
-            composable(Routes.HOME) {
-                HomeScreen(
-                    onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
-                    onAddAccount = { navController.navigate(Routes.ACCOUNT_NEW) },
-                    onAddTransaction = { navController.navigate(Routes.transactionNew()) },
-                    onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) },
-                    onOpenCategoryExpenses = { categoryId, from, to ->
-                        navController.navigate(Routes.categoryExpenses(categoryId, from, to))
-                    },
-                    onOpenDayExpenses = { date -> navController.navigate(Routes.dayExpenses(date)) },
-                    onOpenSettings = { navController.navigate(Routes.SETTINGS) },
-                    onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
-                    onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) },
-                    onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
-                )
-            }
-
-            composable(Routes.ACCOUNT_NEW) { backStackEntry ->
-                AddEditAccountScreen(
-                    accountId = null,
-                    onDone = { navController.popBackStackFrom(backStackEntry) },
-                    onCancel = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
-
-            composable(
-                Routes.ACCOUNT_EDIT,
-                arguments = listOf(navArgument("accountId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val accountId = backStackEntry.arguments?.getLong("accountId")
-                if (accountId != null) {
-                    AddEditAccountScreen(
-                        accountId = accountId,
-                        onDone = { navController.popBackStackFrom(backStackEntry, toRoute = Routes.HOME) },
-                        onCancel = { navController.popBackStackFrom(backStackEntry) }
+    CompositionLocalProvider(
+        LocalOpenBalanceSnapshot provides openBalanceSnapshot,
+        LocalTutorialController provides tutorialController
+    ) {
+        Box {
+            NavHost(navController = navController, startDestination = Routes.HOME) {
+                composable(
+                    Routes.BALANCE_SNAPSHOT,
+                    arguments = listOf(
+                        navArgument("kind") { type = NavType.StringType },
+                        navArgument("id") { type = NavType.LongType }
+                    )
+                ) { backStackEntry ->
+                    BalanceSnapshotScreen(
+                        isTransfer = backStackEntry.arguments?.getString("kind") == "x",
+                        movementId = backStackEntry.arguments?.getLong("id") ?: -1L,
+                        onBack = { navController.popBackStackFrom(backStackEntry) }
                     )
                 }
-            }
 
-            composable(
-                Routes.ACCOUNT_DETAIL,
-                arguments = listOf(navArgument("accountId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val accountId = backStackEntry.arguments?.getLong("accountId")
-                if (accountId != null) {
-                    AccountDetailScreen(
-                        accountId = accountId,
-                        onBack = { navController.popBackStackFrom(backStackEntry) },
-                        onEdit = { navController.navigate(Routes.accountEdit(accountId)) },
-                        onAddTransaction = { navController.navigate(Routes.transactionNew(accountId)) },
+                composable(Routes.HOME) {
+                    HomeScreen(
+                        onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
+                        onAddAccount = { navController.navigate(Routes.ACCOUNT_NEW) },
+                        onAddTransaction = { navController.navigate(Routes.transactionNew()) },
+                        onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) },
+                        onOpenCategoryExpenses = { categoryId, from, to ->
+                            navController.navigate(Routes.categoryExpenses(categoryId, from, to))
+                        },
+                        onOpenDayExpenses = { date -> navController.navigate(Routes.dayExpenses(date)) },
+                        onOpenSettings = { navController.navigate(Routes.SETTINGS) },
+                        onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
+                        onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) },
                         onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
                     )
                 }
-            }
 
-            composable(
-                Routes.TRANSACTION_NEW,
-                arguments = listOf(
-                    navArgument("accountId") { type = NavType.LongType; defaultValue = -1L },
-                    navArgument("fixedExpenseId") { type = NavType.LongType; defaultValue = -1L }
-                )
-            ) { backStackEntry ->
-                val rawId = backStackEntry.arguments?.getLong("accountId") ?: -1L
-                val rawFixedExpenseId = backStackEntry.arguments?.getLong("fixedExpenseId") ?: -1L
-                AddTransactionScreen(
-                    preselectedAccountId = rawId.takeIf { it >= 0 },
-                    preselectedFixedExpenseId = rawFixedExpenseId.takeIf { it >= 0 },
-                    initialShareUris = consumedShareUris,
-                    onShareUrisConsumed = { consumedShareUris = emptyList() },
-                    onDone = { navController.popBackStackFrom(backStackEntry) },
-                    onCancel = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
+                composable(Routes.ACCOUNT_NEW) { backStackEntry ->
+                    AddEditAccountScreen(
+                        accountId = null,
+                        onDone = { navController.popBackStackFrom(backStackEntry) },
+                        onCancel = { navController.popBackStackFrom(backStackEntry) }
+                    )
+                }
 
-            composable(
-                Routes.TRANSACTION_EDIT,
-                arguments = listOf(navArgument("transactionId") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val transactionId = backStackEntry.arguments?.getLong("transactionId")
-                if (transactionId != null) {
+                composable(
+                    Routes.ACCOUNT_EDIT,
+                    arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val accountId = backStackEntry.arguments?.getLong("accountId")
+                    if (accountId != null) {
+                        AddEditAccountScreen(
+                            accountId = accountId,
+                            onDone = { navController.popBackStackFrom(backStackEntry, toRoute = Routes.HOME) },
+                            onCancel = { navController.popBackStackFrom(backStackEntry) }
+                        )
+                    }
+                }
+
+                composable(
+                    Routes.ACCOUNT_DETAIL,
+                    arguments = listOf(navArgument("accountId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val accountId = backStackEntry.arguments?.getLong("accountId")
+                    if (accountId != null) {
+                        AccountDetailScreen(
+                            accountId = accountId,
+                            onBack = { navController.popBackStackFrom(backStackEntry) },
+                            onEdit = { navController.navigate(Routes.accountEdit(accountId)) },
+                            onAddTransaction = { navController.navigate(Routes.transactionNew(accountId)) },
+                            onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
+                        )
+                    }
+                }
+
+                composable(
+                    Routes.TRANSACTION_NEW,
+                    arguments = listOf(
+                        navArgument("accountId") { type = NavType.LongType; defaultValue = -1L },
+                        navArgument("fixedExpenseId") { type = NavType.LongType; defaultValue = -1L }
+                    )
+                ) { backStackEntry ->
+                    val rawId = backStackEntry.arguments?.getLong("accountId") ?: -1L
+                    val rawFixedExpenseId = backStackEntry.arguments?.getLong("fixedExpenseId") ?: -1L
                     AddTransactionScreen(
-                        preselectedAccountId = null,
-                        editTransactionId = transactionId,
+                        preselectedAccountId = rawId.takeIf { it >= 0 },
+                        preselectedFixedExpenseId = rawFixedExpenseId.takeIf { it >= 0 },
+                        initialShareUris = consumedShareUris,
+                        onShareUrisConsumed = { consumedShareUris = emptyList() },
+                        onDone = { navController.popBackStackFrom(backStackEntry) },
+                        onCancel = { navController.popBackStackFrom(backStackEntry) }
+                    )
+                }
+
+                composable(
+                    Routes.TRANSACTION_EDIT,
+                    arguments = listOf(navArgument("transactionId") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val transactionId = backStackEntry.arguments?.getLong("transactionId")
+                    if (transactionId != null) {
+                        AddTransactionScreen(
+                            preselectedAccountId = null,
+                            editTransactionId = transactionId,
+                            onDone = { navController.popBackStackFrom(backStackEntry) },
+                            onCancel = { navController.popBackStackFrom(backStackEntry) }
+                        )
+                    }
+                }
+
+                composable(Routes.TRANSFER_NEW) { backStackEntry ->
+                    AddTransferScreen(
+                        onDone = { navController.popBackStackFrom(backStackEntry) },
+                        onCancel = { navController.popBackStackFrom(backStackEntry) }
+                    )
+                }
+
+                composable(
+                    Routes.CATEGORY_EXPENSES,
+                    arguments = listOf(
+                        navArgument("categoryId") { type = NavType.LongType; defaultValue = -1L },
+                        navArgument("from") { type = NavType.LongType; defaultValue = 0L },
+                        navArgument("to") { type = NavType.LongType; defaultValue = 0L }
+                    )
+                ) { backStackEntry ->
+                    val args = backStackEntry.arguments
+                    val rawCategoryId = args?.getLong("categoryId") ?: -1L
+                    CategoryExpensesScreen(
+                        categoryId = rawCategoryId.takeIf { it >= 0 },
+                        fromMillis = args?.getLong("from") ?: 0L,
+                        toMillis = args?.getLong("to") ?: 0L,
+                        onBack = { navController.popBackStackFrom(backStackEntry) },
+                        onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
+                    )
+                }
+
+                composable(
+                    Routes.DAY_EXPENSES,
+                    arguments = listOf(navArgument("epochDay") { type = NavType.LongType })
+                ) { backStackEntry ->
+                    val epochDay = backStackEntry.arguments?.getLong("epochDay")
+                    if (epochDay != null) {
+                        DayExpensesScreen(
+                            date = LocalDate.ofEpochDay(epochDay),
+                            onBack = { navController.popBackStackFrom(backStackEntry) },
+                            onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
+                        )
+                    }
+                }
+
+                composable(Routes.SETTINGS) { backStackEntry ->
+                    SettingsScreen(
+                        onBack = { navController.popBackStackFrom(backStackEntry) },
+                        onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
+                        onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
+                        onOpenPairScan = { navController.navigate(Routes.PAIR_SCAN) }
+                    )
+                }
+
+                composable(Routes.PAIR_SCAN) { backStackEntry ->
+                    PairScanScreen(
+                        onDone = { navController.popBackStackFrom(backStackEntry) },
+                        onCancel = { navController.popBackStackFrom(backStackEntry) }
+                    )
+                }
+
+                composable(Routes.CATEGORIES) { backStackEntry ->
+                    CategoriesScreen(onBack = { navController.popBackStackFrom(backStackEntry) })
+                }
+
+                composable(Routes.FIXED_EXPENSES) { backStackEntry ->
+                    FixedExpensesScreen(
+                        onBack = { navController.popBackStackFrom(backStackEntry) },
+                        onAddNew = { navController.navigate(Routes.fixedExpenseForm()) },
+                        onEdit = { id -> navController.navigate(Routes.fixedExpenseForm(id)) }
+                    )
+                }
+
+                composable(
+                    Routes.FIXED_EXPENSE_FORM,
+                    arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L })
+                ) { backStackEntry ->
+                    val rawId = backStackEntry.arguments?.getLong("id") ?: -1L
+                    FixedExpenseFormScreen(
+                        fixedExpenseId = rawId.takeIf { it >= 0 },
                         onDone = { navController.popBackStackFrom(backStackEntry) },
                         onCancel = { navController.popBackStackFrom(backStackEntry) }
                     )
                 }
             }
-
-            composable(Routes.TRANSFER_NEW) { backStackEntry ->
-                AddTransferScreen(
-                    onDone = { navController.popBackStackFrom(backStackEntry) },
-                    onCancel = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
-
-            composable(
-                Routes.CATEGORY_EXPENSES,
-                arguments = listOf(
-                    navArgument("categoryId") { type = NavType.LongType; defaultValue = -1L },
-                    navArgument("from") { type = NavType.LongType; defaultValue = 0L },
-                    navArgument("to") { type = NavType.LongType; defaultValue = 0L }
-                )
-            ) { backStackEntry ->
-                val args = backStackEntry.arguments
-                val rawCategoryId = args?.getLong("categoryId") ?: -1L
-                CategoryExpensesScreen(
-                    categoryId = rawCategoryId.takeIf { it >= 0 },
-                    fromMillis = args?.getLong("from") ?: 0L,
-                    toMillis = args?.getLong("to") ?: 0L,
-                    onBack = { navController.popBackStackFrom(backStackEntry) },
-                    onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
-                )
-            }
-
-            composable(
-                Routes.DAY_EXPENSES,
-                arguments = listOf(navArgument("epochDay") { type = NavType.LongType })
-            ) { backStackEntry ->
-                val epochDay = backStackEntry.arguments?.getLong("epochDay")
-                if (epochDay != null) {
-                    DayExpensesScreen(
-                        date = LocalDate.ofEpochDay(epochDay),
-                        onBack = { navController.popBackStackFrom(backStackEntry) },
-                        onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
-                    )
-                }
-            }
-
-            composable(Routes.SETTINGS) { backStackEntry ->
-                SettingsScreen(
-                    onBack = { navController.popBackStackFrom(backStackEntry) },
-                    onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
-                    onOpenCategories = { navController.navigate(Routes.CATEGORIES) },
-                    onOpenPairScan = { navController.navigate(Routes.PAIR_SCAN) }
-                )
-            }
-
-            composable(Routes.PAIR_SCAN) { backStackEntry ->
-                PairScanScreen(
-                    onDone = { navController.popBackStackFrom(backStackEntry) },
-                    onCancel = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
-
-            composable(Routes.CATEGORIES) { backStackEntry ->
-                CategoriesScreen(onBack = { navController.popBackStackFrom(backStackEntry) })
-            }
-
-            composable(Routes.FIXED_EXPENSES) { backStackEntry ->
-                FixedExpensesScreen(
-                    onBack = { navController.popBackStackFrom(backStackEntry) },
-                    onAddNew = { navController.navigate(Routes.fixedExpenseForm()) },
-                    onEdit = { id -> navController.navigate(Routes.fixedExpenseForm(id)) }
-                )
-            }
-
-            composable(
-                Routes.FIXED_EXPENSE_FORM,
-                arguments = listOf(navArgument("id") { type = NavType.LongType; defaultValue = -1L })
-            ) { backStackEntry ->
-                val rawId = backStackEntry.arguments?.getLong("id") ?: -1L
-                FixedExpenseFormScreen(
-                    fixedExpenseId = rawId.takeIf { it >= 0 },
-                    onDone = { navController.popBackStackFrom(backStackEntry) },
-                    onCancel = { navController.popBackStackFrom(backStackEntry) }
-                )
-            }
+            TutorialOverlay(tutorialController)
         }
     }
 }
