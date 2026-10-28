@@ -45,6 +45,12 @@ class TutorialController(private val repository: FinanceRepository) : ViewModel(
         .map { rows -> rows.associateBy { it.tutorialId } }
         .stateIn(viewModelScope, SharingStarted.Eagerly, emptyMap())
 
+    val accountCount: StateFlow<Int> = repository.accountsWithBalance()
+        .map { it.size }
+        .stateIn(viewModelScope, SharingStarted.Eagerly, 0)
+
+    fun isAvailable(guide: TutorialGuide): Boolean = accountCount.value >= guide.minAccounts
+
     private val _homeRequests = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
     /** Asks the NavGraph to go back to Home, e.g. when a guide is started from Ajustes. */
     val homeRequests: SharedFlow<Unit> = _homeRequests
@@ -126,7 +132,9 @@ class TutorialController(private val repository: FinanceRepository) : ViewModel(
     private fun finish(startFollowUp: Boolean) {
         val guide = activeGuide ?: return
         viewModelScope.launch { repository.markTutorialCompleted(guide.id) }
-        val followUp = guide.followUpId?.let(TutorialCatalog::byId)
+        // Skip chained guides the user can't do yet (transfers with a single account) instead of dead-ending.
+        var followUp = guide.followUpId?.let(TutorialCatalog::byId)
+        while (followUp != null && !isAvailable(followUp)) followUp = followUp.followUpId?.let(TutorialCatalog::byId)
         clear()
         if (startFollowUp && followUp != null) start(followUp)
     }

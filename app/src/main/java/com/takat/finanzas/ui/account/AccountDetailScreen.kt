@@ -1,5 +1,8 @@
 package com.takat.finanzas.ui.account
 
+import com.takat.finanzas.ui.components.CreditLimitBar
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -73,7 +76,7 @@ fun AccountDetailScreen(
                     }
                 },
                 actions = {
-                    IconButton(onClick = onEdit) {
+                    IconButton(onClick = onEdit, modifier = Modifier.tutorialAnchor(TutorialAnchors.ACCOUNT_DETAIL_EDIT)) {
                         Icon(Icons.Filled.Edit, contentDescription = "Editar cuenta")
                     }
                 }
@@ -105,6 +108,9 @@ fun AccountDetailScreen(
                         style = MaterialTheme.typography.bodySmall,
                         color = MaterialTheme.colorScheme.onSurfaceVariant
                     )
+                }
+                accountWithBalance?.let {
+                    CreditLimitBar(it, amountsHidden = false, compact = false, modifier = Modifier.padding(top = 12.dp))
                 }
             }
 

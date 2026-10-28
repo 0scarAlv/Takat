@@ -1,5 +1,6 @@
 package com.takat.finanzas.ui.transfer
 
+import com.takat.finanzas.ui.tutorial.TutorialEvents
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.entity.CategoryEntity
@@ -91,6 +92,8 @@ class AddTransferViewModel(private val repository: FinanceRepository) : ViewMode
                     date = state.dateMillis
                 )
             )
+            // Before flagging saved: the guide must advance before the screen pops back to Home.
+            TutorialEvents.emit(TutorialEvents.TRANSFER_CREATED)
             _uiState.update { it.copy(saved = true) }
         }
     }

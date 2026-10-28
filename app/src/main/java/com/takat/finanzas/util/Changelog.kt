@@ -222,7 +222,8 @@ object Changelog {
         ChangelogEntry(47, "3.3.0", listOf(
             "Nuevo: guías interactivas. Resaltan la parte de la pantalla de la que hablan y te acompañan mientras lo hacés de verdad.",
             "Si instalás Takat por primera vez, arranca con una bienvenida que explica cada número del inicio y te ayuda a armar tus cuentas (efectivo, débito, crédito y ahorro).",
-            "Guía de gastos fijos: qué son, por qué bajan tu Disponible antes de pagarlos y cómo crear y pagar uno.",
+            "Guías de movimientos y transferencias (incluido cómo pagar la tarjeta de crédito), de gastos fijos, y una para corregir o eliminar movimientos y cuentas.",
+            "Nuevo: límite para tarjetas de crédito. Ponelo al crear o editar una cuenta \"Debo\" y vas a ver una barra con lo que llevás gastado y cuánto te queda; también te avisa si un gasto pasa el límite.",
             "Podés repetir las guías cuando quieras desde Ajustes › Ayuda › Guías."
         ))
     )

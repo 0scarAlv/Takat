@@ -28,11 +28,14 @@ object BackupCsv {
         "color", "date", "account", "to_account", "category", "amount", "note", "attachments",
         "frequency", "day_of_month", "quincena_only", "notify_enabled", "enabled", "total_debt",
         "installments_count", "period_key", "active", "credit_account", "financed_principal",
-        "interest_rate_bps"
+        "interest_rate_bps", "credit_limit"
     )
 
+    /** Backups written before account credit limits existed don't have that trailing column. */
+    private val LEGACY_HEADER_V4 = HEADER.dropLast(1)
+
     /** Backups written before "compra a crédito" plans existed don't have their three trailing columns. */
-    private val LEGACY_HEADER_V3 = HEADER.dropLast(3)
+    private val LEGACY_HEADER_V3 = LEGACY_HEADER_V4.dropLast(3)
 
     /** Backups written before gastos fijos were included in the backup format don't have the trailing columns. */
     private val LEGACY_HEADER_V2 = LEGACY_HEADER_V3.dropLast(9)
@@ -61,7 +64,8 @@ object BackupCsv {
                 initialBalance = a.initialBalanceCents.toCsvAmount(),
                 isDebt = a.isDebt.toString(),
                 includeInTotal = a.includeInTotal.toString(),
-                color = a.colorArgb.toCsvColor()
+                color = a.colorArgb.toCsvColor(),
+                creditLimit = a.creditLimitCents?.toCsvAmount().orEmpty()
             )
         }
         categories.forEach { c ->
@@ -130,6 +134,7 @@ object BackupCsv {
         val headerFields = parseCsvLine(lines[0])
         val header = when (headerFields) {
             HEADER -> HEADER
+            LEGACY_HEADER_V4 -> LEGACY_HEADER_V4
             LEGACY_HEADER_V3 -> LEGACY_HEADER_V3
             LEGACY_HEADER_V2 -> LEGACY_HEADER_V2
             LEGACY_HEADER_V1 -> LEGACY_HEADER_V1
@@ -154,7 +159,8 @@ object BackupCsv {
                     initialBalanceCents = row["initial_balance"].orEmpty().csvAmountToCents() ?: continue,
                     isDebt = row["is_debt"]?.toBooleanStrictOrNull() ?: false,
                     includeInTotal = row["include_in_total"]?.toBooleanStrictOrNull() ?: true,
-                    colorArgb = row["color"].orEmpty().csvColorToInt()
+                    colorArgb = row["color"].orEmpty().csvColorToInt(),
+                    creditLimitCents = row["credit_limit"]?.takeIf { it.isNotBlank() }?.csvAmountToCents()
                 )
 
                 "category" -> categories += CategoryRow(
@@ -239,12 +245,13 @@ object BackupCsv {
         active: String = "",
         creditAccount: String = "",
         financedPrincipal: String = "",
-        interestRateBps: String = ""
+        interestRateBps: String = "",
+        creditLimit: String = ""
     ): String = listOf(
         type, name, emoji, kind, initialBalance, isDebt, includeInTotal,
         color, date, account, toAccount, category, amount, note, attachments,
         frequency, dayOfMonth, quincenaOnly, notifyEnabled, enabled, totalDebt,
         installmentsCount, periodKey, active, creditAccount, financedPrincipal,
-        interestRateBps
+        interestRateBps, creditLimit
     ).joinToString(",") { encodeCsvField(it) }
 }

@@ -1,7 +1,10 @@
 package com.takat.finanzas.ui.tutorial
 
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ReceiptLong
 import androidx.compose.material.icons.filled.AccountBalanceWallet
+import androidx.compose.material.icons.filled.Edit
+import androidx.compose.material.icons.filled.SwapHoriz
 import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.WavingHand
 import com.takat.finanzas.ui.navigation.Routes
@@ -10,7 +13,10 @@ import com.takat.finanzas.ui.navigation.Routes
 object TutorialCatalog {
     const val WELCOME = "welcome"
     const val FIRST_ACCOUNT = "first-account"
+    const val MOVEMENTS = "movements"
+    const val TRANSFERS = "transfers"
     const val FIXED_EXPENSES = "fixed-expenses"
+    const val EDIT_OR_DELETE = "edit-or-delete"
 
     private val welcome = TutorialGuide(
         id = WELCOME,
@@ -93,7 +99,7 @@ object TutorialCatalog {
         title = "Tus cuentas",
         summary = "Las 4 cuentas básicas y cómo crearlas",
         icon = Icons.Filled.AccountBalanceWallet,
-        followUpId = FIXED_EXPENSES,
+        followUpId = MOVEMENTS,
         steps = listOf(
             TutorialStep(
                 screen = Routes.HOME,
@@ -115,7 +121,9 @@ object TutorialCatalog {
                     "(o con lo que debés, si ya la usaste).\n\n" +
                     "Cada compra con la tarjeta la hace más negativa: por ser deuda SIEMPRE la vas a ver en negativo, y " +
                     "eso es lo que le debés al banco. Cuando la pagás, hacé una Transferencia desde tu débito hacia la " +
-                    "tarjeta y vuelve hacia 0."
+                    "tarjeta y vuelve hacia 0.\n\n" +
+                    "¿Tu tarjeta tiene un límite, por ejemplo $500? Ponelo al crearla y Takat te muestra cuánto llevás " +
+                    "gastado y cuánto te queda. Solo suma lo que compraste con ella: no calcula intereses."
             ),
             TutorialStep(
                 screen = Routes.HOME,
@@ -165,6 +173,15 @@ object TutorialCatalog {
             ),
             TutorialStep(
                 screen = Routes.ACCOUNT_NEW,
+                anchor = TutorialAnchors.ACCOUNT_LIMIT,
+                touchable = true,
+                optional = true,
+                title = "Límite de la tarjeta",
+                body = "Si es tu tarjeta de crédito, poné su límite (por ejemplo 500). Debajo de la cuenta vas a ver " +
+                    "una barra con lo que llevás gastado y cuánto te queda. Si no tiene límite o no lo sabés, dejalo vacío."
+            ),
+            TutorialStep(
+                screen = Routes.ACCOUNT_NEW,
                 anchor = TutorialAnchors.ACCOUNT_SAVE,
                 advance = Advance.Event(TutorialEvents.ACCOUNT_CREATED),
                 title = "Guardala",
@@ -176,9 +193,157 @@ object TutorialCatalog {
                 title = "¡Primera cuenta lista!",
                 body = "Ahora creá las demás con el mismo + de Cuentas: Tarjeta de débito, Tarjeta de crédito y Ahorro. " +
                     "Tocá cualquier cuenta para ver sus movimientos o editarla.\n\n" +
-                    "Lo último que conviene entender son los gastos fijos (alquiler, luz, cuotas), porque cambian tu " +
-                    "Disponible. ¿Te los explico ahora?",
-                primaryLabel = "Ver gastos fijos"
+                    "Ahora te muestro cómo registrar lo que gastás.",
+                primaryLabel = "Seguir: movimientos"
+            )
+        )
+    )
+
+    private val movements = TutorialGuide(
+        id = MOVEMENTS,
+        title = "Movimientos",
+        summary = "Registrar un gasto o un ingreso",
+        icon = Icons.AutoMirrored.Filled.ReceiptLong,
+        minAccounts = 1,
+        followUpId = TRANSFERS,
+        steps = listOf(
+            TutorialStep(
+                screen = Routes.HOME,
+                title = "¿Qué es un movimiento?",
+                body = "Cada vez que entra o sale plata de una de tus cuentas: un gasto (comida, pasaje, una compra " +
+                    "con la tarjeta) o un ingreso (tu sueldo, un pago que te hicieron). Si lo registrás siempre, el " +
+                    "saldo de Takat coincide con la realidad."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_FAB,
+                advance = Advance.TapAnchor,
+                title = "El botón +",
+                body = "Tocá el + para ver las opciones."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_FAB_MOVEMENT,
+                advance = Advance.TapAnchor,
+                title = "Movimiento",
+                body = "Tocá \"Movimiento\"."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSACTION_NEW,
+                anchor = TutorialAnchors.TX_TYPE,
+                touchable = true,
+                title = "¿Gasto o ingreso?",
+                body = "\"Gasto\" si salió plata, \"Ingreso\" si te entró."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSACTION_NEW,
+                anchor = TutorialAnchors.TX_ACCOUNT,
+                touchable = true,
+                title = "Cuenta",
+                body = "De dónde salió (o a dónde entró) la plata. Si pagaste con la tarjeta de crédito, elegí la " +
+                    "tarjeta: así ves cuánto llevás gastado en ella y cuánto te queda de su límite."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSACTION_NEW,
+                anchor = TutorialAnchors.TX_AMOUNT,
+                touchable = true,
+                title = "Monto",
+                body = "Cuánto fue. Si la cuenta no tiene suficiente, o te pasás del límite de la tarjeta, Takat te avisa."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSACTION_NEW,
+                anchor = TutorialAnchors.TX_CATEGORY,
+                touchable = true,
+                title = "Categoría",
+                body = "En qué se fue la plata. Sirve para que Estadísticas te muestre en qué gastás más. Si no está " +
+                    "la que querés, creala con el +. Abajo podés agregar una nota o la foto del comprobante."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSACTION_NEW,
+                anchor = TutorialAnchors.TX_SAVE,
+                advance = Advance.Event(TutorialEvents.TRANSACTION_CREATED),
+                title = "Guardalo",
+                body = "Tocá Guardar."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_ACCOUNTS,
+                title = "¡Registrado!",
+                body = "El saldo de la cuenta ya cambió y el movimiento aparece abajo, en Movimientos, agrupado por " +
+                    "día. Si te equivocaste, tocalo para editarlo o eliminarlo.",
+                primaryLabel = "Seguir: transferencias"
+            )
+        )
+    )
+
+    private val transfers = TutorialGuide(
+        id = TRANSFERS,
+        title = "Transferencias",
+        summary = "Mover plata entre tus cuentas y pagar la tarjeta",
+        icon = Icons.Filled.SwapHoriz,
+        minAccounts = 2,
+        followUpId = FIXED_EXPENSES,
+        steps = listOf(
+            TutorialStep(
+                screen = Routes.HOME,
+                title = "¿Qué es una transferencia?",
+                body = "Mover plata de una cuenta tuya a otra. NO es un gasto: la plata sigue siendo tuya, solo " +
+                    "cambia de lugar, por eso no aparece en Estadísticas. Por ejemplo:\n\n" +
+                    "• Sacar del cajero: de Tarjeta de débito a Efectivo.\n" +
+                    "• Ahorrar: de Tarjeta de débito a Ahorro.\n" +
+                    "• Pagar la tarjeta de crédito: de Tarjeta de débito a Tarjeta de crédito."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_FAB,
+                advance = Advance.TapAnchor,
+                title = "El botón +",
+                body = "Tocá el + otra vez."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_FAB_TRANSFER,
+                advance = Advance.TapAnchor,
+                title = "Transferencia",
+                body = "Tocá \"Transferencia\"."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSFER_NEW,
+                anchor = TutorialAnchors.TRANSFER_FROM,
+                touchable = true,
+                title = "Desde",
+                body = "La cuenta de donde sale la plata."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSFER_NEW,
+                anchor = TutorialAnchors.TRANSFER_TO,
+                touchable = true,
+                title = "Hacia",
+                body = "La cuenta a donde llega. Para pagar la tarjeta de crédito, elegila acá: lo que le debés baja " +
+                    "y vuelve hacia 0."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSFER_NEW,
+                anchor = TutorialAnchors.TRANSFER_AMOUNT,
+                touchable = true,
+                title = "Monto",
+                body = "Cuánto movés."
+            ),
+            TutorialStep(
+                screen = Routes.TRANSFER_NEW,
+                anchor = TutorialAnchors.TRANSFER_SAVE,
+                advance = Advance.Event(TutorialEvents.TRANSFER_CREATED),
+                title = "Transferí",
+                body = "Tocá Transferir."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_ACCOUNTS,
+                title = "¡Listo!",
+                body = "Una cuenta bajó y la otra subió lo mismo, pero tu Disponible no cambió: la plata sigue " +
+                    "siendo tuya.\n\nLo último que conviene entender son los gastos fijos (alquiler, luz, cuotas), " +
+                    "porque sí cambian tu Disponible.",
+                primaryLabel = "Seguir: gastos fijos"
             )
         )
     )
@@ -188,7 +353,7 @@ object TutorialCatalog {
         title = "Gastos fijos",
         summary = "Qué son, por qué bajan tu Disponible y cómo pagarlos",
         icon = Icons.Filled.EventRepeat,
-        requiresAccount = true,
+        minAccounts = 1,
         steps = listOf(
             TutorialStep(
                 screen = Routes.HOME,
@@ -291,7 +456,60 @@ object TutorialCatalog {
         )
     )
 
-    val guides: List<TutorialGuide> = listOf(welcome, firstAccount, fixedExpenses)
+    private val editOrDelete = TutorialGuide(
+        id = EDIT_OR_DELETE,
+        title = "Corregir o eliminar",
+        summary = "Editar un movimiento, una cuenta o borrarlos",
+        icon = Icons.Filled.Edit,
+        minAccounts = 1,
+        steps = listOf(
+            TutorialStep(
+                screen = Routes.HOME,
+                title = "Todo se puede corregir",
+                body = "Si te equivocaste en un monto, una cuenta o una categoría, no hace falta empezar de nuevo. " +
+                    "Te muestro dónde se arregla cada cosa."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_FIRST_MOVEMENT,
+                optional = true,
+                title = "Movimientos",
+                body = "Tocando cualquier movimiento se abre su detalle, con Editar y Eliminar. Las transferencias " +
+                    "solo se pueden eliminar: si una quedó mal, eliminala y hacela de nuevo."
+            ),
+            TutorialStep(
+                screen = Routes.HOME,
+                anchor = TutorialAnchors.HOME_ACCOUNTS,
+                advance = Advance.TapAnchor,
+                title = "Cuentas",
+                body = "Para corregir una cuenta, tocala."
+            ),
+            TutorialStep(
+                screen = Routes.ACCOUNT_DETAIL,
+                anchor = TutorialAnchors.ACCOUNT_DETAIL_EDIT,
+                advance = Advance.TapAnchor,
+                title = "Editar cuenta",
+                body = "Acá ves el saldo y todos sus movimientos. Tocá el lápiz para editarla."
+            ),
+            TutorialStep(
+                screen = Routes.ACCOUNT_EDIT,
+                anchor = TutorialAnchors.ACCOUNT_AMOUNT,
+                title = "Saldo inicial",
+                body = "Podés cambiar nombre, tipo, color o el límite de la tarjeta. Si el saldo no coincide con la " +
+                    "realidad, corregí el Saldo inicial: todos los movimientos se recalculan a partir de él."
+            ),
+            TutorialStep(
+                screen = Routes.ACCOUNT_EDIT,
+                anchor = TutorialAnchors.ACCOUNT_DELETE,
+                title = "Eliminar",
+                body = "La papelera elimina la cuenta; Takat te pide confirmación antes. Si la cuenta ya tenía " +
+                    "movimientos, deja de aparecer pero esos movimientos se mantienen en tu historial.",
+                primaryLabel = "Terminar"
+            )
+        )
+    )
+
+    val guides: List<TutorialGuide> = listOf(welcome, firstAccount, movements, transfers, fixedExpenses, editOrDelete)
 
     fun byId(id: String): TutorialGuide? = guides.firstOrNull { it.id == id }
 }
@@ -312,6 +530,21 @@ object TutorialAnchors {
     const val ACCOUNT_INCLUDE = "account.include"
     const val ACCOUNT_AMOUNT = "account.amount"
     const val ACCOUNT_SAVE = "account.save"
+    const val ACCOUNT_LIMIT = "account.limit"
+    const val ACCOUNT_DELETE = "account.delete"
+    const val ACCOUNT_DETAIL_EDIT = "accountDetail.edit"
+    const val HOME_FAB_MOVEMENT = "home.fab.movement"
+    const val HOME_FAB_TRANSFER = "home.fab.transfer"
+    const val HOME_FIRST_MOVEMENT = "home.firstMovement"
+    const val TX_TYPE = "tx.type"
+    const val TX_ACCOUNT = "tx.account"
+    const val TX_AMOUNT = "tx.amount"
+    const val TX_CATEGORY = "tx.category"
+    const val TX_SAVE = "tx.save"
+    const val TRANSFER_FROM = "transfer.from"
+    const val TRANSFER_TO = "transfer.to"
+    const val TRANSFER_AMOUNT = "transfer.amount"
+    const val TRANSFER_SAVE = "transfer.save"
     const val SETTINGS_FIXED = "settings.fixed"
     const val FIXED_ADD = "fixed.add"
     const val FIXED_NAME = "fixed.name"

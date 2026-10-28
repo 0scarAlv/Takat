@@ -1,5 +1,6 @@
 package com.takat.finanzas.ui.home
 
+import com.takat.finanzas.ui.components.CreditLimitBar
 import com.takat.finanzas.ui.tutorial.LocalTutorialController
 import com.takat.finanzas.ui.tutorial.TutorialAnchors
 import com.takat.finanzas.ui.tutorial.tutorialAnchor
@@ -310,6 +311,7 @@ private fun HomeContent(
     val today = remember { LocalDate.now() }
     // Movements arrive newest first; groupBy keeps that order for both the days and the rows within each day.
     val movementsByDay = remember(uiState.movements) { uiState.movements.groupBy { it.date.toLocalDate() } }
+    val firstMovementKey = uiState.movements.firstOrNull()?.key
 
     LazyColumn(
         modifier = Modifier.fillMaxSize(),
@@ -369,6 +371,9 @@ private fun HomeContent(
                     MovementRow(
                         movement = movement,
                         currentAccountId = null,
+                        modifier = if (movement.key == firstMovementKey) {
+                            Modifier.tutorialAnchor(TutorialAnchors.HOME_FIRST_MOVEMENT)
+                        } else Modifier,
                         showDate = false,
                         onClick = { onMovementClick(movement) }
                     )
@@ -406,8 +411,18 @@ private fun AddActionFab(
             exit = fadeOut() + shrinkVertically()
         ) {
             Column(horizontalAlignment = Alignment.End, verticalArrangement = Arrangement.spacedBy(12.dp)) {
-                LabeledMiniFab(label = "Transferencia", icon = Icons.Default.SwapHoriz, onClick = onAddTransfer)
-                LabeledMiniFab(label = "Movimiento", icon = Icons.AutoMirrored.Filled.ReceiptLong, onClick = onAddTransaction)
+                LabeledMiniFab(
+                    label = "Transferencia",
+                    icon = Icons.Default.SwapHoriz,
+                    onClick = onAddTransfer,
+                    modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_FAB_TRANSFER)
+                )
+                LabeledMiniFab(
+                    label = "Movimiento",
+                    icon = Icons.AutoMirrored.Filled.ReceiptLong,
+                    onClick = onAddTransaction,
+                    modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_FAB_MOVEMENT)
+                )
                 Spacer(Modifier.height(4.dp))
             }
         }
@@ -421,7 +436,7 @@ private fun AddActionFab(
 }
 
 @Composable
-private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit) {
+private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit, modifier: Modifier = Modifier) {
     Row(verticalAlignment = Alignment.CenterVertically, horizontalArrangement = Arrangement.spacedBy(8.dp)) {
         Surface(
             shape = RoundedCornerShape(8.dp),
@@ -434,7 +449,7 @@ private fun LabeledMiniFab(label: String, icon: ImageVector, onClick: () -> Unit
                 modifier = Modifier.padding(horizontal = 12.dp, vertical = 6.dp)
             )
         }
-        SmallFloatingActionButton(onClick = onClick) {
+        SmallFloatingActionButton(onClick = onClick, modifier = modifier) {
             Icon(icon, contentDescription = label)
         }
     }
@@ -595,6 +610,7 @@ private fun AccountRow(item: AccountWithBalance, amountsHidden: Boolean, onClick
             subtitle?.let {
                 Text(it, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant)
             }
+            CreditLimitBar(item, amountsHidden, compact = true, modifier = Modifier.padding(top = 4.dp))
         }
         Text(
             if (amountsHidden) "••••••" else item.balanceCents.centsToDisplay(),

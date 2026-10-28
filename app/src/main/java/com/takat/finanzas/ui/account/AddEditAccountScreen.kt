@@ -91,7 +91,10 @@ fun AddEditAccountScreen(
                 },
                 actions = {
                     if (uiState.isEditing) {
-                        IconButton(onClick = { showDeleteConfirm = true }) {
+                        IconButton(
+                            onClick = { showDeleteConfirm = true },
+                            modifier = Modifier.tutorialAnchor(TutorialAnchors.ACCOUNT_DELETE)
+                        ) {
                             Icon(Icons.Filled.Delete, contentDescription = "Eliminar cuenta")
                         }
                     }
@@ -163,6 +166,23 @@ fun AddEditAccountScreen(
                 modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_AMOUNT),
                 singleLine = true
             )
+
+            if (uiState.isDebt) {
+                OutlinedTextField(
+                    value = uiState.limitText,
+                    onValueChange = viewModel::onLimitChange,
+                    label = { Text("Límite de la tarjeta (opcional)") },
+                    supportingText = {
+                        Text(
+                            "Para ver cuánto llevás gastado con la tarjeta y cuánto te queda. Solo suma lo que " +
+                                "compraste con ella; no calcula intereses ni pago mínimo."
+                        )
+                    },
+                    keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
+                    modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.ACCOUNT_LIMIT),
+                    singleLine = true
+                )
+            }
 
             Column {
                 Text("Color", style = MaterialTheme.typography.labelLarge)

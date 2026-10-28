@@ -8,7 +8,8 @@ data class AccountRow(
     val initialBalanceCents: Long,
     val isDebt: Boolean,
     val includeInTotal: Boolean,
-    val colorArgb: Int
+    val colorArgb: Int,
+    val creditLimitCents: Long? = null
 )
 
 data class CategoryRow(

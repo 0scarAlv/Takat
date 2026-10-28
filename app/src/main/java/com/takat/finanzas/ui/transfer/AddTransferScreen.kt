@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.transfer
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -100,7 +102,8 @@ fun AddTransferScreen(
         ) {
             ExposedDropdownMenuBox(
                 expanded = fromMenuExpanded,
-                onExpandedChange = { fromMenuExpanded = it }
+                onExpandedChange = { fromMenuExpanded = it },
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.TRANSFER_FROM)
             ) {
                 OutlinedTextField(
                     value = fromAccount?.account?.name ?: "",
@@ -150,7 +153,8 @@ fun AddTransferScreen(
 
             ExposedDropdownMenuBox(
                 expanded = toMenuExpanded,
-                onExpandedChange = { toMenuExpanded = it }
+                onExpandedChange = { toMenuExpanded = it },
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.TRANSFER_TO)
             ) {
                 OutlinedTextField(
                     value = toAccount?.account?.name ?: "",
@@ -204,7 +208,7 @@ fun AddTransferScreen(
                     onValueChange = viewModel::onAmountChange,
                     label = { Text("Monto") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TRANSFER_AMOUNT),
                     singleLine = true
                 )
                 if (overBalanceWarning != null) {
@@ -247,7 +251,7 @@ fun AddTransferScreen(
                 Text(uiState.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
 
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TRANSFER_SAVE)) {
                 Text("Transferir")
             }
         }

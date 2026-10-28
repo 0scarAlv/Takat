@@ -9,6 +9,8 @@ package com.takat.finanzas.ui.tutorial
 object TutorialEvents {
     const val ACCOUNT_CREATED = "account.created"
     const val FIXED_EXPENSE_CREATED = "fixedExpense.created"
+    const val TRANSACTION_CREATED = "transaction.created"
+    const val TRANSFER_CREATED = "transfer.created"
 
     private val listeners = mutableSetOf<(String) -> Unit>()
 

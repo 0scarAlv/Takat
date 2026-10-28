@@ -831,7 +831,8 @@ class FinanceRepository(
                     initialBalanceCents = row.initialBalanceCents,
                     colorArgb = row.colorArgb,
                     isDebt = row.isDebt,
-                    includeInTotal = row.includeInTotal
+                    includeInTotal = row.includeInTotal,
+                    creditLimitCents = row.creditLimitCents
                 )
             )
             accountIdByName[key(row.name)] = id

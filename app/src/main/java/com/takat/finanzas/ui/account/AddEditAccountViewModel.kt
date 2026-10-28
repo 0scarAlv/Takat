@@ -19,6 +19,8 @@ data class AddEditAccountUiState(
     val name: String = "",
     val amountText: String = "",
     val isDebt: Boolean = false,
+    /** Only shown (and saved) for "Debo" accounts. */
+    val limitText: String = "",
     val includeInTotal: Boolean = true,
     val colorArgb: Int = AccountSwatches.first(),
     val isEditing: Boolean = false,
@@ -48,6 +50,7 @@ class AddEditAccountViewModel(
                             name = existing.name,
                             amountText = existing.initialBalanceCents.toEditableAmountString(),
                             isDebt = existing.isDebt,
+                            limitText = existing.creditLimitCents?.toEditableAmountString().orEmpty(),
                             includeInTotal = existing.includeInTotal,
                             colorArgb = existing.colorArgb,
                             existingAccount = existing,
@@ -62,6 +65,7 @@ class AddEditAccountViewModel(
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value, error = null) }
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
     fun onIsDebtChange(value: Boolean) = _uiState.update { it.copy(isDebt = value) }
+    fun onLimitChange(value: String) = _uiState.update { it.copy(limitText = value, error = null) }
     fun onIncludeInTotalChange(value: Boolean) = _uiState.update { it.copy(includeInTotal = value) }
     fun onColorChange(color: Int) = _uiState.update { it.copy(colorArgb = color) }
 
@@ -77,6 +81,11 @@ class AddEditAccountViewModel(
             return
         }
         val signedCents = if (state.isDebt) -cents else cents
+        val limitCents = if (state.isDebt && state.limitText.isNotBlank()) state.limitText.parseAmountToCents() else null
+        if (state.isDebt && state.limitText.isNotBlank() && (limitCents == null || limitCents <= 0)) {
+            _uiState.update { it.copy(error = "Límite inválido") }
+            return
+        }
 
         viewModelScope.launch {
             val existing = state.existingAccount
@@ -87,7 +96,8 @@ class AddEditAccountViewModel(
                         initialBalanceCents = signedCents,
                         colorArgb = state.colorArgb,
                         isDebt = state.isDebt,
-                        includeInTotal = state.includeInTotal
+                        includeInTotal = state.includeInTotal,
+                        creditLimitCents = limitCents
                     )
                 )
             } else {
@@ -97,7 +107,8 @@ class AddEditAccountViewModel(
                         initialBalanceCents = signedCents,
                         colorArgb = state.colorArgb,
                         isDebt = state.isDebt,
-                        includeInTotal = state.includeInTotal
+                        includeInTotal = state.includeInTotal,
+                        creditLimitCents = limitCents
                     )
                 )
                 // Before flagging saved: the guide must advance before the screen pops back to Home.

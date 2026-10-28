@@ -13,5 +13,10 @@ data class AccountEntity(
     val createdAt: Long = System.currentTimeMillis(),
     val isDebt: Boolean = false,
     val includeInTotal: Boolean = true,
-    val isArchived: Boolean = false
+    val isArchived: Boolean = false,
+    /**
+     * Credit card limit ("Debo" accounts only), or null for none. Purely a cap to compare spending against:
+     * no interest, minimum payment or statement logic hangs off it.
+     */
+    val creditLimitCents: Long? = null
 )

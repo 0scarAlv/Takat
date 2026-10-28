@@ -1,5 +1,6 @@
 package com.takat.finanzas.ui.transaction
 
+import com.takat.finanzas.ui.tutorial.TutorialEvents
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.entity.AttachmentType
@@ -204,6 +205,8 @@ class AddTransactionViewModel(
                         repository.addDocumentAttachment(transactionId, pending.type, pending.bytes)
                     }
                 }
+                // Before flagging saved: the guide must advance before the screen pops back to Home.
+                TutorialEvents.emit(TutorialEvents.TRANSACTION_CREATED)
             }
             _uiState.update { it.copy(saved = true) }
         }

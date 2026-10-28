@@ -45,6 +45,9 @@ data class TutorialGuide(
     val steps: List<TutorialStep>,
     /** Guide offered by the last step's primary button, so guides can chain (welcome -> first account). */
     val followUpId: String? = null,
-    /** Can't run without at least one account (its form needs one to save); Ajustes > Guías locks it until then. */
-    val requiresAccount: Boolean = false
+    /**
+     * Accounts needed for the guide's forms to save (a transfer needs two). Ajustes > Guías locks it until then,
+     * and a guide chain skips over it.
+     */
+    val minAccounts: Int = 0
 )

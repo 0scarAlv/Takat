@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.transaction
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import android.Manifest
 import android.content.Context
 import android.content.pm.PackageManager
@@ -196,9 +198,16 @@ fun AddTransactionScreen(
     val filteredCategories = uiState.categories.filter { it.kind == relevantKind || it.kind == CategoryKind.BOTH }
     val amountCents = uiState.amountText.parseAmountToCents()
     val overBalanceWarning = selectedAccount?.let { account ->
-        if (uiState.isExpense && !account.account.isDebt && amountCents != null && amountCents > account.balanceCents) {
-            "Esa cuenta solo tiene ${account.balanceCents.centsToDisplay()} disponibles"
-        } else null
+        val creditAvailable = account.creditAvailableCents
+        when {
+            !uiState.isExpense || amountCents == null -> null
+            !account.account.isDebt && amountCents > account.balanceCents ->
+                "Esa cuenta solo tiene ${account.balanceCents.centsToDisplay()} disponibles"
+            account.account.isDebt && creditAvailable != null && amountCents > creditAvailable ->
+                if (creditAvailable > 0) "Con esto pasás el límite de la tarjeta: te quedan ${creditAvailable.centsToDisplay()}"
+                else "Esta tarjeta ya pasó su límite"
+            else -> null
+        }
     }
 
     Scaffold(
@@ -222,7 +231,7 @@ fun AddTransactionScreen(
                 .padding(16.dp),
             verticalArrangement = Arrangement.spacedBy(20.dp)
         ) {
-            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth()) {
+            SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_TYPE)) {
                 SegmentedButton(
                     selected = uiState.isExpense,
                     onClick = { viewModel.onTypeChange(true) },
@@ -251,7 +260,8 @@ fun AddTransactionScreen(
 
             ExposedDropdownMenuBox(
                 expanded = accountMenuExpanded,
-                onExpandedChange = { accountMenuExpanded = it }
+                onExpandedChange = { accountMenuExpanded = it },
+                modifier = Modifier.tutorialAnchor(TutorialAnchors.TX_ACCOUNT)
             ) {
                 OutlinedTextField(
                     value = selectedAccount?.account?.name ?: "",
@@ -305,7 +315,7 @@ fun AddTransactionScreen(
                     onValueChange = viewModel::onAmountChange,
                     label = { Text("Monto") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_AMOUNT),
                     singleLine = true
                 )
                 if (overBalanceWarning != null) {
@@ -334,7 +344,7 @@ fun AddTransactionScreen(
                 singleLine = true
             )
 
-            Column {
+            Column(modifier = Modifier.tutorialAnchor(TutorialAnchors.TX_CATEGORY)) {
                 Text("Categoría", style = MaterialTheme.typography.labelLarge)
                 CategoryPicker(
                     categories = filteredCategories,
@@ -424,7 +434,7 @@ fun AddTransactionScreen(
                 Text(uiState.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
 
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_SAVE)) {
                 Text("Guardar")
             }
         }

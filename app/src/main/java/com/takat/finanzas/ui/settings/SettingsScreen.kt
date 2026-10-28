@@ -4,7 +4,6 @@ import com.takat.finanzas.ui.tutorial.TutorialAnchors
 import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import com.takat.finanzas.ui.tutorial.LocalTutorialController
 import com.takat.finanzas.ui.tutorial.TutorialCatalog
-import kotlinx.coroutines.flow.map
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -682,17 +681,18 @@ private fun MainPage(
 private fun GuidesPage() {
     val controller = LocalTutorialController.current ?: return
     val progress by controller.progress.collectAsState()
-    val repository = rememberRepository()
-    val hasAccounts by remember { repository.accountsWithBalance().map { it.isNotEmpty() } }.collectAsState(initial = true)
+    val accountCount by controller.accountCount.collectAsState()
     SettingsGroup(null) {
         TutorialCatalog.guides.forEachIndexed { index, guide ->
             if (index > 0) RowDivider()
             val done = progress[guide.id]?.completedAt != null
-            val locked = guide.requiresAccount && !hasAccounts
+            val locked = accountCount < guide.minAccounts
             SettingsRow(
                 icon = guide.icon,
                 title = guide.title,
-                summary = if (locked) "Primero creá una cuenta (guía \"Tus cuentas\")" else "${guide.summary} · ${guide.steps.size} pasos",
+                summary = if (locked) {
+                    if (guide.minAccounts > 1) "Necesitás al menos ${guide.minAccounts} cuentas" else "Primero creá una cuenta (guía \"Tus cuentas\")"
+                } else "${guide.summary} · ${guide.steps.size} pasos",
                 onClick = if (locked) null else { { controller.start(guide) } },
                 trailing = {
                     if (locked) {
