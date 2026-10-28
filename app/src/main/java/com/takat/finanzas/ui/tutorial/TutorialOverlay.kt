@@ -59,6 +59,7 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalFocusManager
 import androidx.compose.ui.unit.Constraints
 import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.IntSize
 import androidx.compose.ui.unit.dp
 import kotlinx.coroutines.delay
 import kotlin.math.max
@@ -99,6 +100,7 @@ fun TutorialOverlay(controller: TutorialController) {
     }
 
     var origin by remember { mutableStateOf(Offset.Zero) }
+    var overlaySize by remember { mutableStateOf(IntSize.Zero) }
     val padPx = with(density) { 6.dp.toPx() }
     val hole: Rect? = step.anchor
         ?.let(controller::anchorBounds)
@@ -116,13 +118,16 @@ fun TutorialOverlay(controller: TutorialController) {
     Box(
         modifier = Modifier
             .fillMaxSize()
-            .onGloballyPositioned { origin = it.positionInWindow() }
+            .onGloballyPositioned {
+                origin = it.positionInWindow()
+                overlaySize = it.size
+            }
     ) {
         if (hole == null && step.anchor != null && !anchorGraceOver) return@Box
 
         if (dimAndBlock) {
             Spotlight(hole)
-            TouchBlockers(hole)
+            TouchBlockers(hole.takeIf { needsInteraction || step.touchable }, overlaySize)
         }
 
         val topInset = WindowInsets.safeDrawing.getTop(density)
@@ -196,15 +201,19 @@ private fun Spotlight(hole: Rect?) {
  * itself, so hit-testing falls through to the real element there.
  */
 @Composable
-private fun TouchBlockers(hole: Rect?) {
-    val big = 100_000f
+private fun TouchBlockers(hole: Rect?, size: IntSize) {
+    val width = size.width.toFloat()
+    val height = size.height.toFloat()
     if (hole == null) {
-        Blocker(Rect(0f, 0f, big, big))
+        Blocker(Rect(0f, 0f, width, height))
     } else {
-        Blocker(Rect(0f, 0f, big, hole.top))
-        Blocker(Rect(0f, hole.bottom, big, big))
-        Blocker(Rect(0f, hole.top, hole.left, hole.bottom))
-        Blocker(Rect(hole.right, hole.top, big, hole.bottom))
+        // The hole can hang off-screen (an anchor half scrolled out), so clamp it to the overlay.
+        val top = hole.top.coerceIn(0f, height)
+        val bottom = hole.bottom.coerceIn(0f, height)
+        Blocker(Rect(0f, 0f, width, top))
+        Blocker(Rect(0f, bottom, width, height))
+        Blocker(Rect(0f, top, hole.left.coerceIn(0f, width), bottom))
+        Blocker(Rect(hole.right.coerceIn(0f, width), top, width, bottom))
     }
 }
 

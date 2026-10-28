@@ -77,12 +77,14 @@ object TutorialCatalog {
             TutorialStep(
                 screen = Routes.ACCOUNT_NEW,
                 anchor = TutorialAnchors.ACCOUNT_NAME,
+                touchable = true,
                 title = "Ponele nombre",
                 body = "Por ejemplo \"Efectivo\" o \"Banco\". Tocá el campo, escribilo y después Siguiente."
             ),
             TutorialStep(
                 screen = Routes.ACCOUNT_NEW,
                 anchor = TutorialAnchors.ACCOUNT_DEBT,
+                touchable = true,
                 title = "¿Tengo o Debo?",
                 body = "\"Tengo\" es plata tuya, como efectivo o ahorros. \"Debo\" es una deuda, como la tarjeta de " +
                     "crédito o un préstamo: su saldo se resta de lo que tenés."
@@ -90,6 +92,7 @@ object TutorialCatalog {
             TutorialStep(
                 screen = Routes.ACCOUNT_NEW,
                 anchor = TutorialAnchors.ACCOUNT_INCLUDE,
+                touchable = true,
                 title = "Sumar al resumen",
                 body = "Dejalo encendido para que la cuenta cuente en tu Disponible. Apagalo para plata que querés " +
                     "llevar aparte, como un ahorro que no pensás tocar."
@@ -97,6 +100,7 @@ object TutorialCatalog {
             TutorialStep(
                 screen = Routes.ACCOUNT_NEW,
                 anchor = TutorialAnchors.ACCOUNT_AMOUNT,
+                touchable = true,
                 title = "¿Con cuánto arranca?",
                 body = "Escribí cuánto tiene hoy esa cuenta. Si no sabés exacto, poné un aproximado: lo podés " +
                     "corregir cuando quieras."

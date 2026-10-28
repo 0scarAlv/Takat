@@ -23,7 +23,13 @@ data class TutorialStep(
     val anchor: String? = null,
     val advance: Advance = Advance.Next,
     /** Overrides the primary button text (only for [Advance.Next] steps). */
-    val primaryLabel: String? = null
+    val primaryLabel: String? = null,
+    /**
+     * Lets touches through the spotlight on an [Advance.Next] step, for form fields the user fills in before
+     * tapping Siguiente. Off for purely explanatory steps, so tapping the highlighted button can't wander off.
+     * Interactive steps ([Advance.TapAnchor], [Advance.Event]) always let touches through.
+     */
+    val touchable: Boolean = false
 )
 
 data class TutorialGuide(

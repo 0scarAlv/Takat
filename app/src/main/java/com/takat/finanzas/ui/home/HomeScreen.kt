@@ -1,5 +1,6 @@
 package com.takat.finanzas.ui.home
 
+import com.takat.finanzas.ui.tutorial.LocalTutorialController
 import com.takat.finanzas.ui.tutorial.TutorialAnchors
 import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.animation.AnimatedVisibility
@@ -60,6 +61,7 @@ import androidx.compose.material3.TextButton
 import androidx.compose.material3.TopAppBar
 import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
+import androidx.compose.runtime.LaunchedEffect
 import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
@@ -139,6 +141,11 @@ fun HomeScreen(
     // System back from Presupuesto or Estadísticas returns to Inicio instead of leaving the app.
     BackHandler(enabled = pagerState.currentPage != 1) {
         scope.launch { pagerState.animateScrollToPage(1) }
+    }
+    // Guides point at things on Inicio (balance card, accounts), so bring that page up when one starts.
+    val activeGuide = LocalTutorialController.current?.activeGuide
+    LaunchedEffect(activeGuide) {
+        if (activeGuide != null && pagerState.currentPage != 1) pagerState.animateScrollToPage(1)
     }
 
     Scaffold(
