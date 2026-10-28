@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.fixedexpense
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.PaddingValues
@@ -74,7 +76,7 @@ fun FixedExpensesScreen(
         },
         floatingActionButton = {
             if (tabIndex == 0) {
-                FloatingActionButton(onClick = onAddNew) {
+                FloatingActionButton(onClick = onAddNew, modifier = Modifier.tutorialAnchor(TutorialAnchors.FIXED_ADD)) {
                     Icon(Icons.Filled.Add, contentDescription = "Nuevo gasto fijo")
                 }
             }

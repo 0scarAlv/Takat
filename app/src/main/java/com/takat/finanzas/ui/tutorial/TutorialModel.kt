@@ -39,5 +39,7 @@ data class TutorialGuide(
     val icon: ImageVector,
     val steps: List<TutorialStep>,
     /** Guide offered by the last step's primary button, so guides can chain (welcome -> first account). */
-    val followUpId: String? = null
+    val followUpId: String? = null,
+    /** Can't run without at least one account (its form needs one to save); Ajustes > Guías locks it until then. */
+    val requiresAccount: Boolean = false
 )

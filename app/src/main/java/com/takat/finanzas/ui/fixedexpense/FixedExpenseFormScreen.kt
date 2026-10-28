@@ -1,5 +1,7 @@
 package com.takat.finanzas.ui.fixedexpense
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import android.Manifest
 import android.content.pm.PackageManager
 import android.os.Build
@@ -103,11 +105,11 @@ fun FixedExpenseFormScreen(
                 value = uiState.name,
                 onValueChange = viewModel::onNameChange,
                 label = { Text("Nombre") },
-                modifier = Modifier.fillMaxWidth(),
+                modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.FIXED_NAME),
                 singleLine = true
             )
 
-            Column {
+            Column(modifier = Modifier.tutorialAnchor(TutorialAnchors.FIXED_KIND)) {
                 Text("Tipo", style = MaterialTheme.typography.labelMedium)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                     val kinds = listOf(
@@ -232,7 +234,7 @@ fun FixedExpenseFormScreen(
                     onValueChange = viewModel::onAmountChange,
                     label = { Text("Monto") },
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
-                    modifier = Modifier.fillMaxWidth(),
+                    modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.FIXED_AMOUNT),
                     singleLine = true
                 )
             }
@@ -242,7 +244,8 @@ fun FixedExpenseFormScreen(
                     label = "Cuenta",
                     accounts = uiState.accounts,
                     selectedId = uiState.accountId,
-                    onSelect = viewModel::onAccountChange
+                    onSelect = viewModel::onAccountChange,
+                    modifier = Modifier.tutorialAnchor(TutorialAnchors.FIXED_ACCOUNT)
                 )
             }
 
@@ -257,7 +260,7 @@ fun FixedExpenseFormScreen(
                 )
             }
 
-            Column {
+            Column(modifier = Modifier.tutorialAnchor(TutorialAnchors.FIXED_FREQUENCY)) {
                 Text("Frecuencia", style = MaterialTheme.typography.labelMedium)
                 SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().padding(top = 4.dp)) {
                     SegmentedButton(
@@ -311,7 +314,7 @@ fun FixedExpenseFormScreen(
                 )
             }
 
-            Row(modifier = Modifier.fillMaxWidth()) {
+            Row(modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.FIXED_NOTIFY)) {
                 Text("Notificarme", modifier = Modifier.weight(1f))
                 Switch(
                     checked = uiState.notifyEnabled,
@@ -334,7 +337,7 @@ fun FixedExpenseFormScreen(
                 Text(uiState.error.orEmpty(), color = MaterialTheme.colorScheme.error)
             }
 
-            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth()) {
+            Button(onClick = viewModel::save, modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.FIXED_SAVE)) {
                 Text("Guardar")
             }
         }
@@ -359,10 +362,11 @@ private fun AccountDropdown(
     accounts: List<AccountEntity>,
     supportingText: String? = null,
     selectedId: Long?,
-    onSelect: (Long) -> Unit
+    onSelect: (Long) -> Unit,
+    modifier: Modifier = Modifier
 ) {
     var expanded by remember { mutableStateOf(false) }
-    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }) {
+    ExposedDropdownMenuBox(expanded = expanded, onExpandedChange = { expanded = it }, modifier = modifier) {
         OutlinedTextField(
             value = accounts.find { it.id == selectedId }?.name ?: "",
             onValueChange = {},

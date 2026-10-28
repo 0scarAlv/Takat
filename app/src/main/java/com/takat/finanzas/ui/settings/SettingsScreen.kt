@@ -1,7 +1,10 @@
 package com.takat.finanzas.ui.settings
 
+import com.takat.finanzas.ui.tutorial.TutorialAnchors
+import com.takat.finanzas.ui.tutorial.tutorialAnchor
 import com.takat.finanzas.ui.tutorial.LocalTutorialController
 import com.takat.finanzas.ui.tutorial.TutorialCatalog
+import kotlinx.coroutines.flow.map
 import android.content.Intent
 import android.net.Uri
 import android.widget.Toast
@@ -41,6 +44,7 @@ import androidx.compose.material.icons.filled.EventRepeat
 import androidx.compose.material.icons.filled.FileDownload
 import androidx.compose.material.icons.filled.FileUpload
 import androidx.compose.material.icons.filled.Folder
+import androidx.compose.material.icons.filled.Lock
 import androidx.compose.material.icons.filled.FolderOff
 import androidx.compose.material.icons.filled.Mood
 import androidx.compose.material.icons.filled.Palette
@@ -541,7 +545,8 @@ private fun MainPage(
             icon = Icons.Filled.EventRepeat,
             title = "Gastos fijos",
             summary = "Alquiler, servicios, cuotas y créditos",
-            onClick = onOpenFixedExpenses
+            onClick = onOpenFixedExpenses,
+            modifier = Modifier.tutorialAnchor(TutorialAnchors.SETTINGS_FIXED)
         )
         RowDivider()
         SettingsRow(
@@ -677,17 +682,22 @@ private fun MainPage(
 private fun GuidesPage() {
     val controller = LocalTutorialController.current ?: return
     val progress by controller.progress.collectAsState()
+    val repository = rememberRepository()
+    val hasAccounts by remember { repository.accountsWithBalance().map { it.isNotEmpty() } }.collectAsState(initial = true)
     SettingsGroup(null) {
         TutorialCatalog.guides.forEachIndexed { index, guide ->
             if (index > 0) RowDivider()
             val done = progress[guide.id]?.completedAt != null
+            val locked = guide.requiresAccount && !hasAccounts
             SettingsRow(
                 icon = guide.icon,
                 title = guide.title,
-                summary = "${guide.summary} · ${guide.steps.size} pasos",
-                onClick = { controller.start(guide) },
+                summary = if (locked) "Primero creá una cuenta (guía \"Tus cuentas\")" else "${guide.summary} · ${guide.steps.size} pasos",
+                onClick = if (locked) null else { { controller.start(guide) } },
                 trailing = {
-                    if (done) {
+                    if (locked) {
+                        Icon(Icons.Filled.Lock, contentDescription = "Bloqueada", tint = MaterialTheme.colorScheme.onSurfaceVariant)
+                    } else if (done) {
                         Icon(Icons.Filled.CheckCircle, contentDescription = "Completada", tint = MaterialTheme.colorScheme.primary)
                     } else {
                         Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant)
@@ -750,10 +760,11 @@ private fun SettingsRow(
     onClick: (() -> Unit)? = null,
     trailing: (@Composable () -> Unit)? = if (onClick != null) {
         { Icon(Icons.AutoMirrored.Filled.KeyboardArrowRight, contentDescription = null, tint = MaterialTheme.colorScheme.onSurfaceVariant) }
-    } else null
+    } else null,
+    modifier: Modifier = Modifier
 ) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .then(if (onClick != null) Modifier.clickable(onClick = onClick) else Modifier)
             .heightIn(min = 60.dp)

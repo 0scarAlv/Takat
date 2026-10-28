@@ -499,11 +499,26 @@ private fun BalanceHero(
                         .background(Color.White.copy(alpha = 0.12f))
                         .padding(horizontal = 14.dp, vertical = 4.dp)
                 ) {
-                    HeroLine("Capital total", if (amountsHidden) mask else totals.capitalCents.centsToDisplay(), muted)
+                    HeroLine(
+                        "Capital total",
+                        if (amountsHidden) mask else totals.capitalCents.centsToDisplay(),
+                        muted,
+                        Modifier.tutorialAnchor(TutorialAnchors.HOME_CAPITAL)
+                    )
                     if (totals.pendingFixedExpensesCents > 0) {
-                        HeroLine("Gasto fijo este período", if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(), muted)
+                        HeroLine(
+                            "Gasto fijo este período",
+                            if (amountsHidden) mask else totals.pendingFixedExpensesCents.centsToDisplay(),
+                            muted,
+                            Modifier.tutorialAnchor(TutorialAnchors.HOME_FIXED)
+                        )
                     }
-                    HeroLine("Deuda total", if (amountsHidden) mask else totals.debtCents.centsToDisplay(), muted)
+                    HeroLine(
+                        "Deuda total",
+                        if (amountsHidden) mask else totals.debtCents.centsToDisplay(),
+                        muted,
+                        Modifier.tutorialAnchor(TutorialAnchors.HOME_DEBT)
+                    )
                     if (totals.financedCents > 0) {
                         HeroLine(
                             if (totals.financedIncludedInAvailable) "Crédito (restado)" else "Crédito (no se resta)",
@@ -518,9 +533,9 @@ private fun BalanceHero(
 }
 
 @Composable
-private fun HeroLine(label: String, value: String, labelColor: Color) {
+private fun HeroLine(label: String, value: String, labelColor: Color, modifier: Modifier = Modifier) {
     Row(
-        modifier = Modifier
+        modifier = modifier
             .fillMaxWidth()
             .padding(vertical = 8.dp)
             .semantics(mergeDescendants = true) {},

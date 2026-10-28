@@ -1,5 +1,6 @@
 package com.takat.finanzas.ui.fixedexpense
 
+import com.takat.finanzas.ui.tutorial.TutorialEvents
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import com.takat.finanzas.data.entity.AccountEntity
@@ -277,7 +278,13 @@ class FixedExpenseFormViewModel(
                 financedPrincipalCents = principalCents,
                 interestRateBps = interestRateBps
             )
-            if (fixedExpenseId == null) repository.addFixedExpense(entity) else repository.updateFixedExpense(entity)
+            if (fixedExpenseId == null) {
+                repository.addFixedExpense(entity)
+                // Before flagging saved: the guide must advance before the screen pops back to the list.
+                TutorialEvents.emit(TutorialEvents.FIXED_EXPENSE_CREATED)
+            } else {
+                repository.updateFixedExpense(entity)
+            }
             _uiState.update { it.copy(saved = true) }
         }
     }

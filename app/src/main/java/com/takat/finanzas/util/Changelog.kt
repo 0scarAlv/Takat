@@ -221,7 +221,8 @@ object Changelog {
         )),
         ChangelogEntry(47, "3.3.0", listOf(
             "Nuevo: guías interactivas. Resaltan la parte de la pantalla de la que hablan y te acompañan mientras lo hacés de verdad.",
-            "Si instalás Takat por primera vez, arranca con una bienvenida y te ayuda a crear tu primera cuenta paso a paso.",
+            "Si instalás Takat por primera vez, arranca con una bienvenida que explica cada número del inicio y te ayuda a armar tus cuentas (efectivo, débito, crédito y ahorro).",
+            "Guía de gastos fijos: qué son, por qué bajan tu Disponible antes de pagarlos y cómo crear y pagar uno.",
             "Podés repetir las guías cuando quieras desde Ajustes › Ayuda › Guías."
         ))
     )
