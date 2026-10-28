@@ -205,7 +205,7 @@ object TutorialCatalog {
         summary = "Registrar un gasto o un ingreso",
         icon = Icons.AutoMirrored.Filled.ReceiptLong,
         minAccounts = 1,
-        followUpId = TRANSFERS,
+        followUpId = EDIT_OR_DELETE,
         steps = listOf(
             TutorialStep(
                 screen = Routes.HOME,
@@ -270,8 +270,8 @@ object TutorialCatalog {
                 anchor = TutorialAnchors.HOME_ACCOUNTS,
                 title = "¡Registrado!",
                 body = "El saldo de la cuenta ya cambió y el movimiento aparece abajo, en Movimientos, agrupado por " +
-                    "día. Si te equivocaste, tocalo para editarlo o eliminarlo.",
-                primaryLabel = "Seguir: transferencias"
+                    "día. ¿Y si te equivocaste? Te muestro cómo corregirlo.",
+                primaryLabel = "Seguir: corregir o eliminar"
             )
         )
     )
@@ -462,6 +462,7 @@ object TutorialCatalog {
         summary = "Editar un movimiento, una cuenta o borrarlos",
         icon = Icons.Filled.Edit,
         minAccounts = 1,
+        followUpId = TRANSFERS,
         steps = listOf(
             TutorialStep(
                 screen = Routes.HOME,
@@ -504,12 +505,13 @@ object TutorialCatalog {
                 title = "Eliminar",
                 body = "La papelera elimina la cuenta; Takat te pide confirmación antes. Si la cuenta ya tenía " +
                     "movimientos, deja de aparecer pero esos movimientos se mantienen en tu historial.",
-                primaryLabel = "Terminar"
+                // Generic on purpose: the chain skips Transferencias when there's only one account.
+                primaryLabel = "Siguiente guía"
             )
         )
     )
 
-    val guides: List<TutorialGuide> = listOf(welcome, firstAccount, movements, transfers, fixedExpenses, editOrDelete)
+    val guides: List<TutorialGuide> = listOf(welcome, firstAccount, movements, editOrDelete, transfers, fixedExpenses)
 
     fun byId(id: String): TutorialGuide? = guides.firstOrNull { it.id == id }
 }
