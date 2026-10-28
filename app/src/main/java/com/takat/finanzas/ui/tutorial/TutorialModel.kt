@@ -29,7 +29,12 @@ data class TutorialStep(
      * tapping Siguiente. Off for purely explanatory steps, so tapping the highlighted button can't wander off.
      * Interactive steps ([Advance.TapAnchor], [Advance.Event]) always let touches through.
      */
-    val touchable: Boolean = false
+    val touchable: Boolean = false,
+    /**
+     * Skipped automatically when its anchor isn't on screen, for things that only exist with data (e.g. the
+     * "Gasto fijo este período" line, which a new user doesn't have yet).
+     */
+    val optional: Boolean = false
 )
 
 data class TutorialGuide(

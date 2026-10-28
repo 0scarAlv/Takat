@@ -95,6 +95,7 @@ fun TutorialOverlay(controller: TutorialController) {
     LaunchedEffect(stepKey) {
         if (!anchorGraceOver) {
             delay(600)
+            if (step.optional) controller.skipMissingOptionalStep()
             anchorGraceOver = true
         }
     }
@@ -123,7 +124,7 @@ fun TutorialOverlay(controller: TutorialController) {
                 overlaySize = it.size
             }
     ) {
-        if (hole == null && step.anchor != null && !anchorGraceOver) return@Box
+        if (hole == null && step.anchor != null && (!anchorGraceOver || step.optional)) return@Box
 
         if (dimAndBlock) {
             Spotlight(hole)

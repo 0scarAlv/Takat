@@ -31,7 +31,8 @@ object TutorialCatalog {
                 title = "Disponible",
                 body = "Es el número más importante: la plata que realmente podés usar. Se calcula así:\n\n" +
                     "Capital total − Deuda total − Gasto fijo pendiente\n\n" +
-                    "Si sale negativo, debés más de lo que tenés. Con el ojito ocultás los montos si alguien está mirando."
+                    "Si sale negativo, debés más de lo que tenés. Al principio todo está en 0: se llena cuando creás " +
+                    "tus cuentas. Con el ojito ocultás los montos si alguien está mirando."
             ),
             TutorialStep(
                 screen = Routes.HOME,
@@ -43,6 +44,7 @@ object TutorialCatalog {
             TutorialStep(
                 screen = Routes.HOME,
                 anchor = TutorialAnchors.HOME_FIXED,
+                optional = true,
                 title = "Gasto fijo este período",
                 body = "Lo que todavía te falta pagar este mes o quincena de tus gastos fijos (alquiler, luz, " +
                     "internet, cuotas). Takat lo aparta de tu Disponible antes de que lo pagues, para que no lo gastes " +
@@ -53,7 +55,8 @@ object TutorialCatalog {
                 anchor = TutorialAnchors.HOME_DEBT,
                 title = "Deuda total",
                 body = "Todo lo que DEBÉS en cuentas marcadas como \"Debo\", como la tarjeta de crédito. Acá se muestra " +
-                    "como el monto que debés; en tu lista de cuentas la tarjeta aparece en negativo, y es normal."
+                    "como el monto que debés; en tu lista de cuentas la tarjeta aparece en negativo, y es normal. " +
+                    "Si no debés nada, queda en 0."
             ),
             TutorialStep(
                 screen = Routes.HOME,
@@ -90,6 +93,7 @@ object TutorialCatalog {
         title = "Tus cuentas",
         summary = "Las 4 cuentas básicas y cómo crearlas",
         icon = Icons.Filled.AccountBalanceWallet,
+        followUpId = FIXED_EXPENSES,
         steps = listOf(
             TutorialStep(
                 screen = Routes.HOME,
@@ -171,8 +175,10 @@ object TutorialCatalog {
                 anchor = TutorialAnchors.HOME_ACCOUNTS,
                 title = "¡Primera cuenta lista!",
                 body = "Ahora creá las demás con el mismo + de Cuentas: Tarjeta de débito, Tarjeta de crédito y Ahorro. " +
-                    "Tocá cualquier cuenta para ver sus movimientos o editarla.",
-                primaryLabel = "Terminar"
+                    "Tocá cualquier cuenta para ver sus movimientos o editarla.\n\n" +
+                    "Lo último que conviene entender son los gastos fijos (alquiler, luz, cuotas), porque cambian tu " +
+                    "Disponible. ¿Te los explico ahora?",
+                primaryLabel = "Ver gastos fijos"
             )
         )
     )

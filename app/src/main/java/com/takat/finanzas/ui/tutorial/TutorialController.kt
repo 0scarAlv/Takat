@@ -88,13 +88,29 @@ class TutorialController(private val repository: FinanceRepository) : ViewModel(
     }
 
     fun back() {
-        if (canGoBack()) stepIndex--
+        previousStepIndex()?.let { stepIndex = it }
     }
 
     /** Back only stays on the same screen; going back across a navigation would need the user to undo it. */
-    fun canGoBack(): Boolean {
-        val steps = activeGuide?.steps ?: return false
-        return stepIndex > 0 && steps[stepIndex - 1].screen == steps[stepIndex].screen
+    fun canGoBack(): Boolean = previousStepIndex() != null
+
+    /** Previous step on this screen, passing over optional ones that were skipped (or they'd skip forward again). */
+    private fun previousStepIndex(): Int? {
+        val steps = activeGuide?.steps ?: return null
+        val screen = steps[stepIndex].screen
+        var i = stepIndex - 1
+        while (i >= 0 && steps[i].screen == screen) {
+            val step = steps[i]
+            if (!(step.optional && step.anchor != null && anchors[step.anchor] == null)) return i
+            i--
+        }
+        return null
+    }
+
+    /** Called by the overlay when an [TutorialStep.optional] step's anchor never showed up. */
+    fun skipMissingOptionalStep() {
+        val step = currentStep ?: return
+        if (step.optional && step.anchor != null && anchors[step.anchor] == null) next()
     }
 
     /** Ends the guide early; it won't auto-start again but stays in Ajustes > Guías. */
