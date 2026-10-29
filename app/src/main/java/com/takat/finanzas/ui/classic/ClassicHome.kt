@@ -8,7 +8,12 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.draw.clip
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -100,6 +105,7 @@ import kotlinx.coroutines.launch
 fun ClassicHomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
+    onTransferFromAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
@@ -145,7 +151,8 @@ fun ClassicHomeContent(
                 AccountCard(
                     item = accountWithBalance,
                     amountsHidden = uiState.amountsHidden,
-                    onClick = { onOpenAccount(accountWithBalance.account.id) }
+                    onClick = { onOpenAccount(accountWithBalance.account.id) },
+                    onLongClick = { onTransferFromAccount(accountWithBalance.account.id) }
                 )
             }
         } else {
@@ -280,12 +287,23 @@ private fun TotalsCard(
 }
 
 @Composable
-private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
-    // Card(onClick) instead of Modifier.clickable so the ripple is clipped to the rounded shape.
+@OptIn(ExperimentalFoundationApi::class)
+private fun AccountCard(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
+    val haptics = LocalHapticFeedback.current
+    val shape = RoundedCornerShape(18.dp)
+    // Non-clickable Card + clip + combinedClickable (Card(onClick) has no long-press); ripple stays clipped to the shape.
     Card(
-        onClick = onClick,
-        modifier = Modifier.fillMaxWidth(),
-        shape = RoundedCornerShape(18.dp),
+        modifier = Modifier
+            .fillMaxWidth()
+            .clip(shape)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            ),
+        shape = shape,
         colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surface),
         border = cardBorder
     ) {

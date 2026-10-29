@@ -54,12 +54,13 @@ import com.takat.finanzas.ui.theme.financeColors
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun AddTransferScreen(
+    preselectedFromAccountId: Long? = null,
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: AddTransferViewModel = viewModel(
-        factory = LambdaViewModelFactory { AddTransferViewModel(repository) }
+        factory = LambdaViewModelFactory { AddTransferViewModel(repository, preselectedFromAccountId) }
     )
     val uiState by viewModel.uiState.collectAsState()
     var fromMenuExpanded by remember { mutableStateOf(false) }

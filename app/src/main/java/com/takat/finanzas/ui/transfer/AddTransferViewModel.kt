@@ -29,19 +29,24 @@ data class AddTransferUiState(
     val saved: Boolean = false
 )
 
-class AddTransferViewModel(private val repository: FinanceRepository) : ViewModel() {
+class AddTransferViewModel(
+    private val repository: FinanceRepository,
+    preselectedFromAccountId: Long? = null
+) : ViewModel() {
 
-    private val _uiState = MutableStateFlow(AddTransferUiState())
+    private val _uiState = MutableStateFlow(AddTransferUiState(fromAccountId = preselectedFromAccountId))
     val uiState: StateFlow<AddTransferUiState> = _uiState.asStateFlow()
 
     init {
         viewModelScope.launch {
             repository.accountsWithBalance().collect { accounts ->
                 _uiState.update { state ->
+                    val fromId = state.fromAccountId ?: accounts.firstOrNull()?.account?.id
                     state.copy(
                         accounts = accounts,
-                        fromAccountId = state.fromAccountId ?: accounts.firstOrNull()?.account?.id,
-                        toAccountId = state.toAccountId ?: accounts.getOrNull(1)?.account?.id
+                        fromAccountId = fromId,
+                        // Default destination is the first account that isn't the origin (which may be preselected).
+                        toAccountId = state.toAccountId ?: accounts.firstOrNull { it.account.id != fromId }?.account?.id
                     )
                 }
             }

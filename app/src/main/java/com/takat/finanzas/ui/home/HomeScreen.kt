@@ -10,7 +10,11 @@ import androidx.compose.animation.fadeIn
 import androidx.compose.animation.fadeOut
 import androidx.compose.animation.shrinkVertically
 import androidx.compose.foundation.background
+import androidx.compose.foundation.ExperimentalFoundationApi
 import androidx.compose.foundation.clickable
+import androidx.compose.foundation.combinedClickable
+import androidx.compose.ui.hapticfeedback.HapticFeedbackType
+import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Column
@@ -118,6 +122,7 @@ import com.takat.finanzas.ui.theme.LocalUiStyle
 @Composable
 fun HomeScreen(
     onOpenAccount: (Long) -> Unit,
+    onTransferFromAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onAddTransaction: () -> Unit,
     onAddTransfer: () -> Unit,
@@ -235,6 +240,7 @@ fun HomeScreen(
                 1 -> if (LocalUiStyle.current == UiStyle.CLASSIC) ClassicHomeContent(
                     uiState = uiState,
                     onOpenAccount = onOpenAccount,
+                    onTransferFromAccount = onTransferFromAccount,
                     onAddAccount = onAddAccount,
                     onMovementClick = { selectedMovement = it },
                     onOpenFixedExpenses = onOpenFixedExpenses,
@@ -243,6 +249,7 @@ fun HomeScreen(
                 ) else HomeContent(
                     uiState = uiState,
                     onOpenAccount = onOpenAccount,
+                    onTransferFromAccount = onTransferFromAccount,
                     onAddAccount = onAddAccount,
                     onMovementClick = { selectedMovement = it },
                     onOpenFixedExpenses = onOpenFixedExpenses,
@@ -302,6 +309,7 @@ fun HomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
+    onTransferFromAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
@@ -347,7 +355,7 @@ private fun HomeContent(
             if (uiState.accounts.isEmpty()) {
                 EmptyHint("Todavía no tenés cuentas. Tocá + para crear la primera.")
             } else {
-                AccountsGroup(uiState.accounts, uiState.amountsHidden, onOpenAccount)
+                AccountsGroup(uiState.accounts, uiState.amountsHidden, onOpenAccount, onTransferFromAccount)
             }
         }
 
@@ -563,10 +571,18 @@ private fun HeroLine(label: String, value: String, labelColor: Color, modifier: 
 
 /** All accounts in one card, separated by inset dividers, instead of one floating card per account. */
 @Composable
-private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boolean, onOpenAccount: (Long) -> Unit) {
+private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boolean,
+    onOpenAccount: (Long) -> Unit,
+    onTransferFromAccount: (Long) -> Unit
+) {
     TakatCard(modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_ACCOUNTS)) {
         accounts.forEachIndexed { index, item ->
-            AccountRow(item, amountsHidden, onClick = { onOpenAccount(item.account.id) })
+            AccountRow(
+                item,
+                amountsHidden,
+                onClick = { onOpenAccount(item.account.id) },
+                onLongClick = { onTransferFromAccount(item.account.id) }
+            )
             if (index < accounts.lastIndex) {
                 HorizontalDivider(
                     modifier = Modifier.padding(start = 68.dp),
@@ -578,12 +594,20 @@ private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boo
 }
 
 @Composable
-private fun AccountRow(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit) {
+@OptIn(ExperimentalFoundationApi::class)
+private fun AccountRow(item: AccountWithBalance, amountsHidden: Boolean, onClick: () -> Unit, onLongClick: () -> Unit) {
     val account = item.account
+    val haptics = LocalHapticFeedback.current
     Row(
         modifier = Modifier
             .fillMaxWidth()
-            .clickable(onClick = onClick)
+            .combinedClickable(
+                onClick = onClick,
+                onLongClick = {
+                    haptics.performHapticFeedback(HapticFeedbackType.LongPress)
+                    onLongClick()
+                }
+            )
             .heightIn(min = 64.dp)
             .padding(horizontal = 14.dp, vertical = 10.dp),
         verticalAlignment = Alignment.CenterVertically

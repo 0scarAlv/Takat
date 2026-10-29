@@ -45,7 +45,7 @@ internal object Routes {
     const val ACCOUNT_EDIT = "account/{accountId}/edit"
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}&fixedExpenseId={fixedExpenseId}"
     const val TRANSACTION_EDIT = "transaction/{transactionId}/edit"
-    const val TRANSFER_NEW = "transfer/new"
+    const val TRANSFER_NEW = "transfer/new?fromAccountId={fromAccountId}"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
     const val DAY_EXPENSES = "stats/day/{epochDay}"
     const val SETTINGS = "settings"
@@ -59,6 +59,7 @@ internal object Routes {
     fun accountEdit(id: Long) = "account/$id/edit"
     fun transactionNew(accountId: Long? = null, fixedExpenseId: Long? = null) =
         "transaction/new?accountId=${accountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
+    fun transferNew(fromAccountId: Long? = null) = "transfer/new?fromAccountId=${fromAccountId ?: -1L}"
     fun transactionEdit(id: Long) = "transaction/$id/edit"
     fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
     fun dayExpenses(date: LocalDate) = "stats/day/${date.toEpochDay()}"
@@ -88,7 +89,7 @@ fun TakatNavGraph(
     LaunchedEffect(widgetAction) {
         when (widgetAction) {
             WidgetActions.ACTION_NEW_TRANSACTION -> navController.navigate(Routes.transactionNew())
-            WidgetActions.ACTION_NEW_TRANSFER -> navController.navigate(Routes.TRANSFER_NEW)
+            WidgetActions.ACTION_NEW_TRANSFER -> navController.navigate(Routes.transferNew())
         }
         if (widgetAction != null) pendingWidgetAction.value = null
     }
@@ -143,7 +144,8 @@ fun TakatNavGraph(
                         onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
                         onAddAccount = { navController.navigate(Routes.ACCOUNT_NEW) },
                         onAddTransaction = { navController.navigate(Routes.transactionNew()) },
-                        onAddTransfer = { navController.navigate(Routes.TRANSFER_NEW) },
+                        onTransferFromAccount = { navController.navigate(Routes.transferNew(it)) },
+                        onAddTransfer = { navController.navigate(Routes.transferNew()) },
                         onOpenCategoryExpenses = { categoryId, from, to ->
                             navController.navigate(Routes.categoryExpenses(categoryId, from, to))
                         },
@@ -227,8 +229,13 @@ fun TakatNavGraph(
                     }
                 }
 
-                composable(Routes.TRANSFER_NEW) { backStackEntry ->
+                composable(
+                    Routes.TRANSFER_NEW,
+                    arguments = listOf(navArgument("fromAccountId") { type = NavType.LongType; defaultValue = -1L })
+                ) { backStackEntry ->
+                    val rawFromId = backStackEntry.arguments?.getLong("fromAccountId") ?: -1L
                     AddTransferScreen(
+                        preselectedFromAccountId = rawFromId.takeIf { it >= 0 },
                         onDone = { navController.popBackStackFrom(backStackEntry) },
                         onCancel = { navController.popBackStackFrom(backStackEntry) }
                     )

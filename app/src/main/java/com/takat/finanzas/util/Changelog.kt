@@ -225,6 +225,9 @@ object Changelog {
             "Guías de movimientos y transferencias (incluido cómo pagar la tarjeta de crédito), de gastos fijos, y una para corregir o eliminar movimientos y cuentas.",
             "Nuevo: límite para tarjetas de crédito. Ponelo al crear o editar una cuenta \"Debo\" y vas a ver una barra con lo que llevás gastado y cuánto te queda; también te avisa si un gasto pasa el límite.",
             "Podés repetir las guías cuando quieras desde Ajustes › Ayuda › Guías."
+        )),
+        ChangelogEntry(48, "3.4.0", listOf(
+            "Nuevo: mantené presionada una cuenta en el inicio para crear una transferencia desde ella; la cuenta ya queda elegida como origen."
         ))
     )
 
