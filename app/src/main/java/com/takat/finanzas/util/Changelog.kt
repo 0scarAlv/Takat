@@ -228,6 +228,9 @@ object Changelog {
         )),
         ChangelogEntry(48, "3.4.0", listOf(
             "Nuevo: mantené presionada una cuenta en el inicio para crear una transferencia desde ella; la cuenta ya queda elegida como origen."
+        )),
+        ChangelogEntry(49, "3.4.1", listOf(
+            "Cambio: mantener presionada una cuenta en el inicio ahora crea un movimiento (no una transferencia) con esa cuenta ya elegida."
         ))
     )
 

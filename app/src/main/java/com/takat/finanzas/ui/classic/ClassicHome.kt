@@ -105,7 +105,7 @@ import kotlinx.coroutines.launch
 fun ClassicHomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
-    onTransferFromAccount: (Long) -> Unit,
+    onAddTransactionForAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
@@ -152,7 +152,7 @@ fun ClassicHomeContent(
                     item = accountWithBalance,
                     amountsHidden = uiState.amountsHidden,
                     onClick = { onOpenAccount(accountWithBalance.account.id) },
-                    onLongClick = { onTransferFromAccount(accountWithBalance.account.id) }
+                    onLongClick = { onAddTransactionForAccount(accountWithBalance.account.id) }
                 )
             }
         } else {

@@ -122,7 +122,7 @@ import com.takat.finanzas.ui.theme.LocalUiStyle
 @Composable
 fun HomeScreen(
     onOpenAccount: (Long) -> Unit,
-    onTransferFromAccount: (Long) -> Unit,
+    onAddTransactionForAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onAddTransaction: () -> Unit,
     onAddTransfer: () -> Unit,
@@ -240,7 +240,7 @@ fun HomeScreen(
                 1 -> if (LocalUiStyle.current == UiStyle.CLASSIC) ClassicHomeContent(
                     uiState = uiState,
                     onOpenAccount = onOpenAccount,
-                    onTransferFromAccount = onTransferFromAccount,
+                    onAddTransactionForAccount = onAddTransactionForAccount,
                     onAddAccount = onAddAccount,
                     onMovementClick = { selectedMovement = it },
                     onOpenFixedExpenses = onOpenFixedExpenses,
@@ -249,7 +249,7 @@ fun HomeScreen(
                 ) else HomeContent(
                     uiState = uiState,
                     onOpenAccount = onOpenAccount,
-                    onTransferFromAccount = onTransferFromAccount,
+                    onAddTransactionForAccount = onAddTransactionForAccount,
                     onAddAccount = onAddAccount,
                     onMovementClick = { selectedMovement = it },
                     onOpenFixedExpenses = onOpenFixedExpenses,
@@ -309,7 +309,7 @@ fun HomeScreen(
 private fun HomeContent(
     uiState: HomeUiState,
     onOpenAccount: (Long) -> Unit,
-    onTransferFromAccount: (Long) -> Unit,
+    onAddTransactionForAccount: (Long) -> Unit,
     onAddAccount: () -> Unit,
     onMovementClick: (Movement) -> Unit,
     onOpenFixedExpenses: () -> Unit,
@@ -355,7 +355,7 @@ private fun HomeContent(
             if (uiState.accounts.isEmpty()) {
                 EmptyHint("Todavía no tenés cuentas. Tocá + para crear la primera.")
             } else {
-                AccountsGroup(uiState.accounts, uiState.amountsHidden, onOpenAccount, onTransferFromAccount)
+                AccountsGroup(uiState.accounts, uiState.amountsHidden, onOpenAccount, onAddTransactionForAccount)
             }
         }
 
@@ -573,7 +573,7 @@ private fun HeroLine(label: String, value: String, labelColor: Color, modifier: 
 @Composable
 private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boolean,
     onOpenAccount: (Long) -> Unit,
-    onTransferFromAccount: (Long) -> Unit
+    onAddTransactionForAccount: (Long) -> Unit
 ) {
     TakatCard(modifier = Modifier.tutorialAnchor(TutorialAnchors.HOME_ACCOUNTS)) {
         accounts.forEachIndexed { index, item ->
@@ -581,7 +581,7 @@ private fun AccountsGroup(accounts: List<AccountWithBalance>, amountsHidden: Boo
                 item,
                 amountsHidden,
                 onClick = { onOpenAccount(item.account.id) },
-                onLongClick = { onTransferFromAccount(item.account.id) }
+                onLongClick = { onAddTransactionForAccount(item.account.id) }
             )
             if (index < accounts.lastIndex) {
                 HorizontalDivider(

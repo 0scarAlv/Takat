@@ -144,7 +144,7 @@ fun TakatNavGraph(
                         onOpenAccount = { navController.navigate(Routes.accountDetail(it)) },
                         onAddAccount = { navController.navigate(Routes.ACCOUNT_NEW) },
                         onAddTransaction = { navController.navigate(Routes.transactionNew()) },
-                        onTransferFromAccount = { navController.navigate(Routes.transferNew(it)) },
+                        onAddTransactionForAccount = { navController.navigate(Routes.transactionNew(accountId = it)) },
                         onAddTransfer = { navController.navigate(Routes.transferNew()) },
                         onOpenCategoryExpenses = { categoryId, from, to ->
                             navController.navigate(Routes.categoryExpenses(categoryId, from, to))
