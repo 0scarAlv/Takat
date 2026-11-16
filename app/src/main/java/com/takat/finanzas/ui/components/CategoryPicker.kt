@@ -14,6 +14,15 @@ import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.imePadding
+import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.ArrowDropDown
+import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.ModalBottomSheet
+import androidx.compose.material3.rememberModalBottomSheetState
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.foundation.lazy.grid.GridCells
 import androidx.compose.foundation.lazy.grid.LazyVerticalGrid
 import androidx.compose.foundation.lazy.grid.items
@@ -53,7 +62,8 @@ fun CategoryPicker(
     FlowRow(
         modifier = modifier,
         horizontalArrangement = Arrangement.spacedBy(8.dp),
-        verticalArrangement = Arrangement.spacedBy(8.dp)
+        // Los chips ya reservan 48dp de área táctil (32dp visibles): sin espacio extra quedan 16dp entre filas.
+        verticalArrangement = Arrangement.spacedBy(0.dp)
     ) {
         categories.forEach { category ->
             FilterChip(
@@ -64,6 +74,72 @@ fun CategoryPicker(
             )
         }
         AssistChip(onClick = onAddNew, label = { Text("+ Nueva") })
+    }
+}
+
+/**
+ * Compact version of [CategoryPicker]: a single field showing the chosen category that opens a bottom
+ * sheet with the full grid. Picking one closes the sheet; "+ Nueva" closes it and hands off to [onAddNew].
+ */
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun CategoryField(
+    categories: List<CategoryEntity>,
+    selectedId: Long?,
+    onSelect: (Long) -> Unit,
+    onAddNew: () -> Unit,
+    modifier: Modifier = Modifier
+) {
+    var sheetOpen by rememberSaveable { mutableStateOf(false) }
+    val selected = categories.find { it.id == selectedId }
+
+    Box(modifier = modifier) {
+        OutlinedTextField(
+            value = selected?.name ?: "",
+            onValueChange = {},
+            readOnly = true,
+            label = { Text("Categoría") },
+            placeholder = { Text("Elegí una") },
+            leadingIcon = selected?.let { { CategoryGlyph(it.emoji, iconSize = 20.dp) } },
+            trailingIcon = { Icon(Icons.Filled.ArrowDropDown, contentDescription = null) },
+            singleLine = true,
+            modifier = Modifier.fillMaxWidth()
+        )
+        // Read-only field: an overlay catches the tap anywhere on it.
+        Box(
+            modifier = Modifier
+                .matchParentSize()
+                .clickable(onClickLabel = "Elegir categoría") { sheetOpen = true }
+        )
+    }
+
+    if (sheetOpen) {
+        ModalBottomSheet(
+            onDismissRequest = { sheetOpen = false },
+            sheetState = rememberModalBottomSheetState(skipPartiallyExpanded = true)
+        ) {
+            Column(
+                modifier = Modifier
+                    .padding(horizontal = 16.dp)
+                    .padding(bottom = 24.dp)
+                    .verticalScroll(rememberScrollState())
+            ) {
+                Text("Categoría", style = MaterialTheme.typography.titleMedium)
+                CategoryPicker(
+                    categories = categories,
+                    selectedId = selectedId,
+                    onSelect = {
+                        onSelect(it)
+                        sheetOpen = false
+                    },
+                    onAddNew = {
+                        sheetOpen = false
+                        onAddNew()
+                    },
+                    modifier = Modifier.padding(top = 12.dp)
+                )
+            }
+        }
     }
 }
 

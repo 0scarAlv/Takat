@@ -17,7 +17,10 @@ import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.layout.width
 import androidx.compose.foundation.lazy.LazyColumn
 import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.layout.IntrinsicSize
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.HorizontalDivider
+import androidx.compose.material3.VerticalDivider
 import androidx.compose.material3.LocalContentColor
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ProvideTextStyle
@@ -169,13 +172,6 @@ private fun HeroFigure(label: String, cents: Long, muted: Color, modifier: Modif
 private fun FlowChartCard(state: ChartsUiState) {
     TakatCard {
         Column(Modifier.padding(16.dp)) {
-            Text("Cómo se movió el mes", style = MaterialTheme.typography.titleMedium)
-            Text(
-                "Ingresos y gastos acumulados día a día. Tocá la gráfica para ver un día.",
-                style = MaterialTheme.typography.bodySmall,
-                color = MaterialTheme.colorScheme.onSurfaceVariant
-            )
-            Spacer(Modifier.height(12.dp))
             val chartDays = state.chartDays
             if (chartDays.none { it.incomeCents != 0L || it.expenseCents != 0L }) {
                 Text(
@@ -276,11 +272,12 @@ private fun CumulativeFlowChart(days: List<DailyFlow>, monthLength: Int) {
             Text("$day", style = MaterialTheme.typography.labelSmall, color = labelColor)
         }
     }
-    Spacer(Modifier.height(8.dp))
-    Row(horizontalArrangement = Arrangement.spacedBy(16.dp)) {
-        LegendDot("Ingresos", incomeColor)
-        LegendDot("Gastos", expenseColor)
-    }
+    Text(
+        "Tocá la gráfica para ver otro día.",
+        style = MaterialTheme.typography.bodySmall,
+        color = labelColor.copy(alpha = 0.7f),
+        modifier = Modifier.padding(top = 6.dp)
+    )
 }
 
 @Composable
@@ -293,11 +290,11 @@ private fun SelectedDayHeader(day: DailyFlow, incomeTotal: Long, expenseTotal: L
     )
     Row(Modifier.fillMaxWidth().padding(top = 4.dp), horizontalArrangement = Arrangement.spacedBy(12.dp)) {
         Column(Modifier.weight(1f)) {
-            Text("Ingresos", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LegendDot("Ingresos", colors.positive)
             Text(incomeTotal.centsToDisplay(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.positive)
         }
         Column(Modifier.weight(1f)) {
-            Text("Gastos", style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant)
+            LegendDot("Gastos", colors.negative)
             Text(expenseTotal.centsToDisplay(), style = MaterialTheme.typography.titleMedium, fontWeight = FontWeight.Bold, color = colors.negative)
         }
     }
@@ -347,18 +344,22 @@ private fun InsightTiles(state: ChartsUiState) {
         }
     }
 
-    Column(verticalArrangement = Arrangement.spacedBy(10.dp)) {
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+    // One card split in four by hairlines reads as a single summary instead of four competing boxes.
+    TakatCard {
+        Row(Modifier.height(IntrinsicSize.Min)) {
             InsightTile("Gasto promedio", average.centsToDisplay(), "por día", Modifier.weight(1f))
+            TileDivider(vertical = true)
             InsightTile(paceTile.first, paceTile.second, paceTile.third, Modifier.weight(1f))
         }
-        Row(horizontalArrangement = Arrangement.spacedBy(10.dp)) {
+        TileDivider(vertical = false)
+        Row(Modifier.height(IntrinsicSize.Min)) {
             InsightTile(
                 "Días sin gastos",
                 "${lived.count { it.expenseCents == 0L }}",
                 "de $elapsed ${if (elapsed == 1) "día" else "días"}",
                 Modifier.weight(1f)
             )
+            TileDivider(vertical = true)
             InsightTile(
                 "Vs. mes anterior",
                 changeValue,
@@ -380,16 +381,20 @@ private fun InsightTile(
     modifier: Modifier,
     valueColor: Color = Color.Unspecified
 ) {
-    TakatCard(modifier) {
-        Column(Modifier.padding(14.dp)) {
-            Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
-            Spacer(Modifier.height(4.dp))
-            ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = valueColor)) {
-                FitLabel(value, modifier = Modifier.fillMaxWidth())
-            }
-            Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+    Column(modifier.padding(14.dp)) {
+        Text(label, style = MaterialTheme.typography.labelMedium, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
+        Spacer(Modifier.height(4.dp))
+        ProvideTextStyle(MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold, color = valueColor)) {
+            FitLabel(value, modifier = Modifier.fillMaxWidth())
         }
+        Text(caption, style = MaterialTheme.typography.bodySmall, color = MaterialTheme.colorScheme.onSurfaceVariant, maxLines = 1)
     }
+}
+
+@Composable
+private fun TileDivider(vertical: Boolean) {
+    val color = MaterialTheme.colorScheme.outlineVariant.copy(alpha = 0.5f)
+    if (vertical) VerticalDivider(color = color) else HorizontalDivider(color = color)
 }
 
 @Composable

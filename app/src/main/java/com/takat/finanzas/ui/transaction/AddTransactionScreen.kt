@@ -10,6 +10,8 @@ import android.provider.OpenableColumns
 import androidx.activity.compose.rememberLauncherForActivityResult
 import androidx.activity.result.PickVisualMediaRequest
 import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.layout.Box
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.ExperimentalLayoutApi
@@ -33,9 +35,10 @@ import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material.icons.filled.AttachFile
-import androidx.compose.material.icons.filled.CalendarMonth
 import androidx.compose.material.icons.filled.Close
 import androidx.compose.material.icons.filled.Description
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
 import androidx.compose.material.icons.filled.PhotoCamera
 import androidx.compose.material.icons.filled.PhotoLibrary
 import androidx.compose.material3.AssistChip
@@ -50,7 +53,6 @@ import androidx.compose.material3.Icon
 import androidx.compose.material3.IconButton
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ExposedDropdownMenuAnchorType
-import androidx.compose.material3.OutlinedButton
 import androidx.compose.material3.OutlinedTextField
 import androidx.compose.material3.Scaffold
 import androidx.compose.material3.SegmentedButton
@@ -67,8 +69,10 @@ import androidx.compose.runtime.collectAsState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.saveable.rememberSaveable
 import androidx.compose.runtime.rememberCoroutineScope
 import androidx.compose.runtime.setValue
+import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.focus.onFocusEvent
 import androidx.compose.ui.platform.LocalContext
@@ -81,7 +85,7 @@ import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.ui.components.AccountColorDot
 import com.takat.finanzas.ui.components.BalanceAfterText
 import com.takat.finanzas.ui.components.AddCategoryDialog
-import com.takat.finanzas.ui.components.CategoryPicker
+import com.takat.finanzas.ui.components.CategoryField
 import com.takat.finanzas.ui.components.FixedExpensePicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
 import com.takat.finanzas.ui.util.rememberRepository
@@ -114,6 +118,7 @@ fun AddTransactionScreen(
     var accountMenuExpanded by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
     var showDatePicker by remember { mutableStateOf(false) }
+    var fixedExpanded by rememberSaveable { mutableStateOf(preselectedFixedExpenseId != null) }
     val noteBringIntoViewRequester = remember { BringIntoViewRequester() }
     val coroutineScope = rememberCoroutineScope()
     val context = LocalContext.current
@@ -237,7 +242,7 @@ fun AddTransactionScreen(
                 .imePadding()
                 .verticalScroll(rememberScrollState())
                 .padding(16.dp),
-            verticalArrangement = Arrangement.spacedBy(20.dp)
+            verticalArrangement = Arrangement.spacedBy(16.dp)
         ) {
             SingleChoiceSegmentedButtonRow(modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_TYPE)) {
                 SegmentedButton(
@@ -254,74 +259,15 @@ fun AddTransactionScreen(
                 ) { FitLabel("Ingreso") }
             }
 
-            if (!uiState.isEditing && uiState.pendingFixedExpenses.isNotEmpty()) {
-                Column {
-                    Text("¿Es un gasto fijo?", style = MaterialTheme.typography.labelLarge)
-                    FixedExpensePicker(
-                        pending = uiState.pendingFixedExpenses,
-                        selectedId = uiState.selectedFixedExpenseId,
-                        onToggle = viewModel::onFixedExpenseToggle,
-                        modifier = Modifier.padding(top = 8.dp)
-                    )
-                }
-            }
-
-            ExposedDropdownMenuBox(
-                expanded = accountMenuExpanded,
-                onExpandedChange = { accountMenuExpanded = it },
-                modifier = Modifier.tutorialAnchor(TutorialAnchors.TX_ACCOUNT)
-            ) {
-                OutlinedTextField(
-                    value = selectedAccount?.account?.name ?: "",
-                    onValueChange = {},
-                    readOnly = true,
-                    label = { Text("Cuenta") },
-                    leadingIcon = {
-                        selectedAccount?.let { AccountColorDot(it.account.colorArgb) }
-                    },
-                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountMenuExpanded) },
-                    suffix = {
-                        selectedAccount?.let {
-                            Text(
-                                it.balanceCents.centsToDisplay(),
-                                style = MaterialTheme.typography.bodySmall,
-                                color = MaterialTheme.colorScheme.onSurfaceVariant
-                            )
-                        }
-                    },
-                    modifier = Modifier
-                        .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
-                        .fillMaxWidth()
-                )
-                ExposedDropdownMenu(
-                    expanded = accountMenuExpanded,
-                    onDismissRequest = { accountMenuExpanded = false }
-                ) {
-                    uiState.accounts.forEach { account ->
-                        DropdownMenuItem(
-                            leadingIcon = { AccountColorDot(account.account.colorArgb) },
-                            text = { Text(account.account.name) },
-                            trailingIcon = {
-                                Text(
-                                    account.balanceCents.centsToDisplay(),
-                                    style = MaterialTheme.typography.bodySmall,
-                                    color = MaterialTheme.colorScheme.onSurfaceVariant
-                                )
-                            },
-                            onClick = {
-                                viewModel.onAccountChange(account.account.id)
-                                accountMenuExpanded = false
-                            }
-                        )
-                    }
-                }
-            }
-
+            // Monto: el dato principal, grande y con el color del tipo de movimiento.
+            val amountColor = if (uiState.isExpense) MaterialTheme.financeColors.negative else MaterialTheme.financeColors.positive
             Column {
                 OutlinedTextField(
                     value = uiState.amountText,
                     onValueChange = viewModel::onAmountChange,
                     label = { Text("Monto") },
+                    prefix = { Text(if (uiState.isExpense) "−" else "+", color = amountColor) },
+                    textStyle = MaterialTheme.typography.headlineSmall.copy(color = amountColor),
                     keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Decimal),
                     modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_AMOUNT),
                     singleLine = true
@@ -339,31 +285,116 @@ fun AddTransactionScreen(
                 }
             }
 
-            OutlinedTextField(
-                value = uiState.dateMillis.toDisplayDate(),
-                onValueChange = {},
-                readOnly = true,
-                label = { Text("Fecha") },
-                trailingIcon = {
-                    IconButton(onClick = { showDatePicker = true }) {
-                        Icon(Icons.Filled.CalendarMonth, contentDescription = "Elegir fecha")
+            // Cuenta y fecha comparten fila.
+            Row(horizontalArrangement = Arrangement.spacedBy(8.dp)) {
+                ExposedDropdownMenuBox(
+                    expanded = accountMenuExpanded,
+                    onExpandedChange = { accountMenuExpanded = it },
+                    modifier = Modifier.weight(1.2f).tutorialAnchor(TutorialAnchors.TX_ACCOUNT)
+                ) {
+                    OutlinedTextField(
+                        value = selectedAccount?.account?.name ?: "",
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Cuenta") },
+                        leadingIcon = {
+                            selectedAccount?.let { AccountColorDot(it.account.colorArgb) }
+                        },
+                        trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = accountMenuExpanded) },
+                        supportingText = {
+                            selectedAccount?.let { Text("Saldo ${it.balanceCents.centsToDisplay()}", maxLines = 1) }
+                        },
+                        singleLine = true,
+                        modifier = Modifier
+                            .menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable)
+                            .fillMaxWidth()
+                    )
+                    ExposedDropdownMenu(
+                        expanded = accountMenuExpanded,
+                        onDismissRequest = { accountMenuExpanded = false }
+                    ) {
+                        uiState.accounts.forEach { account ->
+                            DropdownMenuItem(
+                                leadingIcon = { AccountColorDot(account.account.colorArgb) },
+                                text = { Text(account.account.name) },
+                                trailingIcon = {
+                                    Text(
+                                        account.balanceCents.centsToDisplay(),
+                                        style = MaterialTheme.typography.bodySmall,
+                                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                                    )
+                                },
+                                onClick = {
+                                    viewModel.onAccountChange(account.account.id)
+                                    accountMenuExpanded = false
+                                }
+                            )
+                        }
                     }
-                },
-                modifier = Modifier
-                    .fillMaxWidth()
-                    .clickable { showDatePicker = true },
-                singleLine = true
+                }
+
+                Box(modifier = Modifier.weight(1f)) {
+                    OutlinedTextField(
+                        value = uiState.dateMillis.toDisplayDate(),
+                        onValueChange = {},
+                        readOnly = true,
+                        label = { Text("Fecha") },
+                        modifier = Modifier.fillMaxWidth(),
+                        singleLine = true
+                    )
+                    // El campo es de solo lectura: una capa encima abre el calendario al tocar cualquier parte.
+                    Box(
+                        modifier = Modifier
+                            .matchParentSize()
+                            .clickable(onClickLabel = "Elegir fecha") { showDatePicker = true }
+                    )
+                }
+            }
+
+            CategoryField(
+                categories = filteredCategories,
+                selectedId = uiState.categoryId,
+                onSelect = viewModel::onCategoryChange,
+                onAddNew = { showAddCategory = true },
+                modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_CATEGORY)
             )
 
-            Column(modifier = Modifier.tutorialAnchor(TutorialAnchors.TX_CATEGORY)) {
-                Text("Categoría", style = MaterialTheme.typography.labelLarge)
-                CategoryPicker(
-                    categories = filteredCategories,
-                    selectedId = uiState.categoryId,
-                    onSelect = viewModel::onCategoryChange,
-                    onAddNew = { showAddCategory = true },
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+            if (!uiState.isEditing && uiState.pendingFixedExpenses.isNotEmpty()) {
+                val selectedFixed = uiState.pendingFixedExpenses.find { it.fixedExpense.id == uiState.selectedFixedExpenseId }
+                val pendingCount = uiState.pendingFixedExpenses.size
+                Column {
+                    Row(
+                        modifier = Modifier
+                            .fillMaxWidth()
+                            .clickable { fixedExpanded = !fixedExpanded }
+                            .padding(vertical = 4.dp),
+                        verticalAlignment = Alignment.CenterVertically
+                    ) {
+                        Text("¿Es un gasto fijo?", style = MaterialTheme.typography.labelLarge)
+                        Spacer(Modifier.weight(1f))
+                        if (!fixedExpanded) {
+                            Text(
+                                selectedFixed?.fixedExpense?.name
+                                    ?: if (pendingCount == 1) "1 pendiente" else "$pendingCount pendientes",
+                                style = MaterialTheme.typography.bodySmall,
+                                color = if (selectedFixed != null) MaterialTheme.colorScheme.primary else MaterialTheme.colorScheme.onSurfaceVariant,
+                                maxLines = 1
+                            )
+                        }
+                        Icon(
+                            if (fixedExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                            contentDescription = if (fixedExpanded) "Ocultar gastos fijos" else "Mostrar gastos fijos"
+                        )
+                    }
+                    AnimatedVisibility(visible = fixedExpanded) {
+                        FixedExpensePicker(
+                            pending = uiState.pendingFixedExpenses,
+                            selectedId = uiState.selectedFixedExpenseId,
+                            onToggle = viewModel::onFixedExpenseToggle,
+                            modifier = Modifier.padding(top = 8.dp)
+                        )
+                    }
+                }
             }
 
             OutlinedTextField(
@@ -382,41 +413,27 @@ fun AddTransactionScreen(
             )
 
             if (!uiState.isEditing) Column {
-                val attachButtonPadding = PaddingValues(horizontal = 8.dp, vertical = 8.dp)
-                Text("Comprobante (opcional)", style = MaterialTheme.typography.labelLarge)
-                Row(
-                    modifier = Modifier.padding(top = 8.dp),
-                    horizontalArrangement = Arrangement.spacedBy(8.dp)
-                ) {
-                    OutlinedButton(onClick = onTakePhotoClick, modifier = Modifier.weight(1f), contentPadding = attachButtonPadding) {
-                        Icon(Icons.Filled.PhotoCamera, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(Modifier.width(6.dp))
-                        FitLabel("Foto")
+                Row(verticalAlignment = Alignment.CenterVertically) {
+                    Text(
+                        "Comprobante (opcional)",
+                        style = MaterialTheme.typography.labelLarge,
+                        modifier = Modifier.weight(1f)
+                    )
+                    IconButton(onClick = onTakePhotoClick) {
+                        Icon(Icons.Filled.PhotoCamera, contentDescription = "Tomar foto")
                     }
-                    OutlinedButton(
-                        onClick = {
-                            galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
-                        },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = attachButtonPadding
-                    ) {
-                        Icon(Icons.Filled.PhotoLibrary, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(Modifier.width(6.dp))
-                        FitLabel("Galería")
+                    IconButton(onClick = {
+                        galleryLauncher.launch(PickVisualMediaRequest(ActivityResultContracts.PickVisualMedia.ImageOnly))
+                    }) {
+                        Icon(Icons.Filled.PhotoLibrary, contentDescription = "Elegir de la galería")
                     }
-                    OutlinedButton(
-                        onClick = { fileLauncher.launch(arrayOf("application/pdf", "application/json")) },
-                        modifier = Modifier.weight(1f),
-                        contentPadding = attachButtonPadding
-                    ) {
-                        Icon(Icons.Filled.AttachFile, contentDescription = null, modifier = Modifier.size(ButtonDefaults.IconSize))
-                        Spacer(Modifier.width(6.dp))
-                        FitLabel("Archivo")
+                    IconButton(onClick = { fileLauncher.launch(arrayOf("application/pdf", "application/json")) }) {
+                        Icon(Icons.Filled.AttachFile, contentDescription = "Adjuntar archivo")
                     }
                 }
                 if (uiState.pendingAttachments.isNotEmpty()) {
                     FlowRow(
-                        modifier = Modifier.padding(top = 8.dp),
+                        modifier = Modifier.padding(top = 4.dp),
                         horizontalArrangement = Arrangement.spacedBy(8.dp),
                         verticalArrangement = Arrangement.spacedBy(8.dp)
                     ) {

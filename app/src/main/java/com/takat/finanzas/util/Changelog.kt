@@ -239,6 +239,12 @@ object Changelog {
         ChangelogEntry(51, "3.5.1", listOf(
             "Cambio: en las transferencias el motivo queda plegado; tocalo para elegir uno si lo necesitás.",
             "Arreglo: en Estadísticas, al elegir un mes anterior la gráfica de los últimos meses ya no esconde los meses más nuevos, así podés volver al actual."
+        )),
+        ChangelogEntry(52, "3.5.2", listOf(
+            "Cambio: la pantalla de ingresos vs gastos está más limpia: la gráfica va directo con sus totales arriba y los cuatro datos del mes quedan en una sola tarjeta."
+        )),
+        ChangelogEntry(53, "3.6.0", listOf(
+            "Cambio: el formulario de ingreso o gasto está más ordenado: el monto va primero y en grande, cuenta y fecha comparten fila, la categoría se elige desde un campo que abre la lista completa, los gastos fijos se pueden plegar y el comprobante se adjunta con tres íconos."
         ))
     )
 
