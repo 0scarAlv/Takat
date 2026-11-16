@@ -115,7 +115,8 @@ fun FixedExpenseFormScreen(
                     val kinds = listOf(
                         FixedExpenseKind.NORMAL to "Normal",
                         FixedExpenseKind.DEUDA to "Cuotas",
-                        FixedExpenseKind.CREDITO to "Crédito"
+                        FixedExpenseKind.CREDITO to "Crédito",
+                        FixedExpenseKind.TRANSFERENCIA to "Traspaso"
                     )
                     kinds.forEachIndexed { index, (kind, label) ->
                         SegmentedButton(
@@ -229,6 +230,14 @@ fun FixedExpenseFormScreen(
                     )
                 }
             } else {
+                if (uiState.kind == FixedExpenseKind.TRANSFERENCIA) {
+                    Text(
+                        "Un movimiento entre tus cuentas que se repite (por ejemplo, separar para el ahorro). " +
+                            "Al pagarlo se registra como transferencia, no como gasto.",
+                        style = MaterialTheme.typography.bodySmall,
+                        color = MaterialTheme.colorScheme.onSurfaceVariant
+                    )
+                }
                 OutlinedTextField(
                     value = uiState.amountText,
                     onValueChange = viewModel::onAmountChange,
@@ -240,13 +249,22 @@ fun FixedExpenseFormScreen(
             }
 
             if (uiState.kind != FixedExpenseKind.CREDITO) {
+                val isTransfer = uiState.kind == FixedExpenseKind.TRANSFERENCIA
                 AccountDropdown(
-                    label = "Cuenta",
+                    label = if (isTransfer) "Desde" else "Cuenta",
                     accounts = uiState.accounts,
                     selectedId = uiState.accountId,
                     onSelect = viewModel::onAccountChange,
                     modifier = Modifier.tutorialAnchor(TutorialAnchors.FIXED_ACCOUNT)
                 )
+                if (isTransfer) {
+                    AccountDropdown(
+                        label = "Hacia",
+                        accounts = uiState.accounts.filter { it.id != uiState.accountId },
+                        selectedId = uiState.toAccountId,
+                        onSelect = viewModel::onToAccountChange
+                    )
+                }
             }
 
             Column {

@@ -21,4 +21,8 @@ interface FixedExpenseDao {
 
     @Delete
     suspend fun delete(entity: FixedExpenseEntity)
+
+    /** Recurring transfers have no FK on toAccountId, so they're cleaned up by hand when that account is deleted. */
+    @Query("DELETE FROM fixed_expenses WHERE toAccountId = :accountId")
+    suspend fun deleteTransfersTo(accountId: Long)
 }

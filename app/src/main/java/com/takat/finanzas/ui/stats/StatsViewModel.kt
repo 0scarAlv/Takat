@@ -31,6 +31,17 @@ data class StatsUiState(
     val toMillis: Long = 0
 )
 
+/**
+ * Last month shown in the "Últimos meses" chart. It stays anchored on the current month while the
+ * selected month is still inside the window, so picking an older month doesn't hide the newer ones
+ * (and you can tap back to the present). It only slides back when the selection falls out of range.
+ */
+internal fun trendWindowEnd(selected: YearMonth, now: YearMonth = YearMonth.now()): YearMonth {
+    val latestThatKeepsSelected = selected.plusMonths((MONTHLY_TREND_MONTHS - 1).toLong())
+    val end = if (now.isBefore(latestThatKeepsSelected)) now else latestThatKeepsSelected
+    return if (end.isBefore(selected)) selected else end
+}
+
 @OptIn(ExperimentalCoroutinesApi::class)
 class StatsViewModel(repository: FinanceRepository) : ViewModel() {
     private val selectedMonth = MutableStateFlow(YearMonth.now())
@@ -41,7 +52,7 @@ class StatsViewModel(repository: FinanceRepository) : ViewModel() {
             combine(
                 repository.expensesByCategory(start, end),
                 repository.expensesByDay(month),
-                repository.expensesByMonthRange(month, MONTHLY_TREND_MONTHS)
+                repository.expensesByMonthRange(trendWindowEnd(month), MONTHLY_TREND_MONTHS)
             ) { categoryExpenses, dailyExpenses, monthlyExpenses ->
                 StatsUiState(
                     selectedMonth = month,

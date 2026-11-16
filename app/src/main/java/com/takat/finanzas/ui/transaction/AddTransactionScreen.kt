@@ -79,6 +79,7 @@ import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.data.entity.AttachmentType
 import com.takat.finanzas.data.entity.CategoryKind
 import com.takat.finanzas.ui.components.AccountColorDot
+import com.takat.finanzas.ui.components.BalanceAfterText
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.components.FixedExpensePicker
@@ -197,12 +198,19 @@ fun AddTransactionScreen(
     val relevantKind = if (uiState.isExpense) CategoryKind.EXPENSE else CategoryKind.INCOME
     val filteredCategories = uiState.categories.filter { it.kind == relevantKind || it.kind == CategoryKind.BOTH }
     val amountCents = uiState.amountText.parseAmountToCents()
+    // When editing, the stored balance already includes the original transaction: back it out first.
+    val editAdjustment = if (uiState.isEditing && uiState.originalAccountId == uiState.accountId) -uiState.originalAmountCents else 0L
+    val baseBalance = selectedAccount?.let { it.balanceCents + editAdjustment }
+    val balanceAfter = if (baseBalance != null && amountCents != null && amountCents != 0L) {
+        baseBalance + if (uiState.isExpense) -amountCents else amountCents
+    } else null
     val overBalanceWarning = selectedAccount?.let { account ->
-        val creditAvailable = account.creditAvailableCents
+        val creditAvailable = account.creditAvailableCents?.let { it + editAdjustment }
+        val available = account.balanceCents + editAdjustment
         when {
             !uiState.isExpense || amountCents == null -> null
-            !account.account.isDebt && amountCents > account.balanceCents ->
-                "Esa cuenta solo tiene ${account.balanceCents.centsToDisplay()} disponibles"
+            !account.account.isDebt && amountCents > available ->
+                "Esa cuenta solo tiene ${available.centsToDisplay()} disponibles"
             account.account.isDebt && creditAvailable != null && amountCents > creditAvailable ->
                 if (creditAvailable > 0) "Con esto pasás el límite de la tarjeta: te quedan ${creditAvailable.centsToDisplay()}"
                 else "Esta tarjeta ya pasó su límite"
@@ -318,6 +326,9 @@ fun AddTransactionScreen(
                     modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TX_AMOUNT),
                     singleLine = true
                 )
+                if (balanceAfter != null) {
+                    BalanceAfterText(balanceAfter, prefix = "Quedará en ${selectedAccount?.account?.name}")
+                }
                 if (overBalanceWarning != null) {
                     Text(
                         overBalanceWarning,

@@ -89,6 +89,9 @@ object BackupCsv {
         transfers.forEach { tr ->
             lines += buildRow(
                 type = "transfer",
+                // Recurring-transfer payments keep their rule link, like transactions do.
+                name = tr.fixedExpenseId?.let { fixedExpenseById[it]?.name }.orEmpty(),
+                periodKey = tr.fixedExpensePeriodKey.orEmpty(),
                 date = tr.date.toCsvDate(),
                 account = accountById[tr.fromAccountId]?.name.orEmpty(),
                 toAccount = accountById[tr.toAccountId]?.name.orEmpty(),
@@ -102,6 +105,7 @@ object BackupCsv {
                 type = "fixed_expense",
                 name = fe.name,
                 account = accountById[fe.accountId]?.name.orEmpty(),
+                toAccount = fe.toAccountId?.let { accountById[it]?.name }.orEmpty(),
                 category = categoryById[fe.categoryId]?.name.orEmpty(),
                 amount = fe.amountCents.toCsvAmount(),
                 frequency = fe.frequency.name,
@@ -186,7 +190,9 @@ object BackupCsv {
                     toAccountName = row["to_account"].orEmpty(),
                     categoryName = row["category"]?.takeIf { it.isNotBlank() },
                     amountCents = row["amount"].orEmpty().csvAmountToCents() ?: continue,
-                    note = row["note"]?.takeIf { it.isNotBlank() }
+                    note = row["note"]?.takeIf { it.isNotBlank() },
+                    fixedExpenseName = row["name"]?.takeIf { it.isNotBlank() },
+                    fixedExpensePeriodKey = row["period_key"]?.takeIf { it.isNotBlank() }
                 )
 
                 "fixed_expense" -> fixedExpenses += FixedExpenseRow(
@@ -204,7 +210,8 @@ object BackupCsv {
                     installmentsCount = row["installments_count"]?.takeIf { it.isNotBlank() }?.toIntOrNull(),
                     creditAccountName = row["credit_account"]?.takeIf { it.isNotBlank() },
                     financedPrincipalCents = row["financed_principal"]?.takeIf { it.isNotBlank() }?.csvAmountToCents(),
-                    interestRateBps = row["interest_rate_bps"]?.takeIf { it.isNotBlank() }?.toIntOrNull()
+                    interestRateBps = row["interest_rate_bps"]?.takeIf { it.isNotBlank() }?.toIntOrNull(),
+                    toAccountName = row["to_account"]?.takeIf { it.isNotBlank() }
                 )
 
                 "fixed_expense_period" -> fixedExpensePeriodStates += FixedExpensePeriodStateRow(

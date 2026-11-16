@@ -43,6 +43,9 @@ data class AddTransactionUiState(
     val pendingAttachments: List<PendingAttachment> = emptyList(),
     val pendingFixedExpenses: List<PendingFixedExpense> = emptyList(),
     val selectedFixedExpenseId: Long? = null,
+    /** Account and signed amount of the transaction being edited, so the "Quedará" preview doesn't count it twice. */
+    val originalAccountId: Long? = null,
+    val originalAmountCents: Long = 0,
     val error: String? = null,
     val saved: Boolean = false
 )
@@ -82,6 +85,8 @@ class AddTransactionViewModel(
                 _uiState.update {
                     it.copy(
                         accountId = existing.accountId,
+                        originalAccountId = existing.accountId,
+                        originalAmountCents = existing.amountCents,
                         isExpense = existing.amountCents < 0,
                         amountText = kotlin.math.abs(existing.amountCents).toEditableAmountString(),
                         categoryId = existing.categoryId,
@@ -93,7 +98,8 @@ class AddTransactionViewModel(
         } else {
             viewModelScope.launch {
                 repository.pendingFixedExpenses().collect { pending ->
-                    val stillSelectable = pending.filter { it.isPending }
+                    // Recurring transfers are paid from the transfer screen, not as an expense.
+                    val stillSelectable = pending.filter { it.isPending && !it.fixedExpense.isTransfer }
                     _uiState.update { it.copy(pendingFixedExpenses = stillSelectable) }
                     if (preselectedFixedExpenseId != null && _uiState.value.selectedFixedExpenseId == null) {
                         stillSelectable.find { it.fixedExpense.id == preselectedFixedExpenseId }?.let { onFixedExpenseSelect(it) }

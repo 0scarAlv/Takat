@@ -13,6 +13,8 @@ data class PendingFixedExpense(
     /** Sum of every payment ever made toward this rule, across all periods — only meaningful when it's a debt. */
     val totalPaidCents: Long,
     val lastPaymentTransactionId: Long?,
+    /** Set instead of [lastPaymentTransactionId] when the last payment was a transfer (recurring-transfer rules). */
+    val lastPaymentTransferId: Long? = null,
     val countsTowardTotal: Boolean
 ) {
     /** Null when this rule isn't a debt payment plan. */

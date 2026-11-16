@@ -10,9 +10,11 @@ import com.takat.finanzas.data.model.AccountWithBalance
 import com.takat.finanzas.data.repository.FinanceRepository
 import com.takat.finanzas.util.capitalizeFirst
 import com.takat.finanzas.util.parseAmountToCents
+import com.takat.finanzas.util.toEditableAmountString
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
@@ -25,19 +27,45 @@ data class AddTransferUiState(
     val categoryId: Long? = null,
     val note: String = "",
     val dateMillis: Long = System.currentTimeMillis(),
+    /** Name of the recurring transfer this transfer pays, when opened from "Pagar". */
+    val fixedExpenseName: String? = null,
     val error: String? = null,
     val saved: Boolean = false
 )
 
 class AddTransferViewModel(
     private val repository: FinanceRepository,
-    preselectedFromAccountId: Long? = null
+    preselectedFromAccountId: Long? = null,
+    preselectedFixedExpenseId: Long? = null
 ) : ViewModel() {
 
     private val _uiState = MutableStateFlow(AddTransferUiState(fromAccountId = preselectedFromAccountId))
     val uiState: StateFlow<AddTransferUiState> = _uiState.asStateFlow()
 
+    // The recurring-transfer period this transfer pays, if any.
+    private var fixedExpenseId: Long? = null
+    private var fixedExpensePeriodKey: String? = null
+
     init {
+        if (preselectedFixedExpenseId != null) {
+            viewModelScope.launch {
+                val pending = repository.pendingFixedExpenses().first()
+                    .find { it.fixedExpense.id == preselectedFixedExpenseId && it.fixedExpense.isTransfer }
+                    ?: return@launch
+                fixedExpenseId = pending.fixedExpense.id
+                fixedExpensePeriodKey = pending.periodKey
+                _uiState.update {
+                    it.copy(
+                        fromAccountId = pending.fixedExpense.accountId,
+                        toAccountId = pending.fixedExpense.toAccountId,
+                        categoryId = pending.fixedExpense.categoryId,
+                        amountText = pending.remainingCents.takeIf { c -> c > 0 }?.toEditableAmountString() ?: it.amountText,
+                        note = "Pago de ${pending.fixedExpense.name}",
+                        fixedExpenseName = pending.fixedExpense.name
+                    )
+                }
+            }
+        }
         viewModelScope.launch {
             repository.accountsWithBalance().collect { accounts ->
                 _uiState.update { state ->
@@ -55,7 +83,6 @@ class AddTransferViewModel(
             repository.categories.collect { cats -> _uiState.update { it.copy(categories = cats) } }
         }
     }
-
     fun onFromAccountChange(id: Long) = _uiState.update { it.copy(fromAccountId = id) }
     fun onToAccountChange(id: Long) = _uiState.update { it.copy(toAccountId = id) }
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
@@ -94,7 +121,9 @@ class AddTransferViewModel(
                     categoryId = state.categoryId,
                     amountCents = cents,
                     note = state.note.trim().ifBlank { null },
-                    date = state.dateMillis
+                    date = state.dateMillis,
+                    fixedExpenseId = fixedExpenseId,
+                    fixedExpensePeriodKey = fixedExpensePeriodKey
                 )
             )
             // Before flagging saved: the guide must advance before the screen pops back to Home.

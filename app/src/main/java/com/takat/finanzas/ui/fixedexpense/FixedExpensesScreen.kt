@@ -184,7 +184,7 @@ fun FixedExpensesScreen(
                                     Column {
                                         Text(record.fixedExpense.name, fontWeight = FontWeight.SemiBold)
                                         Text(
-                                            "Período ${record.periodKey} · ${record.lastPayment.date.toDisplayDate()}" +
+                                            "Período ${record.periodKey} · ${record.lastPaymentDate.toDisplayDate()}" +
                                                 if (!record.isComplete) " · parcial" else "",
                                             style = MaterialTheme.typography.bodySmall,
                                             color = MaterialTheme.colorScheme.onSurfaceVariant

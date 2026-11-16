@@ -37,7 +37,10 @@ data class TransferRow(
     val toAccountName: String,
     val categoryName: String?,
     val amountCents: Long,
-    val note: String?
+    val note: String?,
+    /** Recurring transfer this transfer pays (by name), if any. Always null in backups older than 3.5.0. */
+    val fixedExpenseName: String? = null,
+    val fixedExpensePeriodKey: String? = null
 )
 
 data class FixedExpenseRow(
@@ -54,7 +57,9 @@ data class FixedExpenseRow(
     val installmentsCount: Int?,
     val creditAccountName: String? = null,
     val financedPrincipalCents: Long? = null,
-    val interestRateBps: Int? = null
+    val interestRateBps: Int? = null,
+    /** Destination account of a recurring transfer; null for regular fixed expenses. */
+    val toAccountName: String? = null
 )
 
 /** References its [FixedExpenseRow] by name, the same way [TransactionRow] references accounts/categories. */

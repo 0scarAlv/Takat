@@ -18,7 +18,7 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 
-enum class FixedExpenseKind { NORMAL, DEUDA, CREDITO }
+enum class FixedExpenseKind { NORMAL, DEUDA, CREDITO, TRANSFERENCIA }
 
 data class FixedExpenseFormUiState(
     val accounts: List<AccountEntity> = emptyList(),
@@ -37,6 +37,8 @@ data class FixedExpenseFormUiState(
     val totalDebtText: String = "",
     val installmentsText: String = "",
     val creditAccountId: Long? = null,
+    /** Destination of a recurring transfer (kind TRANSFERENCIA). */
+    val toAccountId: Long? = null,
     val principalText: String = "",
     val interestRateText: String = "",
     val cuotaText: String = "",
@@ -137,6 +139,7 @@ class FixedExpenseFormViewModel(
                         notifyEnabled = existing.notifyEnabled,
                         enabled = existing.enabled,
                         kind = when {
+                            existing.isTransfer -> FixedExpenseKind.TRANSFERENCIA
                             existing.isCreditPurchase -> FixedExpenseKind.CREDITO
                             existing.totalDebtCents != null -> FixedExpenseKind.DEUDA
                             else -> FixedExpenseKind.NORMAL
@@ -144,6 +147,7 @@ class FixedExpenseFormViewModel(
                         totalDebtText = existing.totalDebtCents?.toEditableAmountString() ?: "",
                         installmentsText = existing.installmentsCount?.toString() ?: "",
                         creditAccountId = existing.creditAccountId,
+                        toAccountId = existing.toAccountId,
                         principalText = existing.financedPrincipalCents?.toEditableAmountString() ?: "",
                         interestRateText = existing.interestRateBps?.let { formatRateBps(it) } ?: "",
                         cuotaText = if (existing.isCreditPurchase) existing.amountCents.toEditableAmountString() else "",
@@ -157,7 +161,8 @@ class FixedExpenseFormViewModel(
 
     fun onNameChange(value: String) = _uiState.update { it.copy(name = value, error = null) }
     fun onAmountChange(value: String) = _uiState.update { it.copy(amountText = value, error = null) }
-    fun onAccountChange(id: Long) = _uiState.update { it.copy(accountId = id) }
+    fun onAccountChange(id: Long) = _uiState.update { it.copy(accountId = id, error = null) }
+    fun onToAccountChange(id: Long) = _uiState.update { it.copy(toAccountId = id, error = null) }
     fun onCategoryChange(id: Long) = _uiState.update { it.copy(categoryId = id) }
     fun onFrequencyChange(frequency: FixedExpenseFrequency) = updateCredit { it.copy(frequency = frequency) }
     fun onDayOfMonthChange(day: Int) = _uiState.update { it.copy(dayOfMonth = day) }
@@ -199,6 +204,18 @@ class FixedExpenseFormViewModel(
             _uiState.update { it.copy(error = "Ingresá un nombre") }
             return
         }
+        val toAccountId: Long? = if (state.kind == FixedExpenseKind.TRANSFERENCIA) {
+            val to = state.toAccountId
+            if (to == null) {
+                _uiState.update { it.copy(error = "Elegí la cuenta destino") }
+                return
+            }
+            if (to == accountId) {
+                _uiState.update { it.copy(error = "La cuenta destino debe ser distinta a la de origen") }
+                return
+            }
+            to
+        } else null
         val totalDebtCents: Long?
         val installments: Int?
         val cents: Long
@@ -276,7 +293,8 @@ class FixedExpenseFormViewModel(
                 installmentsCount = installments,
                 creditAccountId = creditAccountId,
                 financedPrincipalCents = principalCents,
-                interestRateBps = interestRateBps
+                interestRateBps = interestRateBps,
+                toAccountId = toAccountId
             )
             if (fixedExpenseId == null) {
                 repository.addFixedExpense(entity)

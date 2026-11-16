@@ -231,6 +231,14 @@ object Changelog {
         )),
         ChangelogEntry(49, "3.4.1", listOf(
             "Cambio: mantener presionada una cuenta en el inicio ahora crea un movimiento (no una transferencia) con esa cuenta ya elegida."
+        )),
+        ChangelogEntry(50, "3.5.0", listOf(
+            "Nuevo: los gastos fijos pueden ser un traspaso entre cuentas (por ejemplo, apartar plata para Ahorro todos los meses). Al tocar Pagar se abre la transferencia ya armada.",
+            "Nuevo: al cargar un movimiento o una transferencia se muestra cuánto va a quedar en cada cuenta."
+        )),
+        ChangelogEntry(51, "3.5.1", listOf(
+            "Cambio: en las transferencias el motivo queda plegado; tocalo para elegir uno si lo necesitás.",
+            "Arreglo: en Estadísticas, al elegir un mes anterior la gráfica de los últimos meses ya no esconde los meses más nuevos, así podés volver al actual."
         ))
     )
 

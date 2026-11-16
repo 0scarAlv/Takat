@@ -37,5 +37,8 @@ data class TransferEntity(
     /** Always positive; moves this amount from fromAccountId to toAccountId. */
     val amountCents: Long,
     val note: String?,
-    val date: Long
+    val date: Long,
+    /** Same tagging as [TransactionEntity.fixedExpenseId]: set when this transfer pays a recurring-transfer rule. */
+    val fixedExpenseId: Long? = null,
+    val fixedExpensePeriodKey: String? = null
 )

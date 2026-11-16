@@ -9,6 +9,10 @@ import androidx.compose.runtime.MutableState
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.remember
+import androidx.compose.runtime.rememberCoroutineScope
+import com.takat.finanzas.ui.util.rememberRepository
+import kotlinx.coroutines.flow.first
+import kotlinx.coroutines.launch
 import androidx.compose.runtime.setValue
 import androidx.navigation.NavBackStackEntry
 import androidx.navigation.NavController
@@ -45,7 +49,7 @@ internal object Routes {
     const val ACCOUNT_EDIT = "account/{accountId}/edit"
     const val TRANSACTION_NEW = "transaction/new?accountId={accountId}&fixedExpenseId={fixedExpenseId}"
     const val TRANSACTION_EDIT = "transaction/{transactionId}/edit"
-    const val TRANSFER_NEW = "transfer/new?fromAccountId={fromAccountId}"
+    const val TRANSFER_NEW = "transfer/new?fromAccountId={fromAccountId}&fixedExpenseId={fixedExpenseId}"
     const val CATEGORY_EXPENSES = "stats/category/{categoryId}?from={from}&to={to}"
     const val DAY_EXPENSES = "stats/day/{epochDay}"
     const val SETTINGS = "settings"
@@ -59,7 +63,8 @@ internal object Routes {
     fun accountEdit(id: Long) = "account/$id/edit"
     fun transactionNew(accountId: Long? = null, fixedExpenseId: Long? = null) =
         "transaction/new?accountId=${accountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
-    fun transferNew(fromAccountId: Long? = null) = "transfer/new?fromAccountId=${fromAccountId ?: -1L}"
+    fun transferNew(fromAccountId: Long? = null, fixedExpenseId: Long? = null) =
+        "transfer/new?fromAccountId=${fromAccountId ?: -1L}&fixedExpenseId=${fixedExpenseId ?: -1L}"
     fun transactionEdit(id: Long) = "transaction/$id/edit"
     fun categoryExpenses(categoryId: Long?, from: Long, to: Long) = "stats/category/${categoryId ?: -1L}?from=$from&to=$to"
     fun dayExpenses(date: LocalDate) = "stats/day/${date.toEpochDay()}"
@@ -86,6 +91,19 @@ fun TakatNavGraph(
     // doesn't re-attach stale files from a previous share.
     var consumedShareUris by remember { mutableStateOf<List<Uri>>(emptyList()) }
 
+    val repository = rememberRepository()
+    val coroutineScope = rememberCoroutineScope()
+    // Recurring transfers are paid from the transfer screen; everything else as an expense.
+    val payFixedExpense: (Long) -> Unit = { id ->
+        coroutineScope.launch {
+            val rule = repository.fixedExpenses().first().find { it.id == id }
+            navController.navigate(
+                if (rule?.isTransfer == true) Routes.transferNew(fixedExpenseId = id)
+                else Routes.transactionNew(fixedExpenseId = id)
+            )
+        }
+    }
+
     LaunchedEffect(widgetAction) {
         when (widgetAction) {
             WidgetActions.ACTION_NEW_TRANSACTION -> navController.navigate(Routes.transactionNew())
@@ -96,7 +114,7 @@ fun TakatNavGraph(
 
     LaunchedEffect(fixedExpenseId) {
         if (fixedExpenseId != null) {
-            navController.navigate(Routes.transactionNew(fixedExpenseId = fixedExpenseId))
+            payFixedExpense(fixedExpenseId!!)
             pendingFixedExpenseId.value = null
         }
     }
@@ -152,7 +170,7 @@ fun TakatNavGraph(
                         onOpenDayExpenses = { date -> navController.navigate(Routes.dayExpenses(date)) },
                         onOpenSettings = { navController.navigate(Routes.SETTINGS) },
                         onOpenFixedExpenses = { navController.navigate(Routes.FIXED_EXPENSES) },
-                        onPayFixedExpense = { navController.navigate(Routes.transactionNew(fixedExpenseId = it)) },
+                        onPayFixedExpense = { payFixedExpense(it) },
                         onEditTransaction = { navController.navigate(Routes.transactionEdit(it)) }
                     )
                 }
@@ -231,11 +249,15 @@ fun TakatNavGraph(
 
                 composable(
                     Routes.TRANSFER_NEW,
-                    arguments = listOf(navArgument("fromAccountId") { type = NavType.LongType; defaultValue = -1L })
+                    arguments = listOf(
+                        navArgument("fromAccountId") { type = NavType.LongType; defaultValue = -1L },
+                        navArgument("fixedExpenseId") { type = NavType.LongType; defaultValue = -1L }
+                    )
                 ) { backStackEntry ->
                     val rawFromId = backStackEntry.arguments?.getLong("fromAccountId") ?: -1L
                     AddTransferScreen(
                         preselectedFromAccountId = rawFromId.takeIf { it >= 0 },
+                        preselectedFixedExpenseId = (backStackEntry.arguments?.getLong("fixedExpenseId") ?: -1L).takeIf { it >= 0 },
                         onDone = { navController.popBackStackFrom(backStackEntry) },
                         onCancel = { navController.popBackStackFrom(backStackEntry) }
                     )

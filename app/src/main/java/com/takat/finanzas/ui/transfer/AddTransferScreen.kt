@@ -2,6 +2,14 @@ package com.takat.finanzas.ui.transfer
 
 import com.takat.finanzas.ui.tutorial.TutorialAnchors
 import com.takat.finanzas.ui.tutorial.tutorialAnchor
+import androidx.compose.animation.AnimatedVisibility
+import androidx.compose.foundation.clickable
+import androidx.compose.foundation.layout.Row
+import androidx.compose.foundation.layout.Spacer
+import androidx.compose.material.icons.filled.ExpandLess
+import androidx.compose.material.icons.filled.ExpandMore
+import androidx.compose.runtime.saveable.rememberSaveable
+import androidx.compose.ui.Alignment
 import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxSize
@@ -42,6 +50,7 @@ import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.unit.dp
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.takat.finanzas.ui.components.AccountColorDot
+import com.takat.finanzas.ui.components.BalanceAfterText
 import com.takat.finanzas.ui.components.AddCategoryDialog
 import com.takat.finanzas.ui.components.CategoryPicker
 import com.takat.finanzas.ui.util.LambdaViewModelFactory
@@ -55,17 +64,19 @@ import com.takat.finanzas.ui.theme.financeColors
 @Composable
 fun AddTransferScreen(
     preselectedFromAccountId: Long? = null,
+    preselectedFixedExpenseId: Long? = null,
     onDone: () -> Unit,
     onCancel: () -> Unit
 ) {
     val repository = rememberRepository()
     val viewModel: AddTransferViewModel = viewModel(
-        factory = LambdaViewModelFactory { AddTransferViewModel(repository, preselectedFromAccountId) }
+        factory = LambdaViewModelFactory { AddTransferViewModel(repository, preselectedFromAccountId, preselectedFixedExpenseId) }
     )
     val uiState by viewModel.uiState.collectAsState()
     var fromMenuExpanded by remember { mutableStateOf(false) }
     var toMenuExpanded by remember { mutableStateOf(false) }
     var showAddCategory by remember { mutableStateOf(false) }
+    var categoryExpanded by rememberSaveable { mutableStateOf(false) }
     val noteBringIntoViewRequester = remember { BringIntoViewRequester() }
     val coroutineScope = rememberCoroutineScope()
 
@@ -83,7 +94,7 @@ fun AddTransferScreen(
     Scaffold(
         topBar = {
             TopAppBar(
-                title = { Text("Nueva transferencia") },
+                title = { Text(uiState.fixedExpenseName?.let { "Pagar $it" } ?: "Nueva transferencia") },
                 navigationIcon = {
                     IconButton(onClick = onCancel) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = "Cancelar")
@@ -212,6 +223,12 @@ fun AddTransferScreen(
                     modifier = Modifier.fillMaxWidth().tutorialAnchor(TutorialAnchors.TRANSFER_AMOUNT),
                     singleLine = true
                 )
+                if (amountCents != null && amountCents != 0L) {
+                    fromAccount?.let { BalanceAfterText(it.balanceCents - amountCents, prefix = "Quedará en ${it.account.name}") }
+                    if (toAccount != null && toAccount.account.id != fromAccount?.account?.id) {
+                        BalanceAfterText(toAccount.balanceCents + amountCents, prefix = "Quedará en ${toAccount.account.name}")
+                    }
+                }
                 if (overBalanceWarning != null) {
                     Text(
                         overBalanceWarning,
@@ -223,14 +240,38 @@ fun AddTransferScreen(
             }
 
             Column {
-                Text("Motivo (opcional)", style = MaterialTheme.typography.labelLarge)
-                CategoryPicker(
-                    categories = uiState.categories,
-                    selectedId = uiState.categoryId,
-                    onSelect = viewModel::onCategoryChange,
-                    onAddNew = { showAddCategory = true },
-                    modifier = Modifier.padding(top = 8.dp)
-                )
+                val selectedCategoryName = uiState.categories.find { it.id == uiState.categoryId }?.name
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth()
+                        .clickable { categoryExpanded = !categoryExpanded }
+                        .padding(vertical = 4.dp),
+                    verticalAlignment = Alignment.CenterVertically
+                ) {
+                    Text("Motivo (opcional)", style = MaterialTheme.typography.labelLarge)
+                    Spacer(Modifier.weight(1f))
+                    if (!categoryExpanded && selectedCategoryName != null) {
+                        Text(
+                            selectedCategoryName,
+                            style = MaterialTheme.typography.bodySmall,
+                            color = MaterialTheme.colorScheme.onSurfaceVariant,
+                            modifier = Modifier.padding(end = 4.dp)
+                        )
+                    }
+                    Icon(
+                        if (categoryExpanded) Icons.Filled.ExpandLess else Icons.Filled.ExpandMore,
+                        contentDescription = if (categoryExpanded) "Ocultar motivos" else "Mostrar motivos"
+                    )
+                }
+                AnimatedVisibility(visible = categoryExpanded) {
+                    CategoryPicker(
+                        categories = uiState.categories,
+                        selectedId = uiState.categoryId,
+                        onSelect = viewModel::onCategoryChange,
+                        onAddNew = { showAddCategory = true },
+                        modifier = Modifier.padding(top = 8.dp)
+                    )
+                }
             }
 
             OutlinedTextField(

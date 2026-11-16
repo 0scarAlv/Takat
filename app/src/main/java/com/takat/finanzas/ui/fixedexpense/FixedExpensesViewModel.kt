@@ -48,7 +48,8 @@ class FixedExpensesViewModel(private val repository: FinanceRepository) : ViewMo
                 rows = rules.map {
                     FixedExpenseListRow(
                         it,
-                        accountNameById[it.accountId] ?: "?",
+                        (accountNameById[it.accountId] ?: "?") +
+                            (it.toAccountId?.let { to -> " → ${accountNameById[to] ?: "?"}" } ?: ""),
                         totalPaidByRule[it.id] ?: 0,
                         it.creditAccountId?.let { id -> accountNameById[id] ?: "?" }
                     )

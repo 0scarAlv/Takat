@@ -63,8 +63,16 @@ data class FixedExpenseEntity(
     /** Price of what was bought on credit, without interest. */
     val financedPrincipalCents: Long? = null,
     /** Annual interest rate in basis points (2500 = 25%). Informational: the cuota is stored as entered, never re-amortized. */
-    val interestRateBps: Int? = null
+    val interestRateBps: Int? = null,
+    /**
+     * Non-null marks this rule as a recurring transfer: each period, [amountCents] moves from [accountId]
+     * to this account. Paid by a [TransferEntity] tagged with this rule's id instead of a transaction.
+     * No FK (added by ALTER TABLE); rules pointing to a deleted account are removed in deleteAccount.
+     */
+    val toAccountId: Long? = null
 ) {
+    val isTransfer: Boolean get() = toAccountId != null
+
     val isCreditPurchase: Boolean get() = creditAccountId != null && financedPrincipalCents != null
 
     /**
